@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,10 +29,12 @@ export default function Profile() {
   const [isSaving, setIsSaving] = useState(false);
   
   const [userProfile, setUserProfile] = useState({
-    name: 'Александр Николаев',
-    email: 'alexander@nikolife.ru',
-    avatar: 'АН'
+    name: '',
+    email: '',
+    avatar: ''
   });
+  
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
   const [editForm, setEditForm] = useState({
     name: '',
@@ -74,6 +76,10 @@ export default function Profile() {
     }
   };
 
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
   const handleEditClick = () => {
     setEditForm({
       name: userProfile.name,
@@ -82,32 +88,94 @@ export default function Profile() {
     setIsEditDialogOpen(true);
   };
 
+  const loadProfile = async () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setUserProfile(data.user);
+        }
+      } else {
+        navigate('/login');
+      }
+    } catch (error) {
+      console.error('Profile load error:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось загрузить профиль',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     setIsSaving(true);
+    const token = localStorage.getItem('auth_token');
     
-    setTimeout(() => {
-      const initials = editForm.name
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
+    try {
+      const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: editForm.name,
+          email: editForm.email
+        })
+      });
 
-      setUserProfile({
-        name: editForm.name,
-        email: editForm.email,
-        avatar: initials
-      });
-      
-      setIsSaving(false);
-      setIsEditDialogOpen(false);
-      
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setUserProfile(data.user);
+        setIsEditDialogOpen(false);
+        
+        toast({
+          title: 'Профиль обновлен',
+          description: 'Ваши данные успешно сохранены',
+        });
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось сохранить данные',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error('Profile update error:', error);
       toast({
-        title: 'Профиль обновлен',
-        description: 'Ваши данные успешно сохранены',
+        title: 'Ошибка',
+        description: 'Не удалось сохранить данные',
+        variant: 'destructive'
       });
-    }, 1000);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoadingProfile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5] flex items-center justify-center">
+        <Icon name="Loader2" size={48} className="animate-spin text-[#748c6d]" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5]">

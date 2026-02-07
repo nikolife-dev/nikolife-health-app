@@ -54,7 +54,8 @@ def handler(event: dict, context) -> dict:
             conn = psycopg2.connect(os.environ['DATABASE_URL'])
             cur = conn.cursor()
             
-            cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+            schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+            cur.execute(f"SELECT id FROM {schema}.users WHERE email = %s", (email,))
             if cur.fetchone():
                 cur.close()
                 conn.close()
@@ -68,8 +69,8 @@ def handler(event: dict, context) -> dict:
                     'isBase64Encoded': False
                 }
             
-            cur.execute("""
-                INSERT INTO users (name, email, password_hash, auth_token, created_at)
+            cur.execute(f"""
+                INSERT INTO {schema}.users (name, email, password_hash, auth_token, created_at)
                 VALUES (%s, %s, %s, %s, NOW())
                 RETURNING id
             """, (name, email, password_hash, token))
@@ -131,8 +132,9 @@ def handler(event: dict, context) -> dict:
             conn = psycopg2.connect(os.environ['DATABASE_URL'])
             cur = conn.cursor()
             
-            cur.execute("""
-                SELECT id, name, email, password_hash FROM users WHERE email = %s
+            schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+            cur.execute(f"""
+                SELECT id, name, email, password_hash FROM {schema}.users WHERE email = %s
             """, (email,))
             
             row = cur.fetchone()
@@ -153,8 +155,8 @@ def handler(event: dict, context) -> dict:
             token = generate_token()
             user_id, name, email_db = row[0], row[1], row[2]
             
-            cur.execute("""
-                UPDATE users SET auth_token = %s, last_login = NOW() WHERE id = %s
+            cur.execute(f"""
+                UPDATE {schema}.users SET auth_token = %s, last_login = NOW() WHERE id = %s
             """, (token, user_id))
             
             conn.commit()
@@ -209,8 +211,9 @@ def handler(event: dict, context) -> dict:
             conn = psycopg2.connect(os.environ['DATABASE_URL'])
             cur = conn.cursor()
             
-            cur.execute("""
-                SELECT id, name, email, created_at FROM users WHERE auth_token = %s
+            schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+            cur.execute(f"""
+                SELECT id, name, email, created_at FROM {schema}.users WHERE auth_token = %s
             """, (auth_token,))
             
             row = cur.fetchone()
