@@ -3,6 +3,7 @@ import os
 import psycopg2
 import hashlib
 import secrets
+import hmac
 from datetime import datetime, timedelta
 
 def hash_password(password: str) -> str:
@@ -10,6 +11,18 @@ def hash_password(password: str) -> str:
 
 def generate_token() -> str:
     return secrets.token_urlsafe(32)
+
+def verify_telegram_auth(auth_data: dict, bot_token: str) -> bool:
+    """Проверяет подлинность данных от Telegram"""
+    check_hash = auth_data.pop('hash', None)
+    if not check_hash:
+        return False
+    
+    data_check_string = '\n'.join([f'{k}={v}' for k, v in sorted(auth_data.items())])
+    secret_key = hashlib.sha256(bot_token.encode()).digest()
+    calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+    
+    return calculated_hash == check_hash
 
 def handler(event: dict, context) -> dict:
     """
@@ -33,6 +46,123 @@ def handler(event: dict, context) -> dict:
     if method == 'POST':
         try:
             body = json.loads(event.get('body', '{}'))
+            
+            # Проверяем, это авторизация через Telegram
+            if body.get('telegram_auth'):
+                bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+                if not bot_token:
+                    return {
+                        'statusCode': 500,
+                        'headers': {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        },
+                        'body': json.dumps({'success': False, 'error': 'Telegram bot token not configured'}),
+                        'isBase64Encoded': False
+                    }
+                
+                # Проверяем подлинность данных от Telegram
+                auth_data = {
+                    'id': str(body.get('id')),
+                    'first_name': body.get('first_name', ''),
+                    'auth_date': str(body.get('auth_date')),
+                    'hash': body.get('hash')
+                }
+                
+                if body.get('last_name'):
+                    auth_data['last_name'] = body.get('last_name')
+                if body.get('username'):
+                    auth_data['username'] = body.get('username')
+                if body.get('photo_url'):
+                    auth_data['photo_url'] = body.get('photo_url')
+                
+                if not verify_telegram_auth(auth_data.copy(), bot_token):
+                    return {
+                        'statusCode': 401,
+                        'headers': {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        },
+                        'body': json.dumps({'success': False, 'error': 'Невалидные данные Telegram'}),
+                        'isBase64Encoded': False
+                    }
+                
+                # Ищем или создаем пользователя по telegram_id
+                conn = psycopg2.connect(os.environ['DATABASE_URL'])
+                cur = conn.cursor()
+                schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+                
+                telegram_id = body.get('id')
+                telegram_username = body.get('username')
+                full_name = f"{body.get('first_name', '')} {body.get('last_name', '')}".strip()
+                
+                cur.execute(f"SELECT id, name, email, selected_plan FROM {schema}.users WHERE telegram_id = %s", (telegram_id,))
+                user = cur.fetchone()
+                
+                if user:
+                    # Пользователь существует, обновляем токен
+                    token = generate_token()
+                    cur.execute(f"UPDATE {schema}.users SET auth_token = %s, last_login = NOW() WHERE id = %s", (token, user[0]))
+                    conn.commit()
+                    
+                    cur.close()
+                    conn.close()
+                    
+                    return {
+                        'statusCode': 200,
+                        'headers': {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        },
+                        'body': json.dumps({
+                            'success': True,
+                            'user': {
+                                'id': user[0],
+                                'name': user[1],
+                                'email': user[2],
+                                'selected_plan': user[3]
+                            },
+                            'token': token
+                        }),
+                        'isBase64Encoded': False
+                    }
+                else:
+                    # Создаем нового пользователя
+                    token = generate_token()
+                    temp_email = f"telegram_{telegram_id}@nikolife.temp"
+                    temp_password = generate_token()
+                    
+                    cur.execute(f"""
+                        INSERT INTO {schema}.users (name, email, password_hash, auth_token, telegram_id, telegram_username, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                        RETURNING id
+                    """, (full_name, temp_email, hash_password(temp_password), token, telegram_id, telegram_username))
+                    
+                    user_id = cur.fetchone()[0]
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+                    
+                    return {
+                        'statusCode': 200,
+                        'headers': {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        },
+                        'body': json.dumps({
+                            'success': True,
+                            'user': {
+                                'id': user_id,
+                                'name': full_name,
+                                'email': temp_email,
+                                'selected_plan': None
+                            },
+                            'token': token
+                        }),
+                        'isBase64Encoded': False
+                    }
+            
+            # Обычная регистрация
             name = body.get('name')
             email = body.get('email')
             password = body.get('password')

@@ -9,6 +9,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import TelegramCallback from "./pages/TelegramCallback";
 import Onboarding from "./pages/Onboarding";
 import Pricing from "./pages/Pricing";
 import Checkout from "./pages/Checkout";
@@ -32,6 +33,7 @@ const App = () => (
             } />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/auth/telegram/callback" element={<TelegramCallback />} />
             <Route path="/onboarding" element={
               <ProtectedRoute>
                 <Onboarding />
