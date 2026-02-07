@@ -6,13 +6,38 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import Icon from '@/components/ui/icon';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Profile() {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const [userProfile, setUserProfile] = useState({
+    name: 'Александр Николаев',
+    email: 'alexander@nikolife.ru',
+    avatar: 'АН'
+  });
+
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: ''
+  });
 
   const currentPlan = {
     id: 'premium',
@@ -47,6 +72,41 @@ export default function Profile() {
       console.error('Logout error:', error);
       setIsLoggingOut(false);
     }
+  };
+
+  const handleEditClick = () => {
+    setEditForm({
+      name: userProfile.name,
+      email: userProfile.email
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    
+    setTimeout(() => {
+      const initials = editForm.name
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+
+      setUserProfile({
+        name: editForm.name,
+        email: editForm.email,
+        avatar: initials
+      });
+      
+      setIsSaving(false);
+      setIsEditDialogOpen(false);
+      
+      toast({
+        title: 'Профиль обновлен',
+        description: 'Ваши данные успешно сохранены',
+      });
+    }, 1000);
   };
 
   return (
@@ -87,13 +147,21 @@ export default function Profile() {
               <div className="flex flex-col items-center text-center space-y-4">
                 <Avatar className="w-32 h-32">
                   <AvatarFallback className="text-4xl bg-gradient-to-br from-[#748c6d] to-[#5a7052] text-white">
-                    АН
+                    {userProfile.avatar}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Александр Николаев</h2>
-                  <p className="text-gray-600 mt-1">alexander@nikolife.ru</p>
+                  <h2 className="text-2xl font-bold text-gray-900">{userProfile.name}</h2>
+                  <p className="text-gray-600 mt-1">{userProfile.email}</p>
                 </div>
+                <Button
+                  variant="outline"
+                  onClick={handleEditClick}
+                  className="w-full gap-2"
+                >
+                  <Icon name="Edit2" size={16} />
+                  Редактировать профиль
+                </Button>
                 <Badge className="bg-gradient-to-r from-[#748c6d] to-[#5a7052] text-white">
                   <Icon name={currentPlan.icon as any} size={14} className="mr-1" />
                   {currentPlan.name}
@@ -265,6 +333,67 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Редактировать профиль</DialogTitle>
+            <DialogDescription>
+              Измените свои личные данные
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Полное имя</Label>
+              <Input
+                id="name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="Введите ваше имя"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                placeholder="Введите ваш email"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+              disabled={isSaving}
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={handleSaveProfile}
+              disabled={isSaving || !editForm.name.trim() || !editForm.email.trim()}
+              className="bg-gradient-to-r from-[#748c6d] to-[#5a7052] hover:from-[#5a7052] hover:to-[#4a5f42]"
+            >
+              {isSaving ? (
+                <>
+                  <Icon name="Loader2" size={16} className="mr-2 animate-spin" />
+                  Сохранение...
+                </>
+              ) : (
+                <>
+                  <Icon name="Save" size={16} className="mr-2" />
+                  Сохранить
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
