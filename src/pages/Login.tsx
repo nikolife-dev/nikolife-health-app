@@ -31,10 +31,10 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5] flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center mb-4">
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-[#748c6d] to-[#5a7052] rounded-2xl flex items-center justify-center mb-4">
             <Icon name="Heart" size={32} className="text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Вход в Nikolife</h1>
@@ -109,7 +109,7 @@ export default function Login() {
 
         <div className="text-center text-sm">
           <span className="text-gray-600">Ещё нет аккаунта? </span>
-          <Link to="/register" className="text-emerald-600 hover:text-emerald-700 font-semibold">
+          <Link to="/register" className="text-[#748c6d] hover:text-[#5a7052] font-semibold">
             Зарегистрироваться
           </Link>
         </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import Icon from '@/components/ui/icon';
 export default function Checkout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const { planId, planName, price, isYearly } = location.state || {};
 
   const [paymentMethod, setPaymentMethod] = useState('card');
@@ -76,16 +78,27 @@ export default function Checkout() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5] py-12 px-4">
       <div className="max-w-5xl mx-auto">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate('/pricing')}
-          className="mb-6"
-        >
-          <Icon name="ArrowLeft" size={20} className="mr-2" />
-          Назад к тарифам
-        </Button>
+        <div className="flex justify-between items-center mb-6">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/pricing')}
+          >
+            <Icon name="ArrowLeft" size={20} className="mr-2" />
+            Назад к тарифам
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+          >
+            <Icon name="LogOut" size={20} className="mr-2" />
+            Выйти
+          </Button>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
@@ -100,13 +113,13 @@ export default function Checkout() {
                     <div className="space-y-3">
                       <Card 
                         className={`p-4 cursor-pointer transition-all ${
-                          paymentMethod === 'card' ? 'border-emerald-500 border-2 bg-emerald-50' : ''
+                          paymentMethod === 'card' ? 'border-[#748c6d] border-2 bg-[#e8e6dc]' : ''
                         }`}
                         onClick={() => setPaymentMethod('card')}
                       >
                         <div className="flex items-center space-x-4">
                           <RadioGroupItem value="card" id="card" />
-                          <Icon name="CreditCard" size={24} className="text-emerald-600" />
+                          <Icon name="CreditCard" size={24} className="text-[#748c6d]" />
                           <Label htmlFor="card" className="flex-1 cursor-pointer">
                             Банковская карта
                           </Label>
@@ -115,13 +128,13 @@ export default function Checkout() {
 
                       <Card 
                         className={`p-4 cursor-pointer transition-all ${
-                          paymentMethod === 'sbp' ? 'border-emerald-500 border-2 bg-emerald-50' : ''
+                          paymentMethod === 'sbp' ? 'border-[#748c6d] border-2 bg-[#e8e6dc]' : ''
                         }`}
                         onClick={() => setPaymentMethod('sbp')}
                       >
                         <div className="flex items-center space-x-4">
                           <RadioGroupItem value="sbp" id="sbp" />
-                          <Icon name="Smartphone" size={24} className="text-emerald-600" />
+                          <Icon name="Smartphone" size={24} className="text-[#748c6d]" />
                           <Label htmlFor="sbp" className="flex-1 cursor-pointer">
                             Система быстрых платежей (СБП)
                           </Label>
@@ -130,13 +143,13 @@ export default function Checkout() {
 
                       <Card 
                         className={`p-4 cursor-pointer transition-all ${
-                          paymentMethod === 'wallet' ? 'border-emerald-500 border-2 bg-emerald-50' : ''
+                          paymentMethod === 'wallet' ? 'border-[#748c6d] border-2 bg-[#e8e6dc]' : ''
                         }`}
                         onClick={() => setPaymentMethod('wallet')}
                       >
                         <div className="flex items-center space-x-4">
                           <RadioGroupItem value="wallet" id="wallet" />
-                          <Icon name="Wallet" size={24} className="text-emerald-600" />
+                          <Icon name="Wallet" size={24} className="text-[#748c6d]" />
                           <Label htmlFor="wallet" className="flex-1 cursor-pointer">
                             Apple Pay / Google Pay
                           </Label>

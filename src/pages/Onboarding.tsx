@@ -63,7 +63,7 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5] flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl p-8 space-y-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -78,8 +78,8 @@ export default function Onboarding() {
         {step === 1 && (
           <div className="space-y-6 animate-fade-in">
             <div className="text-center space-y-2">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-emerald-100 to-teal-100 rounded-full flex items-center justify-center mb-4">
-                <Icon name="Target" size={40} className="text-emerald-600" />
+              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-[#e8e6dc] to-[#d8d5c5] rounded-full flex items-center justify-center mb-4">
+                <Icon name="Target" size={40} className="text-[#748c6d]" />
               </div>
               <h1 className="text-3xl font-bold text-gray-900">Какова ваша главная цель?</h1>
               <p className="text-gray-600">Мы создадим персональный план для достижения вашей цели</p>
@@ -96,13 +96,13 @@ export default function Onboarding() {
                   <Card
                     key={option.value}
                     className={`p-4 cursor-pointer transition-all hover:shadow-md ${
-                      data.goal === option.value ? 'border-emerald-500 border-2 bg-emerald-50' : ''
+                      data.goal === option.value ? 'border-[#748c6d] border-2 bg-[#e8e6dc]' : ''
                     }`}
                     onClick={() => setData({ ...data, goal: option.value })}
                   >
                     <div className="flex items-center space-x-4">
                       <RadioGroupItem value={option.value} id={option.value} />
-                      <Icon name={option.icon as any} size={24} className="text-emerald-600" />
+                      <Icon name={option.icon as any} size={24} className="text-[#748c6d]" />
                       <Label htmlFor={option.value} className="flex-1 cursor-pointer text-base">
                         {option.label}
                       </Label>
@@ -117,8 +117,8 @@ export default function Onboarding() {
         {step === 2 && (
           <div className="space-y-6 animate-fade-in">
             <div className="text-center space-y-2">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-4">
-                <Icon name="Activity" size={40} className="text-blue-600" />
+              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-[#e8e6dc] to-[#d8d5c5] rounded-full flex items-center justify-center mb-4">
+                <Icon name="Activity" size={40} className="text-[#748c6d]" />
               </div>
               <h1 className="text-3xl font-bold text-gray-900">Ваш уровень активности?</h1>
               <p className="text-gray-600">Это поможет рассчитать оптимальную нагрузку</p>
@@ -136,7 +136,7 @@ export default function Onboarding() {
                   <Card
                     key={option.value}
                     className={`p-4 cursor-pointer transition-all hover:shadow-md ${
-                      data.activityLevel === option.value ? 'border-emerald-500 border-2 bg-emerald-50' : ''
+                      data.activityLevel === option.value ? 'border-[#748c6d] border-2 bg-[#e8e6dc]' : ''
                     }`}
                     onClick={() => setData({ ...data, activityLevel: option.value })}
                   >
@@ -159,8 +159,8 @@ export default function Onboarding() {
         {step === 3 && (
           <div className="space-y-6 animate-fade-in">
             <div className="text-center space-y-2">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-orange-100 to-red-100 rounded-full flex items-center justify-center mb-4">
-                <Icon name="User" size={40} className="text-orange-600" />
+              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-[#e8e6dc] to-[#d8d5c5] rounded-full flex items-center justify-center mb-4">
+                <Icon name="User" size={40} className="text-[#748c6d]" />
               </div>
               <h1 className="text-3xl font-bold text-gray-900">Расскажите о себе</h1>
               <p className="text-gray-600">Эти данные нужны для точного расчета плана</p>
@@ -205,12 +205,12 @@ export default function Onboarding() {
                 </div>
               </div>
 
-              <Card className="p-6 bg-blue-50 border-blue-200">
+              <Card className="p-6 bg-[#e8e6dc] border-[#c9c6b5]">
                 <div className="flex gap-3">
-                  <Icon name="Info" size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                  <Icon name="Info" size={20} className="text-[#748c6d] flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm text-blue-900 font-semibold mb-1">Почему мы спрашиваем?</p>
-                    <p className="text-sm text-blue-700">
+                    <p className="text-sm text-gray-900 font-semibold mb-1">Почему мы спрашиваем?</p>
+                    <p className="text-sm text-gray-700">
                       Эти данные используются для расчета базового метаболизма и создания персонального плана питания и тренировок. Ваша информация защищена.
                     </p>
                   </div>
@@ -223,8 +223,8 @@ export default function Onboarding() {
         {step === 4 && (
           <div className="space-y-6 animate-fade-in">
             <div className="text-center space-y-2">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mb-4">
-                <Icon name="Utensils" size={40} className="text-green-600" />
+              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-[#e8e6dc] to-[#d8d5c5] rounded-full flex items-center justify-center mb-4">
+                <Icon name="Utensils" size={40} className="text-[#748c6d]" />
               </div>
               <h1 className="text-3xl font-bold text-gray-900">Предпочтения в питании</h1>
               <p className="text-gray-600">Мы учтем это при составлении плана питания</p>
@@ -243,7 +243,7 @@ export default function Onboarding() {
                   <Card
                     key={option.value}
                     className={`p-4 cursor-pointer transition-all hover:shadow-md ${
-                      data.dietPreference === option.value ? 'border-emerald-500 border-2 bg-emerald-50' : ''
+                      data.dietPreference === option.value ? 'border-[#748c6d] border-2 bg-[#e8e6dc]' : ''
                     }`}
                     onClick={() => setData({ ...data, dietPreference: option.value })}
                   >

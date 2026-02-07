@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +21,7 @@ interface PricingPlan {
 
 export default function Pricing() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [isYearly, setIsYearly] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
@@ -101,8 +103,20 @@ export default function Pricing() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5] py-12 px-4">
       <div className="max-w-7xl mx-auto space-y-12">
+        <div className="flex justify-end">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+          >
+            <Icon name="LogOut" size={20} className="mr-2" />
+            Выйти
+          </Button>
+        </div>
         <div className="text-center space-y-4">
           <Badge className="mx-auto">Тарифные планы</Badge>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
@@ -125,7 +139,7 @@ export default function Pricing() {
               Ежегодно
             </Label>
             {isYearly && (
-              <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
+              <Badge variant="secondary" className="bg-[#e8e6dc] text-[#5a7052]">
                 Экономия до 33%
               </Badge>
             )}
@@ -142,13 +156,13 @@ export default function Pricing() {
                 key={plan.id}
                 className={`relative p-8 transition-all duration-300 ${
                   plan.popular 
-                    ? 'border-2 border-emerald-500 shadow-2xl scale-105 md:scale-110' 
+                    ? 'border-2 border-[#748c6d] shadow-2xl scale-105 md:scale-110' 
                     : 'hover:shadow-xl'
                 }`}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <Badge className="bg-emerald-500 text-white px-4 py-1">
+                    <Badge className="bg-[#748c6d] text-white px-4 py-1">
                       <Icon name="Star" size={14} className="mr-1" />
                       Популярный
                     </Badge>
@@ -159,7 +173,7 @@ export default function Pricing() {
                   <div className="text-center space-y-2">
                     <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center ${
                       plan.popular 
-                        ? 'bg-gradient-to-br from-emerald-500 to-teal-500' 
+                        ? 'bg-gradient-to-br from-[#748c6d] to-[#5a7052]' 
                         : 'bg-gradient-to-br from-gray-100 to-gray-200'
                     }`}>
                       <Icon 
@@ -192,7 +206,7 @@ export default function Pricing() {
                     disabled={selectedPlan === plan.id}
                     className={`w-full h-12 text-lg ${
                       plan.popular 
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600' 
+                        ? 'bg-gradient-to-r from-[#748c6d] to-[#5a7052] hover:from-[#5a7052] hover:to-[#4a5f42]' 
                         : ''
                     }`}
                     variant={plan.popular ? 'default' : 'outline'}
@@ -216,7 +230,7 @@ export default function Pricing() {
                           name="CheckCircle2" 
                           size={20} 
                           className={`flex-shrink-0 ${
-                            plan.popular ? 'text-emerald-500' : 'text-gray-400'
+                            plan.popular ? 'text-[#748c6d]' : 'text-gray-400'
                           }`}
                         />
                         <span className="text-sm text-gray-700">{feature}</span>
