@@ -5,7 +5,7 @@ import Icon from '@/components/ui/icon';
 
 declare global {
   interface Window {
-    TelegramLoginWidget: any;
+    TelegramLoginWidget: unknown;
   }
 }
 
@@ -18,7 +18,7 @@ export default function Login() {
     script.setAttribute('data-telegram-login', 'nikolife_health_bot');
     script.setAttribute('data-size', 'large');
     script.setAttribute('data-radius', '12');
-    script.setAttribute('data-auth-url', 'https://health.nikolife.ru/auth/telegram/callback');
+    script.setAttribute('data-auth-url', 'https://with-nikolife.com/auth/telegram/callback');
     script.setAttribute('data-request-access', 'write');
     script.async = true;
 

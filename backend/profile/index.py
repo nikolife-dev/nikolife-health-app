@@ -47,7 +47,7 @@ def handler(event: dict, context) -> dict:
         conn = psycopg2.connect(database_url)
         cur = conn.cursor()
         
-        cur.execute(f"SELECT id, name, email FROM {schema}.users WHERE auth_token = %s", (auth_token,))
+        cur.execute(f"SELECT id, name, email, telegram_id, telegram_username, selected_plan FROM {schema}.users WHERE auth_token = %s", (auth_token,))
         user = cur.fetchone()
         
         if not user:
@@ -60,7 +60,7 @@ def handler(event: dict, context) -> dict:
                 'isBase64Encoded': False
             }
         
-        user_id, current_name, current_email = user
+        user_id, current_name, current_email, telegram_id, telegram_username, selected_plan = user
         
         if method == 'GET':
             initials = ''.join([word[0] for word in current_name.split()[:2]]).upper()
@@ -77,7 +77,10 @@ def handler(event: dict, context) -> dict:
                         'id': user_id,
                         'name': current_name,
                         'email': current_email,
-                        'avatar': initials
+                        'avatar': initials,
+                        'telegram_id': telegram_id,
+                        'telegram_username': telegram_username,
+                        'selected_plan': selected_plan
                     }
                 }),
                 'isBase64Encoded': False
@@ -87,6 +90,9 @@ def handler(event: dict, context) -> dict:
             body = json.loads(event.get('body', '{}'))
             new_name = body.get('name', '').strip()
             new_email = body.get('email', '').strip()
+            new_telegram_id = body.get('telegram_id')
+            new_telegram_username = body.get('telegram_username')
+            new_selected_plan = body.get('selected_plan')
             
             if not new_name or not new_email:
                 cur.close()
@@ -110,9 +116,24 @@ def handler(event: dict, context) -> dict:
                         'isBase64Encoded': False
                     }
             
+            update_fields = ['name = %s', 'email = %s']
+            update_values = [new_name, new_email]
+            
+            if new_telegram_id is not None:
+                update_fields.append('telegram_id = %s')
+                update_values.append(new_telegram_id)
+            if new_telegram_username is not None:
+                update_fields.append('telegram_username = %s')
+                update_values.append(new_telegram_username)
+            if new_selected_plan is not None:
+                update_fields.append('selected_plan = %s')
+                update_values.append(new_selected_plan)
+            
+            update_values.append(user_id)
+            
             cur.execute(
-                f"UPDATE {schema}.users SET name = %s, email = %s WHERE id = %s",
-                (new_name, new_email, user_id)
+                f"UPDATE {schema}.users SET {', '.join(update_fields)} WHERE id = %s",
+                tuple(update_values)
             )
             conn.commit()
             

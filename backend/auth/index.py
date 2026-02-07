@@ -36,6 +36,8 @@ def handler(event: dict, context) -> dict:
             name = body.get('name')
             email = body.get('email')
             password = body.get('password')
+            telegram_id = body.get('telegram_id')
+            telegram_username = body.get('telegram_username')
             
             if not name or not email or not password:
                 return {
@@ -70,10 +72,10 @@ def handler(event: dict, context) -> dict:
                 }
             
             cur.execute(f"""
-                INSERT INTO {schema}.users (name, email, password_hash, auth_token, created_at)
-                VALUES (%s, %s, %s, %s, NOW())
+                INSERT INTO {schema}.users (name, email, password_hash, auth_token, telegram_id, telegram_username, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
                 RETURNING id
-            """, (name, email, password_hash, token))
+            """, (name, email, password_hash, token, telegram_id, telegram_username))
             
             user_id = cur.fetchone()[0]
             conn.commit()
@@ -213,7 +215,7 @@ def handler(event: dict, context) -> dict:
             
             schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
             cur.execute(f"""
-                SELECT id, name, email, created_at FROM {schema}.users WHERE auth_token = %s
+                SELECT id, name, email, created_at, telegram_id, telegram_username, selected_plan FROM {schema}.users WHERE auth_token = %s
             """, (auth_token,))
             
             row = cur.fetchone()
@@ -241,7 +243,10 @@ def handler(event: dict, context) -> dict:
                     'id': row[0],
                     'name': row[1],
                     'email': row[2],
-                    'createdAt': row[3].isoformat() if row[3] else None
+                    'createdAt': row[3].isoformat() if row[3] else None,
+                    'telegram_id': row[4],
+                    'telegram_username': row[5],
+                    'selected_plan': row[6]
                 }),
                 'isBase64Encoded': False
             }

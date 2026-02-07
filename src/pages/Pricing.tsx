@@ -82,6 +82,23 @@ export default function Pricing() {
   const handleSelectPlan = async (planId: string) => {
     setSelectedPlan(planId);
     
+    // Сохраняем выбранный тариф в профиле
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ selected_plan: planId })
+        });
+      }
+    } catch (error) {
+      console.error('Failed to save plan selection:', error);
+    }
+    
     if (planId === 'free') {
       navigate('/');
       return;
@@ -177,7 +194,7 @@ export default function Pricing() {
                         : 'bg-gradient-to-br from-gray-100 to-gray-200'
                     }`}>
                       <Icon 
-                        name={plan.icon as any} 
+                        name={plan.icon as "Heart" | "Sparkles" | "Users"} 
                         size={32} 
                         className={plan.popular ? 'text-white' : 'text-gray-600'} 
                       />

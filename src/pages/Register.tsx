@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,21 @@ import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import Icon from '@/components/ui/icon';
 import { useAuth } from '@/contexts/AuthContext';
+
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: {
+        initDataUnsafe?: {
+          user?: {
+            id: number;
+            username?: string;
+          };
+        };
+      };
+    };
+  }
+}
 
 export default function Register() {
   const navigate = useNavigate();
@@ -20,6 +35,18 @@ export default function Register() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [telegramData, setTelegramData] = useState<{ telegram_id?: number; telegram_username?: string }>();
+
+  useEffect(() => {
+    // Получаем данные из Telegram Web App если доступны
+    if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+      const user = window.Telegram.WebApp.initDataUnsafe.user;
+      setTelegramData({
+        telegram_id: user.id,
+        telegram_username: user.username
+      });
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +70,7 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      await register(formData.name, formData.email, formData.password);
+      await register(formData.name, formData.email, formData.password, telegramData);
       navigate('/onboarding');
     } catch (err) {
       setError('Ошибка регистрации. Возможно, email уже используется');

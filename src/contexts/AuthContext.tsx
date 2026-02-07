@@ -4,6 +4,9 @@ interface User {
   id: number;
   name: string;
   email: string;
+  telegram_id?: number;
+  telegram_username?: string;
+  selected_plan?: string;
 }
 
 interface AuthContextType {
@@ -11,7 +14,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, telegramData?: { telegram_id?: number; telegram_username?: string }) => Promise<void>;
   logout: () => void;
 }
 
@@ -78,11 +81,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string, telegramData?: { telegram_id?: number; telegram_username?: string }) => {
     const response = await fetch(AUTH_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password })
+      body: JSON.stringify({ 
+        name, 
+        email, 
+        password,
+        telegram_id: telegramData?.telegram_id,
+        telegram_username: telegramData?.telegram_username
+      })
     });
 
     if (!response.ok) {

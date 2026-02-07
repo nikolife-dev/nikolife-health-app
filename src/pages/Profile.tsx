@@ -31,7 +31,9 @@ export default function Profile() {
   const [userProfile, setUserProfile] = useState({
     name: '',
     email: '',
-    avatar: ''
+    avatar: '',
+    telegram_username: '',
+    selected_plan: ''
   });
   
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -78,6 +80,7 @@ export default function Profile() {
 
   useEffect(() => {
     loadProfile();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleEditClick = () => {
@@ -231,7 +234,7 @@ export default function Profile() {
                   Редактировать профиль
                 </Button>
                 <Badge className="bg-gradient-to-r from-[#748c6d] to-[#5a7052] text-white">
-                  <Icon name={currentPlan.icon as any} size={14} className="mr-1" />
+                  <Icon name={currentPlan.icon as "Sparkles"} size={14} className="mr-1" />
                   {currentPlan.name}
                 </Badge>
               </div>
@@ -285,7 +288,7 @@ export default function Profile() {
                     <p className="text-gray-600">Управляйте своей подпиской</p>
                   </div>
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#748c6d] to-[#5a7052] flex items-center justify-center">
-                    <Icon name={currentPlan.icon as any} size={32} className="text-white" />
+                    <Icon name={currentPlan.icon as "Sparkles"} size={32} className="text-white" />
                   </div>
                 </div>
 
