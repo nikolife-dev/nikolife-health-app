@@ -4,7 +4,6 @@ import psycopg2
 import hashlib
 import secrets
 import hmac
-from datetime import datetime, timedelta
 
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
@@ -29,7 +28,6 @@ def handler(event: dict, context) -> dict:
     Авторизация и регистрация пользователей
     """
     method = event.get('httpMethod', 'GET')
-    path = event.get('path', '/')
     
     if method == 'OPTIONS':
         return {
@@ -162,155 +160,133 @@ def handler(event: dict, context) -> dict:
                         'isBase64Encoded': False
                     }
             
-            # Обычная регистрация
-            name = body.get('name')
-            email = body.get('email')
-            password = body.get('password')
-            telegram_id = body.get('telegram_id')
-            telegram_username = body.get('telegram_username')
-            
-            if not name or not email or not password:
-                return {
-                    'statusCode': 400,
-                    'headers': {
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*'
-                    },
-                    'body': json.dumps({'success': False, 'error': 'Все поля обязательны'}),
-                    'isBase64Encoded': False
-                }
-            
-            password_hash = hash_password(password)
-            token = generate_token()
-            
-            conn = psycopg2.connect(os.environ['DATABASE_URL'])
-            cur = conn.cursor()
-            
-            schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
-            cur.execute(f"SELECT id FROM {schema}.users WHERE email = %s", (email,))
-            if cur.fetchone():
+            # Обычная регистрация - проверяем наличие всех полей
+            if body.get('name') and body.get('email') and body.get('password'):
+                name = body.get('name')
+                email = body.get('email')
+                password = body.get('password')
+                telegram_id = body.get('telegram_id')
+                telegram_username = body.get('telegram_username')
+                
+                password_hash = hash_password(password)
+                token = generate_token()
+                
+                conn = psycopg2.connect(os.environ['DATABASE_URL'])
+                cur = conn.cursor()
+                
+                schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+                cur.execute(f"SELECT id FROM {schema}.users WHERE email = %s", (email,))
+                if cur.fetchone():
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        },
+                        'body': json.dumps({'success': False, 'error': 'Email уже используется'}),
+                        'isBase64Encoded': False
+                    }
+                
+                cur.execute(f"""
+                    INSERT INTO {schema}.users (name, email, password_hash, auth_token, telegram_id, telegram_username, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                    RETURNING id
+                """, (name, email, password_hash, token, telegram_id, telegram_username))
+                
+                user_id = cur.fetchone()[0]
+                conn.commit()
                 cur.close()
                 conn.close()
+                
                 return {
-                    'statusCode': 400,
+                    'statusCode': 200,
                     'headers': {
                         'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*'
+                        'Access-Control-Allow-Origin': '*',
+                        'X-Set-Cookie': f'auth_token={token}; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax'
                     },
-                    'body': json.dumps({'success': False, 'error': 'Email уже используется'}),
+                    'body': json.dumps({
+                        'success': True,
+                        'user': {
+                            'id': user_id,
+                            'name': name,
+                            'email': email
+                        },
+                        'token': token
+                    }),
                     'isBase64Encoded': False
                 }
             
-            cur.execute(f"""
-                INSERT INTO {schema}.users (name, email, password_hash, auth_token, telegram_id, telegram_username, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, NOW())
-                RETURNING id
-            """, (name, email, password_hash, token, telegram_id, telegram_username))
-            
-            user_id = cur.fetchone()[0]
-            conn.commit()
-            cur.close()
-            conn.close()
-            
-            return {
-                'statusCode': 200,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'X-Set-Cookie': f'auth_token={token}; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax'
-                },
-                'body': json.dumps({
-                    'success': True,
-                    'user': {
-                        'id': user_id,
-                        'name': name,
-                        'email': email
+            # Обычный логин - проверяем email и password
+            if body.get('email') and body.get('password'):
+                email = body.get('email')
+                password = body.get('password')
+                
+                password_hash = hash_password(password)
+                
+                conn = psycopg2.connect(os.environ['DATABASE_URL'])
+                cur = conn.cursor()
+                
+                schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+                cur.execute(f"""
+                    SELECT id, name, email, password_hash FROM {schema}.users WHERE email = %s
+                """, (email,))
+                
+                row = cur.fetchone()
+                
+                if not row or row[3] != password_hash:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 401,
+                        'headers': {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        },
+                        'body': json.dumps({'success': False, 'error': 'Неверный email или пароль'}),
+                        'isBase64Encoded': False
+                    }
+                
+                token = generate_token()
+                user_id, name, email_db = row[0], row[1], row[2]
+                
+                cur.execute(f"""
+                    UPDATE {schema}.users SET auth_token = %s, last_login = NOW() WHERE id = %s
+                """, (token, user_id))
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*',
+                        'X-Set-Cookie': f'auth_token={token}; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax'
                     },
-                    'token': token
-                }),
-                'isBase64Encoded': False
-            }
+                    'body': json.dumps({
+                        'success': True,
+                        'user': {
+                            'id': user_id,
+                            'name': name,
+                            'email': email_db
+                        },
+                        'token': token
+                    }),
+                    'isBase64Encoded': False
+                }
             
-        except Exception as e:
+            # Если не подошло ни под одно условие
             return {
-                'statusCode': 500,
+                'statusCode': 400,
                 'headers': {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*'
                 },
-                'body': json.dumps({'success': False, 'error': str(e)}),
-                'isBase64Encoded': False
-            }
-    
-
-        try:
-            body = json.loads(event.get('body', '{}'))
-            email = body.get('email')
-            password = body.get('password')
-            
-            if not email or not password:
-                return {
-                    'statusCode': 400,
-                    'headers': {
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*'
-                    },
-                    'body': json.dumps({'success': False, 'error': 'Email и пароль обязательны'}),
-                    'isBase64Encoded': False
-                }
-            
-            password_hash = hash_password(password)
-            
-            conn = psycopg2.connect(os.environ['DATABASE_URL'])
-            cur = conn.cursor()
-            
-            schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
-            cur.execute(f"""
-                SELECT id, name, email, password_hash FROM {schema}.users WHERE email = %s
-            """, (email,))
-            
-            row = cur.fetchone()
-            
-            if not row or row[3] != password_hash:
-                cur.close()
-                conn.close()
-                return {
-                    'statusCode': 401,
-                    'headers': {
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*'
-                    },
-                    'body': json.dumps({'success': False, 'error': 'Неверный email или пароль'}),
-                    'isBase64Encoded': False
-                }
-            
-            token = generate_token()
-            user_id, name, email_db = row[0], row[1], row[2]
-            
-            cur.execute(f"""
-                UPDATE {schema}.users SET auth_token = %s, last_login = NOW() WHERE id = %s
-            """, (token, user_id))
-            
-            conn.commit()
-            cur.close()
-            conn.close()
-            
-            return {
-                'statusCode': 200,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'X-Set-Cookie': f'auth_token={token}; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax'
-                },
-                'body': json.dumps({
-                    'success': True,
-                    'user': {
-                        'id': user_id,
-                        'name': name,
-                        'email': email_db
-                    },
-                    'token': token
-                }),
+                'body': json.dumps({'success': False, 'error': 'Неверные параметры запроса'}),
                 'isBase64Encoded': False
             }
             
@@ -393,11 +369,11 @@ def handler(event: dict, context) -> dict:
             }
     
     return {
-        'statusCode': 404,
+        'statusCode': 405,
         'headers': {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*'
         },
-        'body': json.dumps({'error': 'Not found'}),
+        'body': json.dumps({'error': 'Method not allowed'}),
         'isBase64Encoded': False
     }
