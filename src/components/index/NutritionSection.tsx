@@ -304,10 +304,16 @@ export default function NutritionSection({
 
   const deleteRecipe = async (menuItemId: number) => {
     dbg("[DEL] deleteRecipe: start", { menuItemId });
+
     try {
       const token = localStorage.getItem("auth_token");
       if (!token) {
         logError("[DEL] no auth token");
+        toast({
+          title: "Ошибка",
+          description: "Нет токена авторизации",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -316,28 +322,68 @@ export default function NutritionSection({
 
       const response = await fetch(url, {
         method: "DELETE",
-        headers: { "X-Auth-Token": token },
+        headers: {
+          "X-Auth-Token": token,
+          Accept: "application/json",
+        },
       });
 
-      dbg("[DEL] response", { status: response.status, ok: response.ok });
-      const data = await response.json();
-      dbg("[DEL] json", data);
+      dbg("[DEL] response meta", {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText,
+      });
 
-      if (data.success) {
+      const rawText = await response.text();
+      dbg("[DEL] response rawText", rawText || "[empty body]");
+
+      let data: any = null;
+      try {
+        data = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        dbg("[DEL] response is NOT JSON");
+      }
+
+      dbg("[DEL] parsed json", data);
+
+      if (!response.ok) {
+        const msg =
+          data?.error || data?.message || rawText || `HTTP ${response.status}`;
+
+        logError(`[DEL] HTTP error: ${msg}`);
+        toast({
+          title: "Ошибка удаления",
+          description: msg,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // success даже если backend вернул 204 No Content
+      const success = data?.success ?? true;
+
+      if (success) {
         logSuccess("[DEL] success");
         setMenu((prev) => prev.filter((item) => item.id !== menuItemId));
         toast({ title: "Удалено", description: "Рецепт удален из плана" });
       } else {
-        logError("[DEL] failed");
+        const msg = data?.error || data?.message || "success=false";
+        logError(`[DEL] failed: ${msg}`);
+        toast({
+          title: "Ошибка удаления",
+          description: msg,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       logError("[DEL] exception");
+      dbg("[DEL] exception payload", { error });
       toast({
         title: "Ошибка",
-        description: "Не удалось удалить рецепт",
+        description:
+          error instanceof Error ? error.message : "Не удалось удалить рецепт",
         variant: "destructive",
       });
-      dbg("[DEL] exception payload", { error });
     } finally {
       dbg("[DEL] deleteRecipe: end");
     }
