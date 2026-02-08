@@ -62,7 +62,7 @@ function DraggableRecipe({ menuItem, onDelete }: DraggableRecipeProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: menuItem.id });
+  } = useSortable({ id: String(menuItem.id) }); // ✅ string id for dnd-kit stability
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -141,11 +141,41 @@ export default function NutritionSection({
   const navigate = useNavigate();
   const { toast } = useToast();
   const { logInfo, logSuccess, logError } = useLiveLogs();
+
+  /**
+   * ========================
+   * DEBUG / DETAILED LOGGING
+   * ========================
+   * Включи/выключи подробные логи одной строкой.
+   */
+  const DEBUG = true;
+
+  // Безопасный логгер: не падает на циклических объектах
+  const dbg = (message: string, data?: unknown) => {
+    if (!DEBUG) return;
+    try {
+      if (data === undefined) {
+        logInfo(message);
+      } else {
+        // Если LiveLogs умеет принимать объект вторым аргументом — отлично.
+        // Если нет — мы дополнительно сериализуем в строку.
+        // @ts-ignore
+        logInfo(message, data);
+      }
+    } catch {
+      try {
+        logInfo(`${message} :: ${JSON.stringify(data)}`);
+      } catch {
+        logInfo(`${message} :: [unserializable payload]`);
+      }
+    }
+  };
+
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [weekDates, setWeekDates] = useState<WeekDate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [activeId, setActiveId] = useState<number | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null); // ✅ string id
 
   const meals = {
     breakfast: "Завтрак",
@@ -162,48 +192,68 @@ export default function NutritionSection({
   );
 
   useEffect(() => {
+    dbg("[INIT] NutritionSection mounted");
     loadMenu();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadMenu = async () => {
     setIsLoading(true);
-    logInfo("Загрузка меню на неделю...");
+    dbg("[MENU] loadMenu: start");
     try {
       const token = localStorage.getItem("auth_token");
       if (!token) {
-        logError("Нет токена авторизации");
+        logError("[MENU] loadMenu: no auth token");
         setIsLoading(false);
         return;
       }
 
-      const response = await fetch(
-        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6",
-        { headers: { "X-Auth-Token": token } },
-      );
+      const url =
+        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6";
+      dbg("[MENU] loadMenu: fetch", { url });
+
+      const response = await fetch(url, { headers: { "X-Auth-Token": token } });
+      dbg("[MENU] loadMenu: response", {
+        status: response.status,
+        ok: response.ok,
+      });
 
       const data = await response.json();
+      dbg("[MENU] loadMenu: json", {
+        hasMenu: !!data?.menu,
+        menuLength: Array.isArray(data?.menu) ? data.menu.length : null,
+        hasWeekDates: !!data?.week_dates,
+        weekDatesLength: Array.isArray(data?.week_dates)
+          ? data.week_dates.length
+          : null,
+      });
+
       if (data.menu) {
-        logSuccess(`Меню загружено: ${data.menu.length} блюд`);
+        logSuccess(`[MENU] loaded: ${data.menu.length} items`);
         setMenu(data.menu);
         if (data.week_dates) {
           setWeekDates(data.week_dates);
         }
+      } else {
+        dbg("[MENU] loadMenu: no menu in response", data);
       }
     } catch (error) {
-      logError("Ошибка загрузки меню");
+      logError("[MENU] loadMenu: failed");
       console.error("Failed to load menu:", error);
+      dbg("[MENU] loadMenu: exception", { error });
     } finally {
       setIsLoading(false);
+      dbg("[MENU] loadMenu: end");
     }
   };
 
   const generateMenu = async () => {
     setIsGenerating(true);
-    logInfo("Запуск генерации меню на неделю...");
+    dbg("[GEN] generateMenu: start");
     try {
       const token = localStorage.getItem("auth_token");
       if (!token) {
-        logError("Нет токена авторизации");
+        logError("[GEN] no auth token");
         toast({
           title: "Требуется авторизация",
           description: "Войдите в систему для генерации меню",
@@ -213,40 +263,39 @@ export default function NutritionSection({
         return;
       }
 
-      logInfo("Отправка запроса на генерацию...");
-      const response = await fetch(
-        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/generate",
-        {
-          method: "POST",
-          headers: {
-            "X-Auth-Token": token,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-        },
-      );
+      const url =
+        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/generate";
+      dbg("[GEN] request", { url, method: "POST" });
 
-      logInfo(`Ответ получен: status=${response.status}`);
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "X-Auth-Token": token, "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      dbg("[GEN] response", { status: response.status, ok: response.ok });
       const data = await response.json();
+      dbg("[GEN] json", data);
+
       if (!response.ok) {
-        logError(`Ошибка генерации: ${data.error || "unknown"}`);
+        logError(`[GEN] failed: ${data.error || "unknown"}`);
         throw new Error(data.error || "Ошибка генерации меню");
       }
 
       if (data.success) {
-        logSuccess(`Генерация завершена: ${data.generated_count} блюд`);
+        logSuccess(`[GEN] success: generated_count=${data.generated_count}`);
         toast({
           title: "Успешно!",
           description: `Сгенерировано ${data.generated_count} блюд`,
         });
         await loadMenu();
       } else {
-        logError("Генерация не удалась");
+        logError("[GEN] not successful");
         throw new Error(data.error || "Не удалось сгенерировать меню");
       }
     } catch (error) {
       logError(
-        `Критическая ошибка генерации: ${error instanceof Error ? error.message : "unknown"}`,
+        `[GEN] exception: ${error instanceof Error ? error.message : "unknown"}`,
       );
       console.error("Generate menu error:", error);
       toast({
@@ -257,47 +306,66 @@ export default function NutritionSection({
             : "Не удалось сгенерировать меню",
         variant: "destructive",
       });
+      dbg("[GEN] exception payload", { error });
     } finally {
       setIsGenerating(false);
+      dbg("[GEN] generateMenu: end");
     }
   };
 
   const deleteRecipe = async (menuItemId: number) => {
-    logInfo(`Удаление рецепта из меню: ID=${menuItemId}`);
+    dbg("[DEL] deleteRecipe: start", { menuItemId });
     try {
       const token = localStorage.getItem("auth_token");
-      const response = await fetch(
-        `https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/${menuItemId}`,
-        {
-          method: "DELETE",
-          //правка X-Auth-Token
-          headers: { "X-Auth-Token": token! },
-        },
-      );
+      if (!token) {
+        logError("[DEL] no auth token");
+        return;
+      }
 
+      const url = `https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/${menuItemId}`;
+      dbg("[DEL] request", { url, method: "DELETE" });
+
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: { "X-Auth-Token": token },
+      });
+
+      dbg("[DEL] response", { status: response.status, ok: response.ok });
       const data = await response.json();
+      dbg("[DEL] json", data);
+
       if (data.success) {
-        logSuccess("Рецепт успешно удален");
-        setMenu(menu.filter((item) => item.id !== menuItemId));
+        logSuccess("[DEL] success");
+        setMenu((prev) => prev.filter((item) => item.id !== menuItemId));
         toast({
           title: "Удалено",
           description: "Рецепт удален из плана",
         });
+      } else {
+        logError("[DEL] failed");
       }
     } catch (error) {
-      logError("Не удалось удалить рецепт");
+      logError("[DEL] exception");
       toast({
         title: "Ошибка",
         description: "Не удалось удалить рецепт",
         variant: "destructive",
       });
+      dbg("[DEL] exception payload", { error });
+    } finally {
+      dbg("[DEL] deleteRecipe: end", { menuLen: menu.length });
     }
   };
 
   const getRecipesForMeal = (dayNumber: number, mealType: string) => {
-    return menu
+    const filtered = menu
       .filter((m) => m.day_of_week === dayNumber && m.meal_type === mealType)
       .sort((a, b) => a.position - b.position);
+
+    // детальный лог по запросу можно включить при необходимости:
+    // dbg('[SEL] getRecipesForMeal', { dayNumber, mealType, count: filtered.length, ids: filtered.map(x => x.id) });
+
+    return filtered;
   };
 
   const getTotalCaloriesForMeal = (dayNumber: number, mealType: string) => {
@@ -311,20 +379,135 @@ export default function NutritionSection({
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as number);
+    dbg("[DND] dragStart", { activeId: event.active?.id });
+    setActiveId(String(event.active.id));
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
 
-    if (!over || active.id === over.id) return;
+    dbg("[DND] dragEnd raw", {
+      activeId: active?.id,
+      overId: over?.id,
+    });
 
-    // Логика для перемещения рецепта между разными ячейками
-    // Пока оставим простую реализацию - можно расширить позже
+    if (!over) {
+      dbg("[DND] drop cancelled: over is null/undefined");
+      return;
+    }
+
+    const activeIdStr = String(active.id);
+    const overIdStr = String(over.id);
+
+    if (activeIdStr === overIdStr) {
+      dbg("[DND] drop ignored: same element", { activeIdStr, overIdStr });
+      return;
+    }
+
+    const activeItem = menu.find((m) => String(m.id) === activeIdStr);
+    const overItem = menu.find((m) => String(m.id) === overIdStr);
+
+    if (!activeItem || !overItem) {
+      logError("[DND] item(s) not found in menu");
+      dbg("[DND] not found details", {
+        activeIdStr,
+        overIdStr,
+        activeFound: !!activeItem,
+        overFound: !!overItem,
+        menuIds: menu.map((m) => m.id),
+      });
+      return;
+    }
+
+    dbg("[DND] resolved items", {
+      active: {
+        id: activeItem.id,
+        day: activeItem.day_of_week,
+        meal: activeItem.meal_type,
+        pos: activeItem.position,
+      },
+      over: {
+        id: overItem.id,
+        day: overItem.day_of_week,
+        meal: overItem.meal_type,
+        pos: overItem.position,
+      },
+    });
+
+    // ✅ Restrict sorting to within the same day + meal_type for now
+    const sameCell =
+      activeItem.day_of_week === overItem.day_of_week &&
+      activeItem.meal_type === overItem.meal_type;
+
+    if (!sameCell) {
+      dbg("[DND] cross-cell move blocked", {
+        from: { day: activeItem.day_of_week, meal: activeItem.meal_type },
+        to: { day: overItem.day_of_week, meal: overItem.meal_type },
+      });
+      toast({
+        title: "Пока нельзя",
+        description:
+          "Перетаскивание между приёмами пищи/днями будет добавлено позже",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Current cell items ordered by position
+    const cellItems = menu
+      .filter(
+        (m) =>
+          m.day_of_week === activeItem.day_of_week &&
+          m.meal_type === activeItem.meal_type,
+      )
+      .sort((a, b) => a.position - b.position);
+
+    dbg("[DND] cellItems before", {
+      count: cellItems.length,
+      ordered: cellItems.map((x) => ({ id: x.id, pos: x.position })),
+    });
+
+    const fromIndex = cellItems.findIndex((m) => String(m.id) === activeIdStr);
+    const toIndex = cellItems.findIndex((m) => String(m.id) === overIdStr);
+
+    dbg("[DND] indexes", { fromIndex, toIndex });
+
+    if (fromIndex === -1 || toIndex === -1) {
+      logError("[DND] invalid indexes");
+      dbg("[DND] invalid indexes details", { activeIdStr, overIdStr });
+      return;
+    }
+
+    // Move item
+    const nextCell = cellItems.slice();
+    const [moved] = nextCell.splice(fromIndex, 1);
+    nextCell.splice(toIndex, 0, moved);
+
+    dbg("[DND] cellItems after", {
+      ordered: nextCell.map((x) => ({ id: x.id, pos: x.position })),
+    });
+
+    // Recalculate positions (because UI sorts by position)
+    const updatedPositions = new Map<number, number>();
+    nextCell.forEach((item, idx) => {
+      updatedPositions.set(item.id, idx + 1);
+    });
+
+    dbg("[DND] updatedPositions", Array.from(updatedPositions.entries()));
+
+    setMenu((prev) =>
+      prev.map((item) =>
+        updatedPositions.has(item.id)
+          ? { ...item, position: updatedPositions.get(item.id)! }
+          : item,
+      ),
+    );
+
+    logSuccess("[DND] menu updated");
     toast({
-      title: "Перемещение",
-      description: "Функция drag-and-drop активна",
+      title: "Готово",
+      description: "Рецепты поменялись местами",
     });
   };
 
@@ -428,7 +611,6 @@ export default function NutritionSection({
                           day.day_number,
                           key,
                         );
-
                         const totalCalories = getTotalCaloriesForMeal(
                           day.day_number,
                           key,
@@ -469,7 +651,7 @@ export default function NutritionSection({
                             <div className="space-y-2 min-h-[100px]">
                               {mealRecipes.length > 0 ? (
                                 <SortableContext
-                                  items={mealRecipes.map((m) => m.id)}
+                                  items={mealRecipes.map((m) => String(m.id))}
                                   strategy={verticalListSortingStrategy}
                                 >
                                   {mealRecipes.map((meal) => (
@@ -544,7 +726,10 @@ export default function NutritionSection({
                 {activeId ? (
                   <div className="border rounded-lg p-3 bg-white shadow-lg">
                     <p className="font-medium text-gray-900 text-sm">
-                      {menu.find((m) => m.id === activeId)?.recipe.title}
+                      {
+                        menu.find((m) => String(m.id) === activeId)?.recipe
+                          .title
+                      }
                     </p>
                   </div>
                 ) : null}
