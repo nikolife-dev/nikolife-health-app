@@ -195,27 +195,44 @@ export default function NutritionSection({
     setIsGenerating(true);
     try {
       const token = localStorage.getItem('auth_token');
+      if (!token) {
+        toast({
+          title: 'Требуется авторизация',
+          description: 'Войдите в систему для генерации меню',
+          variant: 'destructive'
+        });
+        setIsGenerating(false);
+        return;
+      }
+
       const response = await fetch(
         'https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/generate',
         {
           method: 'POST',
-          headers: { 'X-Auth-Token': token!, 'Content-Type': 'application/json' },
+          headers: { 'X-Auth-Token': token, 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         }
       );
 
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка генерации меню');
+      }
+      
       if (data.success) {
         toast({ 
           title: 'Успешно!', 
           description: `Сгенерировано ${data.generated_count} блюд` 
         });
-        loadMenu();
+        await loadMenu();
+      } else {
+        throw new Error(data.error || 'Не удалось сгенерировать меню');
       }
     } catch (error) {
+      console.error('Generate menu error:', error);
       toast({
         title: 'Ошибка',
-        description: 'Не удалось сгенерировать меню',
+        description: error instanceof Error ? error.message : 'Не удалось сгенерировать меню',
         variant: 'destructive'
       });
     } finally {
@@ -254,6 +271,11 @@ export default function NutritionSection({
   const getRecipesForMeal = (dayNumber: number, mealType: string) => {
     return menu.filter(m => m.day_of_week === dayNumber && m.meal_type === mealType)
       .sort((a, b) => a.position - b.position);
+  };
+
+  const getTotalCaloriesForMeal = (dayNumber: number, mealType: string) => {
+    const recipes = getRecipesForMeal(dayNumber, mealType);
+    return recipes.reduce((sum, item) => sum + (item.recipe.calories || 0), 0);
   };
 
   const formatDate = (dateStr: string) => {
@@ -365,15 +387,27 @@ export default function NutritionSection({
                       {Object.entries(meals).map(([key, label]) => {
                         const mealRecipes = getRecipesForMeal(day.day_number, key);
                         
+                        const totalCalories = getTotalCaloriesForMeal(day.day_number, key);
+                        
                         return (
                           <div key={key} className="space-y-3">
-                            <h4 className="font-semibold text-lg text-gray-700 flex items-center gap-2">
-                              <Icon 
-                                name={key === 'breakfast' ? 'Coffee' : key === 'lunch' ? 'UtensilsCrossed' : 'Moon'} 
-                                size={20} 
-                              />
-                              {label}
-                            </h4>
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-semibold text-lg text-gray-700 flex items-center gap-2">
+                                <Icon 
+                                  name={key === 'breakfast' ? 'Coffee' : key === 'lunch' ? 'UtensilsCrossed' : 'Moon'} 
+                                  size={20} 
+                                />
+                                {label}
+                              </h4>
+                              {mealRecipes.length > 0 && (
+                                <div className="flex items-center gap-1 text-sm">
+                                  <Icon name="Flame" size={14} className="text-orange-500" />
+                                  <span className={`font-medium ${totalCalories > 600 ? 'text-red-600' : 'text-gray-600'}`}>
+                                    {totalCalories} ккал
+                                  </span>
+                                </div>
+                              )}
+                            </div>
 
                             <div className="space-y-2 min-h-[100px]">
                               {mealRecipes.length > 0 ? (
@@ -409,6 +443,23 @@ export default function NutritionSection({
                         );
                       })}
                     </div>
+
+                    {/* Итого за день */}
+                    {menu.filter(m => m.day_of_week === day.day_number).length > 0 && (
+                      <div className="mt-6 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700">Итого за день:</span>
+                          <div className="flex items-center gap-1">
+                            <Icon name="Flame" size={16} className="text-orange-500" />
+                            <span className="text-lg font-bold text-gray-900">
+                              {Object.keys(meals).reduce((sum, key) => 
+                                sum + getTotalCaloriesForMeal(day.day_number, key), 0
+                              )} ккал
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </Card>
                 ))}
               </div>
