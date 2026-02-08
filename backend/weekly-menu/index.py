@@ -20,10 +20,10 @@ def handler(event: dict, context) -> dict:
     """
     API для управления меню на неделю:
     GET /user/{user_id} - получить меню пользователя на неделю (админ может любого)
-    GET / - получить меню текущего пользователя
-    POST / - создать/обновить меню
-    POST /generate - автоматически сгенерировать меню на неделю
-    DELETE /{id} - удалить запись меню
+    GET / - получить меню текущего пользователя с датами
+    POST / - добавить рецепт в меню
+    POST /generate - автоматически сгенерировать меню на неделю (1-5 рецептов на прием)
+    DELETE /{id} - удалить один рецепт из меню
     """
     method = event.get('httpMethod', 'GET')
     path = event.get('path', '/')
@@ -131,12 +131,11 @@ def handler(event: dict, context) -> dict:
             cur.execute(f"DELETE FROM {schema}.weekly_menus WHERE user_id = %s AND week_start_date = %s", 
                        (use_user_id, week_start))
             
-            # Генерируем меню на 7 дней
+            # Генерируем меню на 7 дней (1-5 рецептов на каждый прием пищи)
             meal_types = {
                 'breakfast': recipes_by_category.get('завтрак', recipes_by_category.get('breakfast', [])),
                 'lunch': recipes_by_category.get('обед', recipes_by_category.get('lunch', [])),
-                'dinner': recipes_by_category.get('ужин', recipes_by_category.get('dinner', [])),
-                'snack': recipes_by_category.get('перекус', recipes_by_category.get('snack', []))
+                'dinner': recipes_by_category.get('ужин', recipes_by_category.get('dinner', []))
             }
             
             # Если нет рецептов по категориям, используем все
@@ -148,15 +147,19 @@ def handler(event: dict, context) -> dict:
             for day in range(1, 8):  # 1-7 (Пн-Вс)
                 for meal_type, recipe_ids in meal_types.items():
                     if recipe_ids:
-                        recipe_id = random.choice(recipe_ids)
-                        cur.execute(f"""
-                            INSERT INTO {schema}.weekly_menus 
-                            (user_id, week_start_date, day_of_week, meal_type, recipe_id)
-                            VALUES (%s, %s, %s, %s, %s)
-                            ON CONFLICT (user_id, week_start_date, day_of_week, meal_type) 
-                            DO UPDATE SET recipe_id = EXCLUDED.recipe_id
-                        """, (use_user_id, week_start, day, meal_type, recipe_id))
-                        generated_count += 1
+                        # Генерируем от 1 до 3 рецептов на прием пищи
+                        num_recipes = random.randint(1, min(3, len(recipe_ids)))
+                        selected_recipes = random.sample(recipe_ids, num_recipes)
+                        
+                        for position, recipe_id in enumerate(selected_recipes, start=1):
+                            cur.execute(f"""
+                                INSERT INTO {schema}.weekly_menus 
+                                (user_id, week_start_date, day_of_week, meal_type, recipe_id, position)
+                                VALUES (%s, %s, %s, %s, %s, %s)
+                                ON CONFLICT (user_id, week_start_date, day_of_week, meal_type, position) 
+                                DO UPDATE SET recipe_id = EXCLUDED.recipe_id
+                            """, (use_user_id, week_start, day, meal_type, recipe_id, position))
+                            generated_count += 1
             
             conn.commit()
             cur.close()
@@ -177,7 +180,7 @@ def handler(event: dict, context) -> dict:
             # Получаем меню с деталями рецептов
             cur.execute(f"""
                 SELECT 
-                    wm.id, wm.day_of_week, wm.meal_type, wm.notes,
+                    wm.id, wm.day_of_week, wm.meal_type, wm.notes, wm.position,
                     r.id, r.title, r.description, r.cooking_time, r.servings, 
                     r.calories, r.image_url, r.category
                 FROM {schema}.weekly_menus wm
@@ -188,8 +191,8 @@ def handler(event: dict, context) -> dict:
                         WHEN 'breakfast' THEN 1 
                         WHEN 'lunch' THEN 2 
                         WHEN 'dinner' THEN 3 
-                        WHEN 'snack' THEN 4 
-                    END
+                    END,
+                    wm.position
             """, (target_user_id, week_start))
             
             menu_items = []
@@ -199,16 +202,27 @@ def handler(event: dict, context) -> dict:
                     'day_of_week': row[1],
                     'meal_type': row[2],
                     'notes': row[3],
+                    'position': row[4],
                     'recipe': {
-                        'id': row[4],
-                        'title': row[5],
-                        'description': row[6],
-                        'cooking_time': row[7],
-                        'servings': row[8],
-                        'calories': row[9],
-                        'image_url': row[10],
-                        'category': row[11]
+                        'id': row[5],
+                        'title': row[6],
+                        'description': row[7],
+                        'cooking_time': row[8],
+                        'servings': row[9],
+                        'calories': row[10],
+                        'image_url': row[11],
+                        'category': row[12]
                     }
+                })
+            
+            # Добавляем календарные даты для каждого дня
+            week_dates = []
+            for i in range(7):
+                date = week_start + timedelta(days=i)
+                week_dates.append({
+                    'day_number': i + 1,
+                    'date': str(date),
+                    'day_name': ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'][i]
                 })
             
             cur.close()
@@ -219,6 +233,7 @@ def handler(event: dict, context) -> dict:
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
                 'body': json.dumps({
                     'week_start_date': week_start.isoformat(),
+                    'week_dates': week_dates,
                     'menu': menu_items,
                     'user_id': target_user_id
                 }),
@@ -251,12 +266,28 @@ def handler(event: dict, context) -> dict:
                     'isBase64Encoded': False
                 }
             
+            # Находим следующую доступную позицию для этого приема пищи
+            cur.execute(f"""
+                SELECT COALESCE(MAX(position), 0) + 1
+                FROM {schema}.weekly_menus
+                WHERE user_id = %s AND week_start_date = %s AND day_of_week = %s AND meal_type = %s
+            """, (use_user_id, week_start, body.get('day_of_week'), body.get('meal_type')))
+            
+            next_position = cur.fetchone()[0]
+            
+            # Ограничиваем до 5 рецептов на прием пищи
+            if next_position > 5:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Максимум 5 рецептов на один прием пищи'}),
+                    'isBase64Encoded': False
+                }
+            
             cur.execute(f"""
                 INSERT INTO {schema}.weekly_menus 
-                (user_id, week_start_date, day_of_week, meal_type, recipe_id, notes)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (user_id, week_start_date, day_of_week, meal_type) 
-                DO UPDATE SET recipe_id = EXCLUDED.recipe_id, notes = EXCLUDED.notes, updated_at = NOW()
+                (user_id, week_start_date, day_of_week, meal_type, recipe_id, position, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (
                 use_user_id,
@@ -264,6 +295,7 @@ def handler(event: dict, context) -> dict:
                 body.get('day_of_week'),
                 body.get('meal_type'),
                 body.get('recipe_id'),
+                next_position,
                 body.get('notes')
             ))
             

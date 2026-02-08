@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Recipe {
   id: number;
@@ -20,16 +27,30 @@ interface Recipe {
   is_favorite: boolean;
 }
 
+interface WeekDate {
+  day_number: number;
+  date: string;
+  day_name: string;
+}
+
 export default function Recipes() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [showAddToMenu, setShowAddToMenu] = useState(false);
+  const [weekDates, setWeekDates] = useState<WeekDate[]>([]);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [selectedMeal, setSelectedMeal] = useState<string | null>(null);
+  const [isAddingToMenu, setIsAddingToMenu] = useState(false);
 
-  const categories = ['завтрак', 'обед', 'ужин', 'перекус'];
+  const categories = ['завтрак', 'обед', 'ужин'];
+  const meals = { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин' };
   
   // Для бесплатного тарифа - ограничение 30 рецептов
   const isFreeUser = user?.selected_plan === 'free';
@@ -37,7 +58,39 @@ export default function Recipes() {
 
   useEffect(() => {
     loadRecipes();
+    loadWeekDates();
   }, [category]);
+
+  useEffect(() => {
+    // Если пришли с параметрами для добавления в меню
+    const addToMenu = searchParams.get('addToMenu');
+    const day = searchParams.get('day');
+    const meal = searchParams.get('meal');
+    
+    if (addToMenu === 'true' && day && meal) {
+      setSelectedDay(parseInt(day));
+      setSelectedMeal(meal);
+    }
+  }, [searchParams]);
+
+  const loadWeekDates = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch(
+        'https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6',
+        { headers: { 'X-Auth-Token': token } }
+      );
+
+      const data = await response.json();
+      if (data.week_dates) {
+        setWeekDates(data.week_dates);
+      }
+    } catch (error) {
+      console.error('Failed to load week dates:', error);
+    }
+  };
 
   const loadRecipes = async () => {
     setIsLoading(true);
@@ -105,6 +158,63 @@ export default function Recipes() {
     }
   };
 
+  const openAddToMenuDialog = (recipe: Recipe) => {
+    setSelectedRecipe(recipe);
+    setShowAddToMenu(true);
+  };
+
+  const addToMenu = async () => {
+    if (!selectedRecipe || !selectedDay || !selectedMeal) return;
+
+    setIsAddingToMenu(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(
+        'https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6',
+        {
+          method: 'POST',
+          headers: { 
+            'X-Auth-Token': token!, 
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify({
+            day_of_week: selectedDay,
+            meal_type: selectedMeal,
+            recipe_id: selectedRecipe.id
+          })
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        toast({ 
+          title: 'Добавлено!', 
+          description: 'Рецепт добавлен в план питания' 
+        });
+        setShowAddToMenu(false);
+        setSelectedRecipe(null);
+        
+        // Если пришли с параметрами, возвращаемся в меню
+        if (searchParams.get('addToMenu') === 'true') {
+          navigate('/menu');
+        }
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось добавить в план',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsAddingToMenu(false);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5]">
       <div className="max-w-7xl mx-auto p-8 space-y-8">
@@ -113,7 +223,7 @@ export default function Recipes() {
             <Icon name="ArrowLeft" size={20} />
             Назад
           </Button>
-          <h1 className="text-3xl font-bold text-gray-900">Рецепты</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Все рецепты</h1>
           <div className="w-24" />
         </div>
 
@@ -194,7 +304,7 @@ export default function Recipes() {
                       className="text-yellow-500 hover:text-yellow-600 transition-colors"
                     >
                       <Icon
-                        name={recipe.is_favorite ? 'Star' : 'Star'}
+                        name="Star"
                         size={24}
                         className={recipe.is_favorite ? 'fill-current' : ''}
                       />
@@ -218,7 +328,18 @@ export default function Recipes() {
                     </div>
                   </div>
 
-                  <Badge className="bg-[#748c6d]">{recipe.category}</Badge>
+                  <div className="flex gap-2 pt-2">
+                    <Badge className="bg-[#748c6d]">{recipe.category}</Badge>
+                  </div>
+
+                  <Button
+                    onClick={() => openAddToMenuDialog(recipe)}
+                    variant="outline"
+                    className="w-full mt-2"
+                  >
+                    <Icon name="CalendarPlus" size={16} className="mr-2" />
+                    Добавить в план питания
+                  </Button>
                 </div>
               </Card>
             ))}
@@ -233,6 +354,80 @@ export default function Recipes() {
           </Card>
         )}
       </div>
+
+      {/* Add to Menu Dialog */}
+      <Dialog open={showAddToMenu} onOpenChange={setShowAddToMenu}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Добавить в план питания</DialogTitle>
+            <DialogDescription>
+              Выберите день и прием пищи для рецепта "{selectedRecipe?.title}"
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Day Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Выберите день
+              </label>
+              <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
+                {weekDates.map((day) => (
+                  <button
+                    key={day.day_number}
+                    onClick={() => setSelectedDay(day.day_number)}
+                    className={`p-3 border rounded-lg text-left transition-colors ${
+                      selectedDay === day.day_number
+                        ? 'border-[#748c6d] bg-[#748c6d] bg-opacity-10'
+                        : 'border-gray-300 hover:border-[#748c6d]'
+                    }`}
+                  >
+                    <p className="font-medium text-gray-900">{day.day_name}</p>
+                    <p className="text-sm text-gray-600">{formatDate(day.date)}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Meal Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Выберите прием пищи
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {Object.entries(meals).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedMeal(key)}
+                    className={`p-3 border rounded-lg text-center transition-colors ${
+                      selectedMeal === key
+                        ? 'border-[#748c6d] bg-[#748c6d] bg-opacity-10'
+                        : 'border-gray-300 hover:border-[#748c6d]'
+                    }`}
+                  >
+                    <p className="font-medium text-sm">{label}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Button
+              onClick={addToMenu}
+              disabled={!selectedDay || !selectedMeal || isAddingToMenu}
+              className="w-full bg-[#748c6d] hover:bg-[#5a7052]"
+            >
+              {isAddingToMenu ? (
+                <>
+                  <Icon name="Loader2" size={16} className="mr-2 animate-spin" />
+                  Добавление...
+                </>
+              ) : (
+                'Добавить'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
