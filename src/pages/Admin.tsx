@@ -214,6 +214,18 @@ export default function Admin() {
               <Icon name="BarChart3" size={18} />
               Аналитика
             </TabsTrigger>
+            <TabsTrigger value="library" className="gap-2">
+              <Icon name="BookOpen" size={18} />
+              Библиотека
+            </TabsTrigger>
+            <TabsTrigger value="trainings" className="gap-2">
+              <Icon name="Dumbbell" size={18} />
+              Тренировки
+            </TabsTrigger>
+            <TabsTrigger value="nutrition" className="gap-2">
+              <Icon name="Apple" size={18} />
+              Питание
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="space-y-4">
@@ -345,6 +357,57 @@ export default function Admin() {
                 <div className="text-center text-[#4a5446]/60">
                   <Icon name="BarChart3" size={48} className="mx-auto mb-4 opacity-50" />
                   <p>Раздел аналитики будет добавлен позже</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="library" className="space-y-4">
+            <Card className="bg-white/80 backdrop-blur border-[#748c6d]/20">
+              <CardHeader>
+                <CardTitle className="text-[#748c6d]">Библиотека</CardTitle>
+                <CardDescription>
+                  Управление контентом библиотеки
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex items-center justify-center h-64">
+                <div className="text-center text-[#4a5446]/60">
+                  <Icon name="BookOpen" size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>Раздел библиотеки будет настроен позже</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="trainings" className="space-y-4">
+            <Card className="bg-white/80 backdrop-blur border-[#748c6d]/20">
+              <CardHeader>
+                <CardTitle className="text-[#748c6d]">Тренировки</CardTitle>
+                <CardDescription>
+                  Управление программами тренировок
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex items-center justify-center h-64">
+                <div className="text-center text-[#4a5446]/60">
+                  <Icon name="Dumbbell" size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>Раздел тренировок будет настроен позже</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="nutrition" className="space-y-4">
+            <Card className="bg-white/80 backdrop-blur border-[#748c6d]/20">
+              <CardHeader>
+                <CardTitle className="text-[#748c6d]">Питание</CardTitle>
+                <CardDescription>
+                  Управление рецептами и планами питания
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex items-center justify-center h-64">
+                <div className="text-center text-[#4a5446]/60">
+                  <Icon name="Apple" size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>Раздел питания будет настроен позже</p>
                 </div>
               </CardContent>
             </Card>
