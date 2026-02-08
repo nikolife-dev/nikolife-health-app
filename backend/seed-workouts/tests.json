@@ -1,0 +1,14 @@
+{
+  "tests": [
+    {
+      "name": "Seed workouts",
+      "method": "POST",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "message": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
