@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import { useLiveLogs } from '@/components/LiveLogs';
 import {
   DndContext,
   DragEndEvent,
@@ -139,6 +140,7 @@ export default function NutritionSection({
 }: NutritionSectionProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { logInfo, logSuccess, logError } = useLiveLogs();
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [weekDates, setWeekDates] = useState<WeekDate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -165,9 +167,11 @@ export default function NutritionSection({
 
   const loadMenu = async () => {
     setIsLoading(true);
+    logInfo('Загрузка меню на неделю...');
     try {
       const token = localStorage.getItem('auth_token');
       if (!token) {
+        logError('Нет токена авторизации');
         setIsLoading(false);
         return;
       }
@@ -179,12 +183,14 @@ export default function NutritionSection({
 
       const data = await response.json();
       if (data.menu) {
+        logSuccess(`Меню загружено: ${data.menu.length} блюд`);
         setMenu(data.menu);
         if (data.week_dates) {
           setWeekDates(data.week_dates);
         }
       }
     } catch (error) {
+      logError('Ошибка загрузки меню');
       console.error('Failed to load menu:', error);
     } finally {
       setIsLoading(false);
@@ -193,9 +199,11 @@ export default function NutritionSection({
 
   const generateMenu = async () => {
     setIsGenerating(true);
+    logInfo('Запуск генерации меню на неделю...');
     try {
       const token = localStorage.getItem('auth_token');
       if (!token) {
+        logError('Нет токена авторизации');
         toast({
           title: 'Требуется авторизация',
           description: 'Войдите в систему для генерации меню',
@@ -205,6 +213,7 @@ export default function NutritionSection({
         return;
       }
 
+      logInfo('Отправка запроса на генерацию...');
       const response = await fetch(
         'https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/generate',
         {
@@ -214,21 +223,26 @@ export default function NutritionSection({
         }
       );
 
+      logInfo(`Ответ получен: status=${response.status}`);
       const data = await response.json();
       if (!response.ok) {
+        logError(`Ошибка генерации: ${data.error || 'unknown'}`);
         throw new Error(data.error || 'Ошибка генерации меню');
       }
       
       if (data.success) {
+        logSuccess(`Генерация завершена: ${data.generated_count} блюд`);
         toast({ 
           title: 'Успешно!', 
           description: `Сгенерировано ${data.generated_count} блюд` 
         });
         await loadMenu();
       } else {
+        logError('Генерация не удалась');
         throw new Error(data.error || 'Не удалось сгенерировать меню');
       }
     } catch (error) {
+      logError(`Критическая ошибка генерации: ${error instanceof Error ? error.message : 'unknown'}`);
       console.error('Generate menu error:', error);
       toast({
         title: 'Ошибка',
@@ -241,6 +255,7 @@ export default function NutritionSection({
   };
 
   const deleteRecipe = async (menuItemId: number) => {
+    logInfo(`Удаление рецепта из меню: ID=${menuItemId}`);
     try {
       const token = localStorage.getItem('auth_token');
       const response = await fetch(
@@ -253,6 +268,7 @@ export default function NutritionSection({
 
       const data = await response.json();
       if (data.success) {
+        logSuccess('Рецепт успешно удален');
         setMenu(menu.filter(item => item.id !== menuItemId));
         toast({ 
           title: 'Удалено', 
@@ -260,6 +276,7 @@ export default function NutritionSection({
         });
       }
     } catch (error) {
+      logError('Не удалось удалить рецепт');
       toast({
         title: 'Ошибка',
         description: 'Не удалось удалить рецепт',

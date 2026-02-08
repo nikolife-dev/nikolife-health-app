@@ -11,17 +11,22 @@ import IndexSidebar from '@/components/index/IndexSidebar';
 import DashboardSection from '@/components/index/DashboardSection';
 import WorkoutSection from '@/components/index/WorkoutSection';
 import NutritionSection from '@/components/index/NutritionSection';
+import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 
 export default function Index() {
   const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState('dashboard');
+  const { logs, clearLogs, logInfo } = useLiveLogs();
   
   useEffect(() => {
+    logInfo('Загрузка главной страницы');
     const section = searchParams.get('section');
     if (section) {
+      logInfo(`Переход на секцию: ${section}`);
       setActiveSection(section);
     }
   }, [searchParams]);
+  
   const [selectedWorkout, setSelectedWorkout] = useState<number | null>(null);
   const [workoutProgress, setWorkoutProgress] = useState<number[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<number | null>(null);
@@ -358,6 +363,8 @@ export default function Index() {
           </ScrollArea>
         </main>
       </div>
+      
+      <LiveLogs logs={logs} onClear={clearLogs} position="bottom-right" />
     </div>
   );
 }
