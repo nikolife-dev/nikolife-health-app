@@ -21,7 +21,7 @@ interface PricingPlan {
 
 export default function Pricing() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, refreshUser } = useAuth();
   const [isYearly, setIsYearly] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
@@ -86,7 +86,7 @@ export default function Pricing() {
     try {
       const token = localStorage.getItem('auth_token');
       if (token) {
-        await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+        const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -94,13 +94,18 @@ export default function Pricing() {
           },
           body: JSON.stringify({ selected_plan: planId })
         });
+
+        if (response.ok) {
+          // Обновляем данные пользователя в контексте
+          await refreshUser();
+        }
       }
     } catch (error) {
       console.error('Failed to save plan selection:', error);
     }
     
     if (planId === 'free') {
-      navigate('/');
+      navigate('/', { replace: true });
       return;
     }
 

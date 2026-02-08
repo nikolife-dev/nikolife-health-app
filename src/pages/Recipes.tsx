@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Recipe {
   id: number;
@@ -22,12 +23,17 @@ interface Recipe {
 export default function Recipes() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
 
   const categories = ['завтрак', 'обед', 'ужин', 'перекус'];
+  
+  // Для бесплатного тарифа - ограничение 30 рецептов
+  const isFreeUser = user?.selected_plan === 'free';
+  const recipeLimit = isFreeUser ? 30 : 1000;
 
   useEffect(() => {
     loadRecipes();
@@ -40,6 +46,7 @@ export default function Recipes() {
       const params = new URLSearchParams();
       if (category) params.append('category', category);
       if (search) params.append('search', search);
+      params.append('limit', recipeLimit.toString());
 
       const response = await fetch(
         `https://functions.poehali.dev/1fb55aac-7fec-4f7c-a5a0-625b2cfed416?${params}`,
@@ -109,6 +116,26 @@ export default function Recipes() {
           <h1 className="text-3xl font-bold text-gray-900">Рецепты</h1>
           <div className="w-24" />
         </div>
+
+        {isFreeUser && (
+          <Card className="p-4 bg-yellow-50 border-yellow-200">
+            <div className="flex items-start gap-3">
+              <Icon name="Info" size={20} className="text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-gray-700">
+                  <strong>Бесплатный тариф:</strong> Доступно 30 рецептов.{' '}
+                  <button
+                    onClick={() => navigate('/pricing')}
+                    className="text-[#748c6d] hover:underline font-semibold"
+                  >
+                    Обновите тариф
+                  </button>
+                  {' '}для полного доступа ко всем рецептам.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
 
         <Card className="p-6">
           <div className="flex gap-4 flex-wrap">

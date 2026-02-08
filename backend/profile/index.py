@@ -88,11 +88,24 @@ def handler(event: dict, context) -> dict:
         
         elif method == 'PUT':
             body = json.loads(event.get('body', '{}'))
-            new_name = body.get('name', '').strip()
-            new_email = body.get('email', '').strip()
+            new_name = body.get('name', '').strip() if body.get('name') else current_name
+            new_email = body.get('email', '').strip() if body.get('email') else current_email
             new_telegram_id = body.get('telegram_id')
             new_telegram_username = body.get('telegram_username')
             new_selected_plan = body.get('selected_plan')
+            
+            # Если передан только selected_plan, обновляем только его
+            if new_selected_plan is not None and not body.get('name') and not body.get('email'):
+                cur.execute(f"UPDATE {schema}.users SET selected_plan = %s WHERE id = %s", (new_selected_plan, user_id))
+                conn.commit()
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'success': True, 'selected_plan': new_selected_plan}),
+                    'isBase64Encoded': False
+                }
             
             if not new_name or not new_email:
                 cur.close()
