@@ -173,11 +173,38 @@ export default function Index() {
 
   const meals = recipes.slice(0, 3);
 
-  const articles = [
-    { title: 'Основы здорового питания', category: 'Питание', readTime: '5 мин' },
-    { title: 'Техники управления стрессом', category: 'Ментальное здоровье', readTime: '8 мин' },
-    { title: 'Восстановление после тренировок', category: 'Тренировки', readTime: '6 мин' },
-  ];
+  interface Article {
+    id: number;
+    title: string;
+    category: 'nutrition' | 'training' | 'health';
+    content: string;
+    published_date: string;
+    view_count: number;
+  }
+
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [articleCategory, setArticleCategory] = useState<string>('all');
+
+  useEffect(() => {
+    if (activeSection === 'library') {
+      loadArticles();
+    }
+  }, [articleCategory, activeSection]);
+
+  const loadArticles = async () => {
+    try {
+      const url = articleCategory === 'all'
+        ? 'https://functions.poehali.dev/cea33162-065b-4e11-8767-9b4ffd23fa04'
+        : `https://functions.poehali.dev/cea33162-065b-4e11-8767-9b4ffd23fa04?category=${articleCategory}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      setArticles(data);
+    } catch (error) {
+      console.error('Failed to load articles:', error);
+      setArticles([]);
+    }
+  };
 
   const chats = [
     { 
@@ -220,42 +247,104 @@ export default function Index() {
 
               {activeSection === 'library' && (
                 <div className="space-y-6">
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Библиотека знаний</h2>
-                    <p className="text-gray-600">Статьи о здоровье, питании и тренировках</p>
-                  </div>
+                  {!selectedArticle ? (
+                    <>
+                      <div>
+                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Библиотека знаний</h2>
+                        <p className="text-gray-600">Статьи о здоровье, питании и тренировках</p>
+                      </div>
 
-                  <Tabs defaultValue="all" className="w-full">
-                    <TabsList>
-                      <TabsTrigger value="all">Все</TabsTrigger>
-                      <TabsTrigger value="nutrition">Питание</TabsTrigger>
-                      <TabsTrigger value="training">Тренировки</TabsTrigger>
-                      <TabsTrigger value="wellness">Здоровье</TabsTrigger>
-                    </TabsList>
+                      <Tabs value={articleCategory} onValueChange={setArticleCategory} className="w-full">
+                        <TabsList>
+                          <TabsTrigger value="all">Все</TabsTrigger>
+                          <TabsTrigger value="nutrition">Питание</TabsTrigger>
+                          <TabsTrigger value="training">Тренировки</TabsTrigger>
+                          <TabsTrigger value="health">Здоровье</TabsTrigger>
+                        </TabsList>
 
-                    <TabsContent value="all" className="space-y-4 mt-6">
-                      {articles.map((article, index) => (
-                        <Card key={index} className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                          <div className="flex items-start gap-4">
-                            <div className="h-16 w-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <Icon name="BookOpen" className="text-purple-600" size={24} />
-                            </div>
-                            <div className="flex-1">
-                              <Badge variant="secondary" className="mb-2">{article.category}</Badge>
-                              <h3 className="text-xl font-semibold text-gray-900 mb-2">{article.title}</h3>
-                              <div className="flex items-center gap-4 text-sm text-gray-600">
-                                <span className="flex items-center gap-1">
-                                  <Icon name="Clock" size={14} />
-                                  {article.readTime}
-                                </span>
+                        <TabsContent value={articleCategory} className="space-y-4 mt-6">
+                          {articles.length === 0 ? (
+                            <Card className="p-12">
+                              <div className="text-center text-gray-500">
+                                <Icon name="BookOpen" size={48} className="mx-auto mb-4 opacity-50" />
+                                <p>Статей пока нет</p>
                               </div>
-                            </div>
-                            <Icon name="ChevronRight" className="text-gray-400" size={24} />
-                          </div>
-                        </Card>
-                      ))}
-                    </TabsContent>
-                  </Tabs>
+                            </Card>
+                          ) : (
+                            articles.map((article) => (
+                              <Card 
+                                key={article.id} 
+                                className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                                onClick={() => setSelectedArticle(article)}
+                              >
+                                <div className="flex items-start gap-4">
+                                  <div className="h-16 w-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <Icon name="BookOpen" className="text-purple-600" size={24} />
+                                  </div>
+                                  <div className="flex-1">
+                                    <Badge variant="secondary" className="mb-2">
+                                      {article.category === 'nutrition' && 'Питание'}
+                                      {article.category === 'training' && 'Тренировки'}
+                                      {article.category === 'health' && 'Здоровье'}
+                                    </Badge>
+                                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{article.title}</h3>
+                                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                                      <span className="flex items-center gap-1">
+                                        <Icon name="Calendar" size={14} />
+                                        {new Date(article.published_date).toLocaleDateString('ru-RU')}
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <Icon name="Eye" size={14} />
+                                        {article.view_count} просмотров
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <Icon name="ChevronRight" className="text-gray-400" size={24} />
+                                </div>
+                              </Card>
+                            ))
+                          )}
+                        </TabsContent>
+                      </Tabs>
+                    </>
+                  ) : (
+                    <div className="space-y-6">
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => setSelectedArticle(null)}
+                        className="mb-4"
+                      >
+                        <Icon name="ArrowLeft" size={18} className="mr-2" />
+                        Назад к списку
+                      </Button>
+
+                      <Card className="p-8">
+                        <Badge variant="secondary" className="mb-4">
+                          {selectedArticle.category === 'nutrition' && 'Питание'}
+                          {selectedArticle.category === 'training' && 'Тренировки'}
+                          {selectedArticle.category === 'health' && 'Здоровье'}
+                        </Badge>
+                        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                          {selectedArticle.title}
+                        </h1>
+                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-8">
+                          <span className="flex items-center gap-1">
+                            <Icon name="Calendar" size={14} />
+                            {new Date(selectedArticle.published_date).toLocaleDateString('ru-RU')}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Icon name="Eye" size={14} />
+                            {selectedArticle.view_count} просмотров
+                          </span>
+                        </div>
+                        <div className="prose prose-lg max-w-none">
+                          <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                            {selectedArticle.content}
+                          </p>
+                        </div>
+                      </Card>
+                    </div>
+                  )}
                 </div>
               )}
 
