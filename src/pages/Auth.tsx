@@ -28,10 +28,18 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // Live logs
+  const [logs, setLogs] = useState<string[]>([]);
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString('ru-RU');
+    setLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+  };
 
   // Load Telegram widget
   useEffect(() => {
     if (authMethod === 'telegram') {
+      addLog('Загрузка Telegram виджета...');
       const script = document.createElement('script');
       script.src = 'https://telegram.org/js/telegram-widget.js?22';
       script.setAttribute('data-telegram-login', 'nikolife_health_bot');
@@ -45,11 +53,15 @@ export default function Auth() {
       if (container) {
         container.innerHTML = '';
         container.appendChild(script);
+        addLog('Telegram виджет добавлен в DOM');
+      } else {
+        addLog('⚠️ Контейнер telegram-login-container не найден');
       }
 
       return () => {
         if (container) {
           container.innerHTML = '';
+          addLog('Telegram виджет очищен');
         }
       };
     }
@@ -58,11 +70,13 @@ export default function Auth() {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    addLog(`Начало авторизации: mode=${mode}, email=${email}`);
 
     try {
       if (mode === 'register') {
         // Регистрация
         if (password !== confirmPassword) {
+          addLog('❌ Ошибка: пароли не совпадают');
           toast({
             title: 'Ошибка',
             description: 'Пароли не совпадают',
@@ -72,18 +86,23 @@ export default function Auth() {
           return;
         }
 
+        addLog('Отправка запроса регистрации...');
         const response = await fetch('https://functions.poehali.dev/5d61e550-4be2-483e-a685-bb7eaaaea724', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, password }),
         });
 
+        addLog(`Получен ответ: status=${response.status}`);
         const data = await response.json();
+        addLog(`Данные ответа: ${JSON.stringify(data).substring(0, 100)}...`);
 
         if (!response.ok || !data.success) {
+          addLog(`❌ Ошибка регистрации: ${data.error || 'неизвестная ошибка'}`);
           throw new Error(data.error || 'Ошибка регистрации');
         }
 
+        addLog('✅ Регистрация успешна, сохранение токена...');
         localStorage.setItem('auth_token', data.token);
         toast({
           title: 'Успешно!',
@@ -92,34 +111,43 @@ export default function Auth() {
         
         // Проверяем тариф
         if (data.user?.selected_plan) {
+          addLog('Переход на главную (тариф выбран)');
           navigate('/', { replace: true });
         } else {
+          addLog('Переход на страницу выбора тарифа');
           navigate('/pricing', { replace: true });
         }
 
       } else if (mode === 'login') {
         // Вход
+        addLog('Отправка запроса на вход...');
         const response = await fetch('https://functions.poehali.dev/5d61e550-4be2-483e-a685-bb7eaaaea724', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
 
+        addLog(`Получен ответ: status=${response.status}`);
         const data = await response.json();
+        addLog(`Данные ответа: ${JSON.stringify(data).substring(0, 100)}...`);
 
         if (!response.ok || !data.success) {
+          addLog(`❌ Ошибка входа: ${data.error || 'неверные данные'}`);
           throw new Error(data.error || 'Неверный email или пароль');
         }
 
+        addLog('✅ Вход успешен, сохранение токена...');
         localStorage.setItem('auth_token', data.token);
         toast({
           title: 'Успешно!',
           description: 'Вы вошли в систему',
         });
+        addLog('Переход на главную страницу');
         navigate('/', { replace: true });
 
       } else if (mode === 'reset') {
         // Восстановление пароля
+        addLog('Отправка инструкций для восстановления пароля');
         toast({
           title: 'Инструкции отправлены',
           description: 'Проверьте вашу почту для восстановления пароля',
@@ -128,6 +156,7 @@ export default function Auth() {
       }
 
     } catch (error) {
+      addLog(`❌ Критическая ошибка: ${error instanceof Error ? error.message : 'неизвестная'}`);
       toast({
         title: 'Ошибка',
         description: error instanceof Error ? error.message : 'Произошла ошибка',
@@ -360,6 +389,28 @@ export default function Auth() {
           </p>
         </div>
       </Card>
+
+      {/* Live Logs Panel */}
+      {logs.length > 0 && (
+        <Card className="w-full max-w-md p-4 bg-gray-900 text-green-400 font-mono text-xs">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold">🔴 Логи в реальном времени</h3>
+            <button
+              onClick={() => setLogs([])}
+              className="text-gray-400 hover:text-white text-xs"
+            >
+              Очистить
+            </button>
+          </div>
+          <div className="space-y-1 max-h-64 overflow-y-auto">
+            {logs.map((log, i) => (
+              <div key={i} className="text-xs break-all">
+                {log}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
