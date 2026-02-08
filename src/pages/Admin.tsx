@@ -87,6 +87,8 @@ export default function Admin() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [workoutCategory, setWorkoutCategory] = useState<string>('all');
   const [isAddWorkoutDialogOpen, setIsAddWorkoutDialogOpen] = useState(false);
+  const [isEditWorkoutDialogOpen, setIsEditWorkoutDialogOpen] = useState(false);
+  const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [newWorkout, setNewWorkout] = useState({
     title: '',
     description: '',
@@ -235,6 +237,93 @@ export default function Admin() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleEditWorkout = async (workout: Workout) => {
+    try {
+      const response = await fetch(`${WORKOUTS_API}?id=${workout.id}`);
+      const data = await response.json();
+      
+      setEditingWorkout(data);
+      setNewWorkout({
+        title: data.title,
+        description: data.description || '',
+        category: data.category,
+        duration_minutes: data.duration_minutes,
+        difficulty: data.difficulty,
+        calories: data.calories,
+        published_date: data.published_date,
+        video_base64: ''
+      });
+      
+      interface ExerciseResponse {
+        exercise_name: string;
+        sets: string;
+        rest_seconds: number;
+      }
+
+      if (data.exercises && data.exercises.length > 0) {
+        setExercises(data.exercises.map((ex: ExerciseResponse) => ({
+          name: ex.exercise_name,
+          sets: ex.sets,
+          rest_seconds: ex.rest_seconds
+        })));
+      } else {
+        setExercises([{ name: '', sets: '', rest_seconds: 0 }]);
+      }
+      
+      setIsEditWorkoutDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to load workout:', error);
+    }
+  };
+
+  const handleUpdateWorkout = async () => {
+    if (!editingWorkout) return;
+
+    try {
+      const updateData: Partial<Workout> = {
+        title: newWorkout.title,
+        description: newWorkout.description,
+        category: newWorkout.category,
+        duration_minutes: newWorkout.duration_minutes,
+        difficulty: newWorkout.difficulty,
+        calories: newWorkout.calories,
+        published_date: newWorkout.published_date
+      };
+
+      const response = await fetch(`${WORKOUTS_API}?id=${editingWorkout.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      });
+
+      if (response.ok) {
+        setIsEditWorkoutDialogOpen(false);
+        setEditingWorkout(null);
+        setNewWorkout({
+          title: '',
+          description: '',
+          category: 'cardio',
+          duration_minutes: 0,
+          difficulty: 'beginner',
+          calories: 0,
+          published_date: new Date().toISOString().split('T')[0],
+          video_base64: ''
+        });
+        setExercises([{ name: '', sets: '', rest_seconds: 0 }]);
+        loadWorkouts();
+      }
+    } catch (error) {
+      console.error('Failed to update workout:', error);
+    }
+  };
+
+  const handleDeleteVideo = async () => {
+    if (!editingWorkout || !editingWorkout.video_url) return;
+    if (!confirm('Удалить видео?')) return;
+
+    setEditingWorkout({ ...editingWorkout, video_url: null });
   };
 
   const stats: Array<{
@@ -960,12 +1049,13 @@ export default function Admin() {
                       <TableHead className="text-right">Время</TableHead>
                       <TableHead className="text-right">Калории</TableHead>
                       <TableHead className="text-right">Просмотры</TableHead>
+                      <TableHead className="text-right">Действия</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {workouts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-[#4a5446]/60">
+                        <TableCell colSpan={7} className="text-center text-[#4a5446]/60">
                           Нет тренировок
                         </TableCell>
                       </TableRow>
@@ -1001,6 +1091,15 @@ export default function Admin() {
                               {workout.view_count}
                             </div>
                           </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditWorkout(workout)}
+                            >
+                              <Icon name="Edit" size={16} />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))
                     )}
@@ -1008,6 +1107,148 @@ export default function Admin() {
                 </Table>
               </CardContent>
             </Card>
+
+            <Dialog open={isEditWorkoutDialogOpen} onOpenChange={setIsEditWorkoutDialogOpen}>
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Редактировать тренировку</DialogTitle>
+                  <DialogDescription>
+                    Измените параметры тренировки
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {editingWorkout?.video_url && (
+                    <div className="space-y-2">
+                      <Label>Текущее видео</Label>
+                      <div className="flex items-center gap-2">
+                        <video src={editingWorkout.video_url} className="w-32 h-20 object-cover rounded" />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDeleteVideo}
+                        >
+                          <Icon name="Trash2" size={14} className="mr-1" />
+                          Удалить видео
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <Label htmlFor="edit-title">Название</Label>
+                    <Input
+                      id="edit-title"
+                      value={newWorkout.title}
+                      onChange={(e) => setNewWorkout({...newWorkout, title: e.target.value})}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-description">Описание</Label>
+                    <Textarea
+                      id="edit-description"
+                      value={newWorkout.description}
+                      onChange={(e) => setNewWorkout({...newWorkout, description: e.target.value})}
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-category">Категория</Label>
+                      <Select
+                        value={newWorkout.category}
+                        onValueChange={(value: 'cardio' | 'strength' | 'flexibility') =>
+                          setNewWorkout({...newWorkout, category: value})
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cardio">Кардио</SelectItem>
+                          <SelectItem value="strength">Сила</SelectItem>
+                          <SelectItem value="flexibility">Гибкость</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="edit-difficulty">Уровень сложности</Label>
+                      <Select
+                        value={newWorkout.difficulty}
+                        onValueChange={(value: 'beginner' | 'intermediate' | 'advanced') =>
+                          setNewWorkout({...newWorkout, difficulty: value})
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="beginner">Начальный</SelectItem>
+                          <SelectItem value="intermediate">Средний</SelectItem>
+                          <SelectItem value="advanced">Продвинутый</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="edit-duration">Время (мин)</Label>
+                      <Input
+                        id="edit-duration"
+                        type="number"
+                        value={newWorkout.duration_minutes || ''}
+                        onChange={(e) => setNewWorkout({...newWorkout, duration_minutes: parseInt(e.target.value) || 0})}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="edit-calories">Калории</Label>
+                      <Input
+                        id="edit-calories"
+                        type="number"
+                        value={newWorkout.calories || ''}
+                        onChange={(e) => setNewWorkout({...newWorkout, calories: parseInt(e.target.value) || 0})}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="edit-date">Дата публикации</Label>
+                      <Input
+                        id="edit-date"
+                        type="date"
+                        value={newWorkout.published_date}
+                        onChange={(e) => setNewWorkout({...newWorkout, published_date: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-video">Загрузить новое видео</Label>
+                    <Input
+                      id="edit-video"
+                      type="file"
+                      accept="video/mp4"
+                      onChange={handleVideoUpload}
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setIsEditWorkoutDialogOpen(false)}>
+                      Отмена
+                    </Button>
+                    <Button
+                      className="bg-[#748c6d] hover:bg-[#5f7459]"
+                      onClick={handleUpdateWorkout}
+                    >
+                      Сохранить
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="nutrition" className="space-y-4">
