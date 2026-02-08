@@ -1,0 +1,43 @@
+{
+  "tests": [
+    {
+      "name": "Get all workouts",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": [],
+      "bodyMatcher": "type"
+    },
+    {
+      "name": "Create workout",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "title": "HIIT тренировка",
+        "description": "Интенсивная кардио тренировка",
+        "category": "cardio",
+        "duration_minutes": 20,
+        "difficulty": "intermediate",
+        "calories": 280,
+        "published_date": "2026-02-08",
+        "exercises": [
+          {
+            "name": "Прыжки",
+            "sets": "3x20",
+            "rest_seconds": 30
+          }
+        ]
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "id": "number",
+        "title": "string",
+        "category": "string",
+        "duration_minutes": "number",
+        "difficulty": "string",
+        "calories": "number"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
