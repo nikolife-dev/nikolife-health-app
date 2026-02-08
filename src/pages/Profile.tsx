@@ -118,10 +118,11 @@ export default function Profile() {
 
     try {
       logInfo('Отправка GET запроса на /profile endpoint');
+      logInfo(`Headers: X-Authorization=Bearer ${token.substring(0, 15)}...`);
       const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'X-Authorization': `Bearer ${token}`
         }
       });
 
@@ -178,12 +179,13 @@ export default function Profile() {
         email: editForm.email
       };
       logInfo(`Body запроса: ${JSON.stringify(requestBody)}`);
+      logInfo(`Headers: X-Authorization=Bearer ${token.substring(0, 15)}...`);
       
       const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'X-Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(requestBody)
       });
