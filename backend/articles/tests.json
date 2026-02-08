@@ -1,0 +1,33 @@
+{
+  "tests": [
+    {
+      "name": "Get all articles",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": [],
+      "bodyMatcher": "type"
+    },
+    {
+      "name": "Create article",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "title": "Тестовая статья",
+        "category": "health",
+        "content": "Содержание тестовой статьи",
+        "published_date": "2026-02-08"
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "id": "number",
+        "title": "string",
+        "category": "string",
+        "content": "string",
+        "published_date": "string",
+        "view_count": "number"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
