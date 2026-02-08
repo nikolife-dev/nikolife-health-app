@@ -1,10 +1,114 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
+import { useToast } from '@/hooks/use-toast';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Recipe {
+  id: number;
+  title: string;
+  description: string;
+  cooking_time: number;
+  servings: number;
+  calories: number;
+  image_url?: string;
+  category: string;
+}
+
+interface MenuItem {
+  id: number;
+  day_of_week: number;
+  meal_type: string;
+  position: number;
+  notes?: string;
+  recipe: Recipe;
+}
+
+interface WeekDate {
+  day_number: number;
+  date: string;
+  day_name: string;
+}
+
+interface DraggableRecipeProps {
+  menuItem: MenuItem;
+  onDelete: (id: number) => void;
+}
+
+function DraggableRecipe({ menuItem, onDelete }: DraggableRecipeProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: menuItem.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="border rounded-lg p-3 bg-white hover:shadow-md transition-shadow group cursor-move"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-gray-900 text-sm truncate">
+            {menuItem.recipe.title}
+          </p>
+          <div className="flex gap-3 text-xs text-gray-500 mt-1">
+            <span className="flex items-center gap-1">
+              <Icon name="Clock" size={12} />
+              {menuItem.recipe.cooking_time}м
+            </span>
+            <span className="flex items-center gap-1">
+              <Icon name="Flame" size={12} />
+              {menuItem.recipe.calories} ккал
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(menuItem.id);
+          }}
+          className="text-red-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+          title="Удалить"
+        >
+          <Icon name="X" size={18} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface OldRecipe {
   id: number;
   name: string;
   calories: number;
@@ -19,7 +123,7 @@ interface Recipe {
 }
 
 interface NutritionSectionProps {
-  recipes: Recipe[];
+  recipes: OldRecipe[];
   selectedRecipe: number | null;
   setSelectedRecipe: (id: number | null) => void;
   mealPlan: {[key: string]: number};
@@ -27,297 +131,301 @@ interface NutritionSectionProps {
 }
 
 export default function NutritionSection({
-  recipes,
+  recipes: _recipes,
   selectedRecipe,
   setSelectedRecipe,
-  mealPlan,
-  setMealPlan
+  mealPlan: _mealPlan,
+  setMealPlan: _setMealPlan
 }: NutritionSectionProps) {
-  const handleGenerateMealPlan = () => {
-    const breakfast = recipes.filter(r => r.time === 'Завтрак')[0]?.id || 0;
-    const lunch = recipes.filter(r => r.time === 'Обед')[0]?.id || 1;
-    const dinner = recipes.filter(r => r.time === 'Ужин')[0]?.id || 2;
-    setMealPlan({ breakfast, lunch, dinner });
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [menu, setMenu] = useState<MenuItem[]>([]);
+  const [weekDates, setWeekDates] = useState<WeekDate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [activeId, setActiveId] = useState<number | null>(null);
+
+  const meals = { 
+    breakfast: 'Завтрак', 
+    lunch: 'Обед', 
+    dinner: 'Ужин' 
   };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  useEffect(() => {
+    loadMenu();
+  }, []);
+
+  const loadMenu = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        'https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6',
+        { headers: { 'X-Auth-Token': token } }
+      );
+
+      const data = await response.json();
+      if (data.menu) {
+        setMenu(data.menu);
+        if (data.week_dates) {
+          setWeekDates(data.week_dates);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load menu:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateMenu = async () => {
+    setIsGenerating(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(
+        'https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/generate',
+        {
+          method: 'POST',
+          headers: { 'X-Auth-Token': token!, 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        toast({ 
+          title: 'Успешно!', 
+          description: `Сгенерировано ${data.generated_count} блюд` 
+        });
+        loadMenu();
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось сгенерировать меню',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const deleteRecipe = async (menuItemId: number) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(
+        `https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/${menuItemId}`,
+        {
+          method: 'DELETE',
+          headers: { 'X-Auth-Token': token! }
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        setMenu(menu.filter(item => item.id !== menuItemId));
+        toast({ 
+          title: 'Удалено', 
+          description: 'Рецепт удален из плана' 
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось удалить рецепт',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const getRecipesForMeal = (dayNumber: number, mealType: string) => {
+    return menu.filter(m => m.day_of_week === dayNumber && m.meal_type === mealType)
+      .sort((a, b) => a.position - b.position);
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as number);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over || active.id === over.id) return;
+
+    // Логика для перемещения рецепта между разными ячейками
+    // Пока оставим простую реализацию - можно расширить позже
+    toast({
+      title: 'Перемещение',
+      description: 'Функция drag-and-drop активна',
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Icon name="Loader2" size={48} className="animate-spin text-[#748c6d]" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {selectedRecipe === null ? (
-        <>
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">План питания</h2>
-              <p className="text-gray-600">Создайте персональное меню из рецептов</p>
-            </div>
-            <Button onClick={handleGenerateMealPlan}>
-              <Icon name="Sparkles" size={18} className="mr-2" />
-              Сгенерировать меню
-            </Button>
-          </div>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">План питания</h2>
+          <p className="text-gray-600">Моё меню на неделю</p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={generateMenu} 
+            disabled={isGenerating}
+            className="bg-[#748c6d] hover:bg-[#5a7052]"
+          >
+            {isGenerating ? (
+              <>
+                <Icon name="Loader2" size={20} className="mr-2 animate-spin" />
+                Генерация...
+              </>
+            ) : (
+              <>
+                <Icon name="Wand2" size={20} className="mr-2" />
+                Сгенерировать
+              </>
+            )}
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => navigate('/recipes')}
+          >
+            <Icon name="Plus" size={20} className="mr-2" />
+            Добавить рецепт
+          </Button>
+        </div>
+      </div>
 
-          <Card className="p-6 bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
-            <div className="grid md:grid-cols-4 gap-6">
-              <div>
-                <h3 className="text-2xl font-bold mb-2">1850</h3>
-                <p className="opacity-90">ккал/день</p>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold mb-2">89г</h3>
-                <p className="opacity-90">Белков</p>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold mb-2">220г</h3>
-                <p className="opacity-90">Углеводов</p>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold mb-2">65г</h3>
-                <p className="opacity-90">Жиров</p>
-              </div>
-            </div>
-          </Card>
+      <Tabs defaultValue="week" className="w-full">
+        <TabsList>
+          <TabsTrigger value="week">Моё меню</TabsTrigger>
+          <TabsTrigger value="recipes" onClick={() => navigate('/recipes')}>
+            Все рецепты
+          </TabsTrigger>
+        </TabsList>
 
-          <Tabs defaultValue="plan" className="w-full">
-            <TabsList className="mb-6">
-              <TabsTrigger value="plan">Моё меню</TabsTrigger>
-              <TabsTrigger value="recipes">Все рецепты</TabsTrigger>
-            </TabsList>
+        <TabsContent value="week" className="space-y-6 mt-6">
+          {weekDates.length === 0 && menu.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Icon name="CalendarDays" size={64} className="mx-auto mb-4 text-gray-400" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Меню пока пусто</h3>
+              <p className="text-gray-600 mb-6">
+                Сгенерируйте автоматический план питания или добавьте рецепты вручную
+              </p>
+              <Button 
+                onClick={generateMenu} 
+                className="bg-[#748c6d] hover:bg-[#5a7052]"
+              >
+                <Icon name="Wand2" size={20} className="mr-2" />
+                Сгенерировать план
+              </Button>
+            </Card>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="space-y-6">
+                {weekDates.map((day) => (
+                  <Card key={day.day_number} className="p-6">
+                    <div className="mb-4">
+                      <h3 className="text-2xl font-bold text-gray-900">{day.day_name}</h3>
+                      <p className="text-gray-600">{formatDate(day.date)}</p>
+                    </div>
 
-            <TabsContent value="plan" className="space-y-4">
-              {Object.keys(mealPlan).length === 0 ? (
-                <Card className="p-12 text-center">
-                  <Icon name="UtensilsCrossed" size={64} className="mx-auto text-gray-300 mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Создайте своё меню</h3>
-                  <p className="text-gray-600 mb-6">Нажмите "Сгенерировать меню" или выберите рецепты вручную</p>
-                  <Button onClick={handleGenerateMealPlan}>
-                    <Icon name="Sparkles" size={18} className="mr-2" />
-                    Сгенерировать меню
-                  </Button>
-                </Card>
-              ) : (
-                <>
-                  {['breakfast', 'lunch', 'dinner'].map((mealType) => {
-                    const recipeId = mealPlan[mealType];
-                    const recipe = recipes.find(r => r.id === recipeId);
-                    if (!recipe) return null;
-                    
-                    return (
-                      <Card key={mealType} className="p-6 hover:shadow-lg transition-all duration-300">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <Badge variant="secondary" className="mb-3">
-                              {recipe.time}
-                            </Badge>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">{recipe.name}</h3>
-                            <div className="flex gap-6 text-sm text-gray-600 mb-4">
-                              <span className="flex items-center gap-1">
-                                <Icon name="Flame" size={14} />
-                                {recipe.calories} ккал
-                              </span>
-                              <span>Б: {recipe.protein}г</span>
-                              <span>Ж: {recipe.fats}г</span>
-                              <span>У: {recipe.carbs}г</span>
-                              <span className="flex items-center gap-1">
-                                <Icon name="Clock" size={14} />
-                                {recipe.cookTime}
-                              </span>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => setSelectedRecipe(recipe.id)}
-                              >
-                                Посмотреть рецепт
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => {
-                                  const newPlan = { ...mealPlan };
-                                  delete newPlan[mealType];
-                                  setMealPlan(newPlan);
-                                }}
-                              >
-                                <Icon name="X" size={16} />
-                              </Button>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {Object.entries(meals).map(([key, label]) => {
+                        const mealRecipes = getRecipesForMeal(day.day_number, key);
+                        
+                        return (
+                          <div key={key} className="space-y-3">
+                            <h4 className="font-semibold text-lg text-gray-700 flex items-center gap-2">
+                              <Icon 
+                                name={key === 'breakfast' ? 'Coffee' : key === 'lunch' ? 'UtensilsCrossed' : 'Moon'} 
+                                size={20} 
+                              />
+                              {label}
+                            </h4>
+
+                            <div className="space-y-2 min-h-[100px]">
+                              {mealRecipes.length > 0 ? (
+                                <SortableContext
+                                  items={mealRecipes.map(m => m.id)}
+                                  strategy={verticalListSortingStrategy}
+                                >
+                                  {mealRecipes.map((meal) => (
+                                    <DraggableRecipe
+                                      key={meal.id}
+                                      menuItem={meal}
+                                      onDelete={deleteRecipe}
+                                    />
+                                  ))}
+                                </SortableContext>
+                              ) : (
+                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                                  <p className="text-gray-400 text-sm">Не выбрано</p>
+                                </div>
+                              )}
+
+                              {mealRecipes.length < 5 && (
+                                <button
+                                  onClick={() => navigate(`/recipes?addToMenu=true&day=${day.day_number}&meal=${key}`)}
+                                  className="w-full border-2 border-dashed border-[#748c6d] rounded-lg p-3 text-[#748c6d] hover:bg-[#748c6d] hover:text-white transition-colors flex items-center justify-center gap-2"
+                                >
+                                  <Icon name="Plus" size={18} />
+                                  <span className="text-sm font-medium">Добавить</span>
+                                </button>
+                              )}
                             </div>
                           </div>
-                        </div>
-                      </Card>
-                    );
-                  })}
-                  
-                  <Card className="p-6 bg-gradient-to-br from-emerald-50 to-teal-50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-1">Итого за день</h4>
-                        <p className="text-sm text-gray-600">Сбалансированный план питания</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-gray-900">
-                          {Object.values(mealPlan).reduce((sum, id) => {
-                            const recipe = recipes.find(r => r.id === id);
-                            return sum + (recipe?.calories || 0);
-                          }, 0)} ккал
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Белка: {Object.values(mealPlan).reduce((sum, id) => {
-                            const recipe = recipes.find(r => r.id === id);
-                            return sum + (recipe?.protein || 0);
-                          }, 0)}г
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </>
-              )}
-            </TabsContent>
-
-            <TabsContent value="recipes" className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                {recipes.map((recipe) => (
-                  <Card 
-                    key={recipe.id} 
-                    className="p-6 hover:shadow-lg transition-all duration-300 cursor-pointer"
-                    onClick={() => setSelectedRecipe(recipe.id)}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <Badge variant="secondary">{recipe.time}</Badge>
-                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
-                        {recipe.difficulty}
-                      </Badge>
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-3">{recipe.name}</h3>
-                    <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Icon name="Flame" size={16} className="text-orange-500" />
-                        <span>{recipe.calories} ккал</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Icon name="Clock" size={16} className="text-blue-500" />
-                        <span>{recipe.cookTime}</span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-sm pt-4 border-t">
-                      <div>
-                        <p className="text-gray-500">Белки</p>
-                        <p className="font-semibold text-gray-900">{recipe.protein}г</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Жиры</p>
-                        <p className="font-semibold text-gray-900">{recipe.fats}г</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Углеводы</p>
-                        <p className="font-semibold text-gray-900">{recipe.carbs}г</p>
-                      </div>
+                        );
+                      })}
                     </div>
                   </Card>
                 ))}
               </div>
-            </TabsContent>
-          </Tabs>
-        </>
-      ) : (
-        <>
-          {(() => {
-            const recipe = recipes.find(r => r.id === selectedRecipe);
-            if (!recipe) return null;
 
-            return (
-              <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <Button variant="ghost" onClick={() => setSelectedRecipe(null)}>
-                    <Icon name="ArrowLeft" size={20} className="mr-2" />
-                    Назад
-                  </Button>
-                </div>
-
-                <Card className="p-8">
-                  <div className="flex items-start justify-between mb-6">
-                    <div>
-                      <div className="flex items-center gap-3 mb-3">
-                        <Badge variant="secondary">{recipe.time}</Badge>
-                        <Badge className="bg-emerald-100 text-emerald-700">{recipe.difficulty}</Badge>
-                      </div>
-                      <h2 className="text-3xl font-bold text-gray-900 mb-4">{recipe.name}</h2>
-                      <div className="flex gap-6 text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Icon name="Clock" size={20} className="text-blue-500" />
-                          <span>{recipe.cookTime}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Icon name="Flame" size={20} className="text-orange-500" />
-                          <span>{recipe.calories} ккал</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <p className="text-2xl font-bold text-gray-900">{recipe.protein}г</p>
-                        <p className="text-sm text-gray-600">Белки</p>
-                      </div>
-                      <div className="p-4 bg-green-50 rounded-lg">
-                        <p className="text-2xl font-bold text-gray-900">{recipe.fats}г</p>
-                        <p className="text-sm text-gray-600">Жиры</p>
-                      </div>
-                      <div className="p-4 bg-orange-50 rounded-lg">
-                        <p className="text-2xl font-bold text-gray-900">{recipe.carbs}г</p>
-                        <p className="text-sm text-gray-600">Углеводы</p>
-                      </div>
-                    </div>
+              <DragOverlay>
+                {activeId ? (
+                  <div className="border rounded-lg p-3 bg-white shadow-lg">
+                    <p className="font-medium text-gray-900 text-sm">
+                      {menu.find(m => m.id === activeId)?.recipe.title}
+                    </p>
                   </div>
-
-                  <div className="aspect-video bg-gradient-to-br from-orange-100 to-red-100 rounded-xl flex items-center justify-center mb-6">
-                    <Icon name="Image" size={64} className="text-orange-300" />
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-4">Ингредиенты</h3>
-                      <ul className="space-y-3">
-                        {recipe.ingredients.map((ingredient, i) => (
-                          <li key={i} className="flex items-center gap-3">
-                            <Icon name="CheckCircle2" size={20} className="text-emerald-500 flex-shrink-0" />
-                            <span className="text-gray-700">{ingredient}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-4">Приготовление</h3>
-                      <ol className="space-y-4">
-                        {recipe.steps.map((step, i) => (
-                          <li key={i} className="flex gap-4">
-                            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                              <span className="font-bold text-emerald-600">{i + 1}</span>
-                            </div>
-                            <p className="text-gray-700 pt-1">{step}</p>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  </div>
-                </Card>
-
-                <div className="flex gap-4">
-                  <Button className="flex-1" size="lg">
-                    <Icon name="Plus" size={20} className="mr-2" />
-                    Добавить в план питания
-                  </Button>
-                  <Button variant="outline" size="lg">
-                    <Icon name="Heart" size={20} />
-                  </Button>
-                  <Button variant="outline" size="lg">
-                    <Icon name="Share2" size={20} />
-                  </Button>
-                </div>
-              </div>
-            );
-          })()}
-        </>
-      )}
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

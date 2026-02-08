@@ -194,9 +194,9 @@ export default function Recipes() {
         setShowAddToMenu(false);
         setSelectedRecipe(null);
         
-        // Если пришли с параметрами, возвращаемся в меню
+        // Если пришли с параметрами, возвращаемся на главную с секцией "Питание"
         if (searchParams.get('addToMenu') === 'true') {
-          navigate('/menu');
+          navigate('/?section=nutrition');
         }
       }
     } catch (error) {

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +13,15 @@ import WorkoutSection from '@/components/index/WorkoutSection';
 import NutritionSection from '@/components/index/NutritionSection';
 
 export default function Index() {
+  const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState('dashboard');
+  
+  useEffect(() => {
+    const section = searchParams.get('section');
+    if (section) {
+      setActiveSection(section);
+    }
+  }, [searchParams]);
   const [selectedWorkout, setSelectedWorkout] = useState<number | null>(null);
   const [workoutProgress, setWorkoutProgress] = useState<number[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<number | null>(null);

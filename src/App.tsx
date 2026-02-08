@@ -16,7 +16,6 @@ import Pricing from "./pages/Pricing";
 import Checkout from "./pages/Checkout";
 import Profile from "./pages/Profile";
 import Recipes from "./pages/Recipes";
-import WeeklyMenu from "./pages/WeeklyMenu";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,11 +60,6 @@ const App = () => (
             <Route path="/recipes" element={
               <ProtectedRoute requiresPlan={true}>
                 <Recipes />
-              </ProtectedRoute>
-            } />
-            <Route path="/menu" element={
-              <ProtectedRoute requiresPlan={true}>
-                <WeeklyMenu />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
