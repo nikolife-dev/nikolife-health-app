@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import TelegramCallback from "./pages/TelegramCallback";
@@ -31,8 +32,9 @@ const App = () => (
                 <Index />
               </ProtectedRoute>
             } />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/login" element={<Auth />} />
+            <Route path="/register" element={<Auth />} />
             <Route path="/auth/telegram/callback" element={<TelegramCallback />} />
             <Route path="/onboarding" element={
               <ProtectedRoute>

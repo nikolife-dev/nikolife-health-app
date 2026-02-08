@@ -127,7 +127,7 @@ export default function Pricing() {
             variant="outline" 
             onClick={() => {
               logout();
-              navigate('/login');
+              navigate('/auth');
             }}
           >
             <Icon name="LogOut" size={20} className="mr-2" />

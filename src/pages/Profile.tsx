@@ -71,7 +71,7 @@ export default function Profile() {
     setIsLoggingOut(true);
     try {
       await logout();
-      navigate('/login');
+      navigate('/auth');
     } catch (error) {
       console.error('Logout error:', error);
       setIsLoggingOut(false);
@@ -94,7 +94,7 @@ export default function Profile() {
   const loadProfile = async () => {
     const token = localStorage.getItem('auth_token');
     if (!token) {
-      navigate('/login');
+      navigate('/auth');
       return;
     }
 

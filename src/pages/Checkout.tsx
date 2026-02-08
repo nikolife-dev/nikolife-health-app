@@ -92,7 +92,7 @@ export default function Checkout() {
             variant="outline" 
             onClick={() => {
               logout();
-              navigate('/login');
+              navigate('/auth');
             }}
           >
             <Icon name="LogOut" size={20} className="mr-2" />

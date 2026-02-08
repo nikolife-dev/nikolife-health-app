@@ -93,7 +93,7 @@ export default function TelegramCallback() {
             <h2 className="text-2xl font-bold text-gray-900">Ошибка авторизации</h2>
             <p className="text-gray-600">{error}</p>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/auth')}
               className="w-full px-4 py-2 bg-[#748c6d] text-white rounded-lg hover:bg-[#5a7052] transition-colors"
             >
               Вернуться к входу
