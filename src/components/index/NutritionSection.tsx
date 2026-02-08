@@ -146,22 +146,15 @@ export default function NutritionSection({
    * ========================
    * DEBUG / DETAILED LOGGING
    * ========================
-   * Включи/выключи подробные логи одной строкой.
    */
   const DEBUG = true;
 
-  // Безопасный логгер: не падает на циклических объектах
   const dbg = (message: string, data?: unknown) => {
     if (!DEBUG) return;
     try {
-      if (data === undefined) {
-        logInfo(message);
-      } else {
-        // Если LiveLogs умеет принимать объект вторым аргументом — отлично.
-        // Если нет — мы дополнительно сериализуем в строку.
-        // @ts-ignore
-        logInfo(message, data);
-      }
+      if (data === undefined) logInfo(message);
+      // @ts-ignore
+      else logInfo(message, data);
     } catch {
       try {
         logInfo(`${message} :: ${JSON.stringify(data)}`);
@@ -175,7 +168,7 @@ export default function NutritionSection({
   const [weekDates, setWeekDates] = useState<WeekDate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null); // ✅ string id
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const meals = {
     breakfast: "Завтрак",
@@ -185,9 +178,7 @@ export default function NutritionSection({
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
+      activationConstraint: { distance: 8 },
     }),
   );
 
@@ -231,9 +222,7 @@ export default function NutritionSection({
       if (data.menu) {
         logSuccess(`[MENU] loaded: ${data.menu.length} items`);
         setMenu(data.menu);
-        if (data.week_dates) {
-          setWeekDates(data.week_dates);
-        }
+        if (data.week_dates) setWeekDates(data.week_dates);
       } else {
         dbg("[MENU] loadMenu: no menu in response", data);
       }
@@ -337,10 +326,7 @@ export default function NutritionSection({
       if (data.success) {
         logSuccess("[DEL] success");
         setMenu((prev) => prev.filter((item) => item.id !== menuItemId));
-        toast({
-          title: "Удалено",
-          description: "Рецепт удален из плана",
-        });
+        toast({ title: "Удалено", description: "Рецепт удален из плана" });
       } else {
         logError("[DEL] failed");
       }
@@ -353,19 +339,14 @@ export default function NutritionSection({
       });
       dbg("[DEL] exception payload", { error });
     } finally {
-      dbg("[DEL] deleteRecipe: end", { menuLen: menu.length });
+      dbg("[DEL] deleteRecipe: end");
     }
   };
 
   const getRecipesForMeal = (dayNumber: number, mealType: string) => {
-    const filtered = menu
+    return menu
       .filter((m) => m.day_of_week === dayNumber && m.meal_type === mealType)
       .sort((a, b) => a.position - b.position);
-
-    // детальный лог по запросу можно включить при необходимости:
-    // dbg('[SEL] getRecipesForMeal', { dayNumber, mealType, count: filtered.length, ids: filtered.map(x => x.id) });
-
-    return filtered;
   };
 
   const getTotalCaloriesForMeal = (dayNumber: number, mealType: string) => {
@@ -383,6 +364,15 @@ export default function NutritionSection({
     setActiveId(String(event.active.id));
   };
 
+  /**
+   * ✅ Cross-cell drag-and-drop:
+   * - reorder within one meal/day
+   * - move between meals
+   * - move between days
+   *
+   * NOTE: With current markup, a drop target exists only on items.
+   * Dropping into an empty cell needs droppable containers (can add next).
+   */
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
@@ -420,56 +410,41 @@ export default function NutritionSection({
       return;
     }
 
+    const sourceCell = {
+      day: activeItem.day_of_week,
+      meal: activeItem.meal_type,
+    };
+    const targetCell = { day: overItem.day_of_week, meal: overItem.meal_type };
+    const sameCell =
+      sourceCell.day === targetCell.day && sourceCell.meal === targetCell.meal;
+
     dbg("[DND] resolved items", {
-      active: {
-        id: activeItem.id,
-        day: activeItem.day_of_week,
-        meal: activeItem.meal_type,
-        pos: activeItem.position,
-      },
-      over: {
-        id: overItem.id,
-        day: overItem.day_of_week,
-        meal: overItem.meal_type,
-        pos: overItem.position,
-      },
+      active: { id: activeItem.id, ...sourceCell, pos: activeItem.position },
+      over: { id: overItem.id, ...targetCell, pos: overItem.position },
+      sameCell,
     });
 
-    // ✅ Restrict sorting to within the same day + meal_type for now
-    const sameCell =
-      activeItem.day_of_week === overItem.day_of_week &&
-      activeItem.meal_type === overItem.meal_type;
-
-    if (!sameCell) {
-      dbg("[DND] cross-cell move blocked", {
-        from: { day: activeItem.day_of_week, meal: activeItem.meal_type },
-        to: { day: overItem.day_of_week, meal: overItem.meal_type },
-      });
-      toast({
-        title: "Пока нельзя",
-        description:
-          "Перетаскивание между приёмами пищи/днями будет добавлено позже",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Current cell items ordered by position
-    const cellItems = menu
+    const sourceItems = menu
       .filter(
         (m) =>
-          m.day_of_week === activeItem.day_of_week &&
-          m.meal_type === activeItem.meal_type,
+          m.day_of_week === sourceCell.day && m.meal_type === sourceCell.meal,
       )
       .sort((a, b) => a.position - b.position);
 
-    dbg("[DND] cellItems before", {
-      count: cellItems.length,
-      ordered: cellItems.map((x) => ({ id: x.id, pos: x.position })),
-    });
+    const targetItems = sameCell
+      ? sourceItems
+      : menu
+          .filter(
+            (m) =>
+              m.day_of_week === targetCell.day &&
+              m.meal_type === targetCell.meal,
+          )
+          .sort((a, b) => a.position - b.position);
 
-    const fromIndex = cellItems.findIndex((m) => String(m.id) === activeIdStr);
-    const toIndex = cellItems.findIndex((m) => String(m.id) === overIdStr);
+    const fromIndex = sourceItems.findIndex(
+      (m) => String(m.id) === activeIdStr,
+    );
+    const toIndex = targetItems.findIndex((m) => String(m.id) === overIdStr);
 
     dbg("[DND] indexes", { fromIndex, toIndex });
 
@@ -479,35 +454,58 @@ export default function NutritionSection({
       return;
     }
 
-    // Move item
-    const nextCell = cellItems.slice();
-    const [moved] = nextCell.splice(fromIndex, 1);
-    nextCell.splice(toIndex, 0, moved);
+    const moved = { ...activeItem };
 
-    dbg("[DND] cellItems after", {
-      ordered: nextCell.map((x) => ({ id: x.id, pos: x.position })),
+    // Remove from source
+    const newSource = sourceItems.slice();
+    newSource.splice(fromIndex, 1);
+
+    // Target base
+    const newTarget = sameCell ? newSource.slice() : targetItems.slice();
+    // Insert into target at toIndex
+    newTarget.splice(toIndex, 0, moved);
+
+    // Normalize positions
+    const normalizedSource = newSource.map((it, idx) => ({
+      ...it,
+      position: idx + 1,
+    }));
+    const normalizedTarget = newTarget.map((it, idx) => ({
+      ...it,
+      position: idx + 1,
+      day_of_week: targetCell.day,
+      meal_type: targetCell.meal,
+    }));
+
+    dbg("[DND] normalized", {
+      source: normalizedSource.map((x) => ({ id: x.id, pos: x.position })),
+      target: normalizedTarget.map((x) => ({ id: x.id, pos: x.position })),
     });
 
-    // Recalculate positions (because UI sorts by position)
-    const updatedPositions = new Map<number, number>();
-    nextCell.forEach((item, idx) => {
-      updatedPositions.set(item.id, idx + 1);
+    setMenu((prev) => {
+      const sourceMap = new Map<number, MenuItem>(
+        normalizedSource.map((x) => [x.id, x]),
+      );
+      const targetMap = new Map<number, MenuItem>(
+        normalizedTarget.map((x) => [x.id, x]),
+      );
+
+      return prev.map((item) => {
+        // moved item обязательно в target
+        const inTarget = targetMap.get(item.id);
+        if (inTarget) return inTarget;
+
+        const inSource = sourceMap.get(item.id);
+        if (inSource) return inSource;
+
+        return item;
+      });
     });
-
-    dbg("[DND] updatedPositions", Array.from(updatedPositions.entries()));
-
-    setMenu((prev) =>
-      prev.map((item) =>
-        updatedPositions.has(item.id)
-          ? { ...item, position: updatedPositions.get(item.id)! }
-          : item,
-      ),
-    );
 
     logSuccess("[DND] menu updated");
     toast({
       title: "Готово",
-      description: "Рецепты поменялись местами",
+      description: sameCell ? "Рецепты поменялись местами" : "Рецепт перенесён",
     });
   };
 
@@ -691,7 +689,6 @@ export default function NutritionSection({
                       })}
                     </div>
 
-                    {/* Итого за день */}
                     {menu.filter((m) => m.day_of_week === day.day_number)
                       .length > 0 && (
                       <div className="mt-6 pt-4 border-t border-gray-200">
