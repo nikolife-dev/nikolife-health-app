@@ -16,47 +16,15 @@ import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 export default function Index() {
   const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState('dashboard');
-  const { logs, clearLogs, logInfo, logSuccess, logError, logWarning } = useLiveLogs();
+  const { logs, clearLogs, logInfo } = useLiveLogs();
   
   useEffect(() => {
-    logInfo('🚀 Инициализация главной страницы приложения');
-    logInfo(`📍 Текущий URL: ${window.location.href}`);
-    logInfo(`🖥️ User Agent: ${navigator.userAgent.substring(0, 50)}...`);
-    logInfo(`📱 Размер экрана: ${window.innerWidth}x${window.innerHeight}`);
-    logInfo(`🌐 Язык: ${navigator.language}`);
-    
-    // Проверка авторизации
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      logSuccess(`🔐 Токен авторизации найден: ${token.substring(0, 15)}...`);
-      logInfo(`  • Длина токена: ${token.length} символов`);
-    } else {
-      logWarning('⚠️ Токен авторизации не найден в localStorage');
-    }
-    
-    // Проверка параметров URL
+    logInfo('Загрузка главной страницы');
     const section = searchParams.get('section');
-    const allParams = Array.from(searchParams.entries());
-    
-    if (allParams.length > 0) {
-      logInfo(`🔗 Параметры URL: ${JSON.stringify(Object.fromEntries(allParams))}`);
-    } else {
-      logInfo('🔗 Параметры URL отсутствуют');
-    }
-    
     if (section) {
-      logInfo(`📂 Переход на секцию из URL: "${section}"`);
+      logInfo(`Переход на секцию: ${section}`);
       setActiveSection(section);
-    } else {
-      logInfo('📂 Секция по умолчанию: "dashboard"');
     }
-    
-    logSuccess('✅ Главная страница успешно загружена');
-    
-    // Логирование при размонтировании
-    return () => {
-      logInfo('👋 Размонтирование главной страницы');
-    };
   }, [searchParams]);
   
   const [selectedWorkout, setSelectedWorkout] = useState<number | null>(null);
@@ -232,52 +200,10 @@ export default function Index() {
     },
   ];
 
-  // Логирование инициализации данных
-  useEffect(() => {
-    logInfo(`📊 Данные инициализированы:`);
-    logInfo(`  • Привычки: ${habits.length} шт.`);
-    logInfo(`  • Тренировки: ${workouts.length} шт.`);
-    logInfo(`  • Рецепты: ${recipes.length} шт.`);
-    logInfo(`  • Статьи: ${articles.length} шт.`);
-    logInfo(`  • Чаты: ${chats.length} шт.`);
-    
-    // Детали по привычкам
-    logInfo('📌 Детали привычек:');
-    habits.forEach((habit, i) => {
-      logInfo(`  ${i+1}. "${habit.name}": ${habit.progress}% (стрик: ${habit.streak} дн.)`);
-    });
-    
-    // Детали по тренировкам
-    logInfo('💪 Детали тренировок:');
-    workouts.forEach((workout, i) => {
-      logInfo(`  ${i+1}. "${workout.title}": ${workout.duration}, ${workout.level}, ${workout.calories} ккал`);
-    });
-  }, []);
-
-  // Расширенное логирование смены секции
-  const handleSectionChange = (newSection: string) => {
-    logInfo(`🔄 Смена секции: "${activeSection}" → "${newSection}"`);
-    
-    // Детальная информация по секциям
-    const sectionDetails: Record<string, string> = {
-      dashboard: 'Главная панель (привычки, статистика)',
-      workouts: 'Тренировки (HIIT, йога, силовые)',
-      nutrition: 'Питание (меню на неделю, рецепты)',
-      library: 'Библиотека знаний',
-      chats: 'Чаты и сообщества',
-      analytics: 'Аналитика и прогресс',
-      profile: 'Профиль пользователя'
-    };
-    
-    logInfo(`📂 Открывается: ${sectionDetails[newSection] || 'Неизвестная секция'}`);
-    setActiveSection(newSection);
-    logSuccess(`✅ Секция "${newSection}" успешно активирована`);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       <div className="flex h-screen">
-        <IndexSidebar activeSection={activeSection} setActiveSection={handleSectionChange} />
+        <IndexSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
 
         <main className="flex-1 overflow-hidden">
           <ScrollArea className="h-full">
@@ -288,25 +214,16 @@ export default function Index() {
                   articles={articles}
                   workouts={workouts}
                   meals={meals}
-                  onSectionChange={(section: string) => {
-                    logInfo(`🖱️ Клик по быстрому переходу в DashboardSection → "${section}"`);
-                    handleSectionChange(section);
-                  }}
+                  onSectionChange={setActiveSection}
                 />
               )}
 
-              {activeSection === 'library' && (() => {
-                logInfo('📚 Рендер секции "Библиотека знаний"');
-                logInfo(`  • Всего статей: ${articles.length}`);
-                articles.forEach((article, i) => {
-                  logInfo(`    ${i+1}. "${article.title}" (${article.category}, ${article.readTime})`);
-                });
-                return (
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-3xl font-bold text-gray-900 mb-2">Библиотека знаний</h2>
-                      <p className="text-gray-600">Статьи о здоровье, питании и тренировках</p>
-                    </div>
+              {activeSection === 'library' && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Библиотека знаний</h2>
+                    <p className="text-gray-600">Статьи о здоровье, питании и тренировках</p>
+                  </div>
 
                   <Tabs defaultValue="all" className="w-full">
                     <TabsList>
@@ -340,98 +257,38 @@ export default function Index() {
                     </TabsContent>
                   </Tabs>
                 </div>
-                );
-              })()}
+              )}
 
-              {activeSection === 'workouts' && (() => {
-                logInfo('🏋️ Рендер секции "Тренировки"');
-                logInfo(`  • Всего тренировок: ${workouts.length}`);
-                logInfo(`  • Выбрана тренировка: ${selectedWorkout !== null ? `#${selectedWorkout} "${workouts[selectedWorkout]?.title}"` : 'нет'}`);
-                logInfo(`  • Прогресс выполнения: ${workoutProgress.length} шагов`);
-                return (
-                  <WorkoutSection 
-                    workouts={workouts}
-                    selectedWorkout={selectedWorkout}
-                    setSelectedWorkout={(id: number | null) => {
-                      logInfo(`🎯 Выбор тренировки: ${id !== null ? `#${id} "${workouts[id]?.title}"` : 'отмена'}`);
-                      if (id !== null) {
-                        const workout = workouts[id];
-                        logInfo(`  • Длительность: ${workout?.duration}`);
-                        logInfo(`  • Уровень: ${workout?.level}`);
-                        logInfo(`  • Категория: ${workout?.category}`);
-                        logInfo(`  • Калории: ${workout?.calories} ккал`);
-                        logInfo(`  • Упражнений: ${workout?.exercises?.length || 0}`);
-                      }
-                      setSelectedWorkout(id);
-                    }}
-                    workoutProgress={workoutProgress}
-                    setWorkoutProgress={(progress: number[]) => {
-                      logInfo(`📈 Обновление прогресса тренировки: ${progress.length} упражнений выполнено`);
-                      logInfo(`  • Прогресс: ${progress.join(', ')}`);
-                      setWorkoutProgress(progress);
-                    }}
-                  />
-                );
-              })()}
+              {activeSection === 'workouts' && (
+                <WorkoutSection 
+                  workouts={workouts}
+                  selectedWorkout={selectedWorkout}
+                  setSelectedWorkout={setSelectedWorkout}
+                  workoutProgress={workoutProgress}
+                  setWorkoutProgress={setWorkoutProgress}
+                />
+              )}
 
-              {activeSection === 'nutrition' && (() => {
-                logInfo('🍽️ Рендер секции "Питание"');
-                logInfo(`  • Всего рецептов: ${recipes.length}`);
-                logInfo(`  • Выбран рецепт: ${selectedRecipe !== null ? `#${selectedRecipe} "${recipes[selectedRecipe]?.name}"` : 'нет'}`);
-                logInfo(`  • Запланировано приёмов пищи: ${Object.keys(mealPlan).length}`);
-                return (
-                  <NutritionSection 
-                    recipes={recipes}
-                    selectedRecipe={selectedRecipe}
-                    setSelectedRecipe={(id: number | null) => {
-                      logInfo(`🎯 Выбор рецепта: ${id !== null ? `#${id} "${recipes[id]?.name}"` : 'отмена'}`);
-                      if (id !== null) {
-                        const recipe = recipes[id];
-                        logInfo(`  • Калории: ${recipe?.calories} ккал`);
-                        logInfo(`  • Белки: ${recipe?.protein}г, Углеводы: ${recipe?.carbs}г, Жиры: ${recipe?.fats}г`);
-                        logInfo(`  • Время приготовления: ${recipe?.cookTime}`);
-                        logInfo(`  • Сложность: ${recipe?.difficulty}`);
-                        logInfo(`  • Ингредиентов: ${recipe?.ingredients?.length || 0}`);
-                      }
-                      setSelectedRecipe(id);
-                    }}
-                    mealPlan={mealPlan}
-                    setMealPlan={(plan: {[key: string]: number}) => {
-                      logInfo(`📅 Обновление плана питания`);
-                      logInfo(`  • Приёмов пищи запланировано: ${Object.keys(plan).length}`);
-                      Object.entries(plan).forEach(([time, recipeId]) => {
-                        logInfo(`    - ${time}: рецепт #${recipeId} "${recipes[recipeId]?.name}"`);
-                      });
-                      setMealPlan(plan);
-                    }}
-                  />
-                );
-              })()}
+              {activeSection === 'nutrition' && (
+                <NutritionSection 
+                  recipes={recipes}
+                  selectedRecipe={selectedRecipe}
+                  setSelectedRecipe={setSelectedRecipe}
+                  mealPlan={mealPlan}
+                  setMealPlan={setMealPlan}
+                />
+              )}
 
-              {activeSection === 'community' && (() => {
-                logInfo('💬 Рендер секции "Сообщество"');
-                logInfo(`  • Всего чатов: ${chats.length}`);
-                chats.forEach((chat) => {
-                  logInfo(`    - "${chat.name}" (${chat.type}, ${chat.unread} непрочитанных)`);
-                });
-                return (
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-3xl font-bold text-gray-900 mb-2">Сообщество</h2>
-                      <p className="text-gray-600">Общайтесь и делитесь опытом</p>
-                    </div>
+              {activeSection === 'community' && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Сообщество</h2>
+                    <p className="text-gray-600">Общайтесь и делитесь опытом</p>
+                  </div>
 
-                    <div className="space-y-4">
-                      {chats.map((chat) => (
-                        <Card 
-                          key={chat.id} 
-                          className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                          onClick={() => {
-                            logInfo(`🖱️ Клик по чату: "${chat.name}" (${chat.type})`);
-                            logInfo(`  • Последнее сообщение: "${chat.lastMessage}"`);
-                            logInfo(`  • Время: ${chat.time}`);
-                          }}
-                        >
+                  <div className="space-y-4">
+                    {chats.map((chat) => (
+                      <Card key={chat.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
                         <div className="flex items-start gap-4">
                           <Avatar className="h-12 w-12 flex-shrink-0">
                             <AvatarFallback className={chat.type === 'assistant' ? 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white' : 'bg-gradient-to-br from-blue-500 to-purple-500 text-white'}>
@@ -456,21 +313,14 @@ export default function Index() {
                     ))}
                   </div>
                 </div>
-                );
-              })()}
+              )}
 
-              {activeSection === 'progress' && (() => {
-                logInfo('📊 Рендер секции "Ваш прогресс"');
-                logInfo('  • Метрики:');
-                logInfo('    - Вес: 68.2 кг (-3.2 кг за месяц)');
-                logInfo('    - Активность: 21 тренировок в месяц');
-                logInfo('    - Стрик: 12 дней подряд');
-                return (
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-3xl font-bold text-gray-900 mb-2">Ваш прогресс</h2>
-                      <p className="text-gray-600">Отслеживайте достижения и статистику</p>
-                    </div>
+              {activeSection === 'progress' && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Ваш прогресс</h2>
+                    <p className="text-gray-600">Отслеживайте достижения и статистику</p>
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card className="p-6">
@@ -508,8 +358,7 @@ export default function Index() {
                     </div>
                   </Card>
                 </div>
-                );
-              })()}
+              )}
             </div>
           </ScrollArea>
         </main>
