@@ -31,6 +31,7 @@ export default function Index() {
   const [workoutProgress, setWorkoutProgress] = useState<number[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<number | null>(null);
   const [mealPlan, setMealPlan] = useState<{[key: string]: number}>({});
+  const [favoritePodcasts, setFavoritePodcasts] = useState<number[]>([]);
 
   const habits = [
     { name: 'Утренняя зарядка', progress: 85, streak: 12 },
@@ -408,61 +409,116 @@ export default function Index() {
                 <div className="space-y-6">
                   <div>
                     <h2 className="text-3xl font-bold text-gray-900 mb-2">Ментальное Здоровье</h2>
-                    <p className="text-gray-600">Медитации, дыхательные практики и управление стрессом</p>
+                    <p className="text-gray-600">Аудио-подкасты для медитации и расслабления</p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center mb-4">
-                        <Icon name="Brain" className="text-purple-600" size={24} />
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">Медитация</h3>
-                      <p className="text-gray-600 text-sm mb-4">Практики осознанности для снижения стресса</p>
-                      <Badge variant="secondary">10 практик</Badge>
-                    </Card>
-
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mb-4">
-                        <Icon name="Wind" className="text-blue-600" size={24} />
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">Дыхание</h3>
-                      <p className="text-gray-600 text-sm mb-4">Дыхательные упражнения для расслабления</p>
-                      <Badge variant="secondary">8 техник</Badge>
-                    </Card>
-
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-pink-100 to-pink-200 flex items-center justify-center mb-4">
-                        <Icon name="Heart" className="text-pink-600" size={24} />
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">Управление стрессом</h3>
-                      <p className="text-gray-600 text-sm mb-4">Техники борьбы со стрессом и тревогой</p>
-                      <Badge variant="secondary">12 методов</Badge>
-                    </Card>
+                  <div className="space-y-4">
+                    {[
+                      {
+                        id: 1,
+                        title: 'Утренняя медитация для начинающих',
+                        description: 'Простая практика для спокойного начала дня',
+                        duration: '12:30',
+                        category: 'Медитация'
+                      },
+                      {
+                        id: 2,
+                        title: 'Дыхательные техники для снятия стресса',
+                        description: 'Эффективные методы управления тревожностью',
+                        duration: '8:45',
+                        category: 'Дыхание'
+                      },
+                      {
+                        id: 3,
+                        title: 'Глубокое расслабление перед сном',
+                        description: 'Настройтесь на качественный отдых',
+                        duration: '18:20',
+                        category: 'Сон'
+                      },
+                      {
+                        id: 4,
+                        title: 'Практика осознанности',
+                        description: 'Присутствуйте в моменте здесь и сейчас',
+                        duration: '15:00',
+                        category: 'Медитация'
+                      },
+                      {
+                        id: 5,
+                        title: 'Управление эмоциями через дыхание',
+                        description: 'Научитесь контролировать свои реакции',
+                        duration: '10:15',
+                        category: 'Дыхание'
+                      },
+                      {
+                        id: 6,
+                        title: 'Сканирование тела',
+                        description: 'Освободите напряжение в каждой части тела',
+                        duration: '20:00',
+                        category: 'Расслабление'
+                      },
+                      {
+                        id: 7,
+                        title: 'Благодарность и позитивное мышление',
+                        description: 'Практика для улучшения настроения',
+                        duration: '7:30',
+                        category: 'Позитив'
+                      },
+                      {
+                        id: 8,
+                        title: 'Преодоление тревожности',
+                        description: 'Техники борьбы с беспокойством',
+                        duration: '14:45',
+                        category: 'Стресс'
+                      }
+                    ].map((podcast) => (
+                      <Card key={podcast.id} className="p-6 hover:shadow-lg transition-shadow">
+                        <div className="flex items-start gap-4">
+                          <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                            <Icon name="Headphones" className="text-white" size={28} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-4 mb-2">
+                              <div className="flex-1">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-1">{podcast.title}</h3>
+                                <p className="text-sm text-gray-600 mb-3">{podcast.description}</p>
+                                <div className="flex items-center gap-3">
+                                  <Badge variant="secondary" className="flex items-center gap-1">
+                                    <Icon name="Clock" size={14} />
+                                    {podcast.duration}
+                                  </Badge>
+                                  <Badge variant="outline">{podcast.category}</Badge>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (favoritePodcasts.includes(podcast.id)) {
+                                    setFavoritePodcasts(favoritePodcasts.filter(id => id !== podcast.id));
+                                  } else {
+                                    setFavoritePodcasts([...favoritePodcasts, podcast.id]);
+                                  }
+                                }}
+                                className="flex-shrink-0"
+                              >
+                                <Icon
+                                  name={favoritePodcasts.includes(podcast.id) ? 'Heart' : 'Heart'}
+                                  size={20}
+                                  className={favoritePodcasts.includes(podcast.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}
+                                />
+                              </Button>
+                            </div>
+                            <div className="flex items-center gap-2 mt-4">
+                              <Button size="sm" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+                                <Icon name="Play" size={16} className="mr-1" />
+                                Слушать
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
-
-                  <Card className="p-8">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-6">Сегодняшняя практика</h3>
-                    <div className="flex items-center gap-6 mb-6">
-                      <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-                        <Icon name="Sparkles" className="text-white" size={36} />
-                      </div>
-                      <div>
-                        <h4 className="text-xl font-semibold text-gray-900 mb-2">Утренняя медитация</h4>
-                        <p className="text-gray-600">Начните день с осознанности и спокойствия</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <Badge variant="secondary" className="flex items-center gap-1">
-                        <Icon name="Clock" size={14} />
-                        10 минут
-                      </Badge>
-                      <Badge variant="secondary">Начальный уровень</Badge>
-                    </div>
-                    <Button className="w-full mt-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-                      <Icon name="Play" size={18} className="mr-2" />
-                      Начать практику
-                    </Button>
-                  </Card>
                 </div>
               )}
 
