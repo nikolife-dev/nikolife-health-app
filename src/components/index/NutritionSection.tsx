@@ -142,23 +142,21 @@ export default function NutritionSection({
 
       const data = await response.json();
       
-      dbg("[MENU] loadMenu: raw response keys", Object.keys(data || {}));
-      dbg("[MENU] loadMenu: full response", data);
-      dbg("[MENU] loadMenu: menu field type", typeof data?.menu);
-      dbg("[MENU] loadMenu: menu field value", data?.menu);
-      dbg("[MENU] loadMenu: week_dates field type", typeof data?.week_dates);
-      dbg("[MENU] loadMenu: week_dates field value", data?.week_dates);
+      console.log("[MENU] RAW RESPONSE:", JSON.stringify(data, null, 2));
+      logInfo(`[MENU] Response keys: ${Object.keys(data || {}).join(", ")}`);
+      logInfo(`[MENU] Has menu? ${!!data?.menu} (type: ${typeof data?.menu}, isArray: ${Array.isArray(data?.menu)})`);
+      logInfo(`[MENU] Has week_dates? ${!!data?.week_dates} (type: ${typeof data?.week_dates}, isArray: ${Array.isArray(data?.week_dates)})`);
       
-      dbg("[MENU] loadMenu: json", {
-        hasMenu: !!data?.menu,
-        menuLength: Array.isArray(data?.menu) ? data.menu.length : null,
-        hasWeekDates: !!data?.week_dates,
-        weekDatesLength: Array.isArray(data?.week_dates)
-          ? data.week_dates.length
-          : null,
-        dataKeys: Object.keys(data || {}),
-        fullData: data,
-      });
+      if (data?.menu) {
+        logInfo(`[MENU] menu length: ${Array.isArray(data.menu) ? data.menu.length : 'not array'}`);
+        if (Array.isArray(data.menu) && data.menu.length > 0) {
+          logInfo(`[MENU] First menu item: ${JSON.stringify(data.menu[0])}`);
+        }
+      }
+      
+      if (data?.week_dates) {
+        logInfo(`[MENU] week_dates length: ${Array.isArray(data.week_dates) ? data.week_dates.length : 'not array'}`);
+      }
 
       if (data?.menu && Array.isArray(data.menu)) {
         logSuccess(`[MENU] loaded: ${data.menu.length} items`);
