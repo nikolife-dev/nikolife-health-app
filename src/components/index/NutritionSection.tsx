@@ -16,12 +16,8 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import DraggableRecipe from "./nutrition/DraggableRecipe";
+import DayCard from "./nutrition/DayCard";
 
 interface Recipe {
   id: number;
@@ -47,66 +43,6 @@ interface WeekDate {
   day_number: number;
   date: string;
   day_name: string;
-}
-
-interface DraggableRecipeProps {
-  menuItem: MenuItem;
-  onDelete: (id: number) => void;
-}
-
-function DraggableRecipe({ menuItem, onDelete }: DraggableRecipeProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: String(menuItem.id) }); // ✅ string id for dnd-kit stability
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="border rounded-lg p-3 bg-white hover:shadow-md transition-shadow group cursor-move"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-gray-900 text-sm truncate">
-            {menuItem.recipe.title}
-          </p>
-          <div className="flex gap-3 text-xs text-gray-500 mt-1">
-            <span className="flex items-center gap-1">
-              <Icon name="Clock" size={12} />
-              {menuItem.recipe.cooking_time}м
-            </span>
-            <span className="flex items-center gap-1">
-              <Icon name="Flame" size={12} />
-              {menuItem.recipe.calories} ккал
-            </span>
-          </div>
-        </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(menuItem.id);
-          }}
-          className="text-red-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-          title="Удалить"
-        >
-          <Icon name="X" size={18} />
-        </button>
-      </div>
-    </div>
-  );
 }
 
 interface OldRecipe {
@@ -142,18 +78,13 @@ export default function NutritionSection({
   const { toast } = useToast();
   const { logInfo, logSuccess, logError } = useLiveLogs();
 
-  /**
-   * ========================
-   * DEBUG / DETAILED LOGGING
-   * ========================
-   */
   const DEBUG = true;
 
   const dbg = (message: string, data?: unknown) => {
     if (!DEBUG) return;
     try {
       if (data === undefined) logInfo(message);
-      // @ts-ignore
+      // @ts-expect-error - logInfo может не принимать второй параметр
       else logInfo(message, data);
     } catch {
       try {
@@ -337,7 +268,7 @@ export default function NutritionSection({
       const rawText = await response.text();
       dbg("[DEL] response rawText", rawText || "[empty body]");
 
-      let data: any = null;
+      let data: { success?: boolean; error?: string; message?: string } | null = null;
       try {
         data = rawText ? JSON.parse(rawText) : null;
       } catch {
@@ -359,7 +290,6 @@ export default function NutritionSection({
         return;
       }
 
-      // success даже если backend вернул 204 No Content
       const success = data?.success ?? true;
 
       if (success) {
@@ -400,25 +330,11 @@ export default function NutritionSection({
     return recipes.reduce((sum, item) => sum + (item.recipe.calories || 0), 0);
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
-  };
-
   const handleDragStart = (event: DragStartEvent) => {
     dbg("[DND] dragStart", { activeId: event.active?.id });
     setActiveId(String(event.active.id));
   };
 
-  /**
-   * ✅ Cross-cell drag-and-drop:
-   * - reorder within one meal/day
-   * - move between meals
-   * - move between days
-   *
-   * NOTE: With current markup, a drop target exists only on items.
-   * Dropping into an empty cell needs droppable containers (can add next).
-   */
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
@@ -502,16 +418,12 @@ export default function NutritionSection({
 
     const moved = { ...activeItem };
 
-    // Remove from source
     const newSource = sourceItems.slice();
     newSource.splice(fromIndex, 1);
 
-    // Target base
     const newTarget = sameCell ? newSource.slice() : targetItems.slice();
-    // Insert into target at toIndex
     newTarget.splice(toIndex, 0, moved);
 
-    // Normalize positions
     const normalizedSource = newSource.map((it, idx) => ({
       ...it,
       position: idx + 1,
@@ -537,7 +449,6 @@ export default function NutritionSection({
       );
 
       return prev.map((item) => {
-        // moved item обязательно в target
         const inTarget = targetMap.get(item.id);
         if (inTarget) return inTarget;
 
@@ -566,6 +477,8 @@ export default function NutritionSection({
       </div>
     );
   }
+
+  const activeDragItem = activeId ? menu.find((m) => String(m.id) === activeId) : null;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -641,140 +554,24 @@ export default function NutritionSection({
             >
               <div className="space-y-6">
                 {weekDates.map((day) => (
-                  <Card key={day.day_number} className="p-6">
-                    <div className="mb-4">
-                      <h3 className="text-2xl font-bold text-gray-900">
-                        {day.day_name}
-                      </h3>
-                      <p className="text-gray-600">{formatDate(day.date)}</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {Object.entries(meals).map(([key, label]) => {
-                        const mealRecipes = getRecipesForMeal(
-                          day.day_number,
-                          key,
-                        );
-                        const totalCalories = getTotalCaloriesForMeal(
-                          day.day_number,
-                          key,
-                        );
-
-                        return (
-                          <div key={key} className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-semibold text-lg text-gray-700 flex items-center gap-2">
-                                <Icon
-                                  name={
-                                    key === "breakfast"
-                                      ? "Coffee"
-                                      : key === "lunch"
-                                        ? "UtensilsCrossed"
-                                        : "Moon"
-                                  }
-                                  size={20}
-                                />
-                                {label}
-                              </h4>
-                              {mealRecipes.length > 0 && (
-                                <div className="flex items-center gap-1 text-sm">
-                                  <Icon
-                                    name="Flame"
-                                    size={14}
-                                    className="text-orange-500"
-                                  />
-                                  <span
-                                    className={`font-medium ${totalCalories > 600 ? "text-red-600" : "text-gray-600"}`}
-                                  >
-                                    {totalCalories} ккал
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="space-y-2 min-h-[100px]">
-                              {mealRecipes.length > 0 ? (
-                                <SortableContext
-                                  items={mealRecipes.map((m) => String(m.id))}
-                                  strategy={verticalListSortingStrategy}
-                                >
-                                  {mealRecipes.map((meal) => (
-                                    <DraggableRecipe
-                                      key={meal.id}
-                                      menuItem={meal}
-                                      onDelete={deleteRecipe}
-                                    />
-                                  ))}
-                                </SortableContext>
-                              ) : (
-                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                                  <p className="text-gray-400 text-sm">
-                                    Не выбрано
-                                  </p>
-                                </div>
-                              )}
-
-                              {mealRecipes.length < 5 && (
-                                <button
-                                  onClick={() =>
-                                    navigate(
-                                      `/recipes?addToMenu=true&day=${day.day_number}&meal=${key}`,
-                                    )
-                                  }
-                                  className="w-full border-2 border-dashed border-[#748c6d] rounded-lg p-3 text-[#748c6d] hover:bg-[#748c6d] hover:text-white transition-colors flex items-center justify-center gap-2"
-                                >
-                                  <Icon name="Plus" size={18} />
-                                  <span className="text-sm font-medium">
-                                    Добавить
-                                  </span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {menu.filter((m) => m.day_of_week === day.day_number)
-                      .length > 0 && (
-                      <div className="mt-6 pt-4 border-t border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">
-                            Итого за день:
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <Icon
-                              name="Flame"
-                              size={16}
-                              className="text-orange-500"
-                            />
-                            <span className="text-lg font-bold text-gray-900">
-                              {Object.keys(meals).reduce(
-                                (sum, key) =>
-                                  sum +
-                                  getTotalCaloriesForMeal(day.day_number, key),
-                                0,
-                              )}{" "}
-                              ккал
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </Card>
+                  <DayCard
+                    key={day.day_number}
+                    day={day}
+                    meals={meals}
+                    getRecipesForMeal={getRecipesForMeal}
+                    getTotalCaloriesForMeal={getTotalCaloriesForMeal}
+                    onDelete={deleteRecipe}
+                    onAddClick={() => navigate("/recipes")}
+                  />
                 ))}
               </div>
 
               <DragOverlay>
-                {activeId ? (
-                  <div className="border rounded-lg p-3 bg-white shadow-lg">
-                    <p className="font-medium text-gray-900 text-sm">
-                      {
-                        menu.find((m) => String(m.id) === activeId)?.recipe
-                          .title
-                      }
-                    </p>
-                  </div>
+                {activeDragItem ? (
+                  <DraggableRecipe
+                    menuItem={activeDragItem}
+                    onDelete={() => {}}
+                  />
                 ) : null}
               </DragOverlay>
             </DndContext>
