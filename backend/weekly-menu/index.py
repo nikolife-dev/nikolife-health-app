@@ -313,7 +313,7 @@ def handler(event: dict, context) -> dict:
                         WHEN 'dinner' THEN 3 
                     END,
                     wm.position
-            """, (target_user_id, week_start))
+            """, (current_user_id, week_start))
             
             menu_items = []
             for row in cur.fetchall():
@@ -355,7 +355,7 @@ def handler(event: dict, context) -> dict:
                     'week_start_date': week_start.isoformat(),
                     'week_dates': week_dates,
                     'menu': menu_items,
-                    'user_id': target_user_id
+                    'user_id': current_user_id
                 }),
                 'isBase64Encoded': False
             }
