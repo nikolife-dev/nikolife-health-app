@@ -151,6 +151,45 @@ export default function AdminRecipesTab() {
     setIsEditDialogOpen(true);
   };
 
+  const handleToggleActive = async (recipe: Recipe) => {
+    const newStatus = !recipe.is_active;
+    logInfo(`[TOGGLE] Изменение статуса рецепта #${recipe.id}: ${recipe.is_active ? 'Активен' : 'Скрыт'} → ${newStatus ? 'Активен' : 'Скрыт'}`);
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const url = `${RECIPES_API}?id=${recipe.id}`;
+      
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'X-Auth-Token': token!,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_active: newStatus }),
+      });
+
+      if (response.ok) {
+        logSuccess(`[TOGGLE] Статус рецепта #${recipe.id} изменен на: ${newStatus ? 'Активен' : 'Скрыт'}`);
+        toast({ 
+          title: 'Успешно', 
+          description: `Рецепт ${newStatus ? 'активирован' : 'скрыт'}` 
+        });
+        loadRecipes();
+      } else {
+        const data = await response.json();
+        logError(`[TOGGLE] Ошибка: ${data.error || 'unknown'}`);
+        throw new Error(data.error || 'Ошибка изменения статуса');
+      }
+    } catch (error) {
+      logError(`[TOGGLE] Exception: ${error instanceof Error ? error.message : 'unknown'}`);
+      toast({
+        title: 'Ошибка',
+        description: error instanceof Error ? error.message : 'Не удалось изменить статус',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const getCategoryBadge = (cat: string) => {
     const colors: Record<string, string> = {
       'завтрак': 'bg-yellow-500/10 text-yellow-700',
@@ -268,9 +307,10 @@ export default function AdminRecipesTab() {
                         <Badge
                           className={
                             recipe.is_active
-                              ? 'bg-green-500/10 text-green-700'
-                              : 'bg-gray-500/10 text-gray-700'
+                              ? 'bg-green-500/10 text-green-700 cursor-pointer hover:bg-green-500/20'
+                              : 'bg-gray-500/10 text-gray-700 cursor-pointer hover:bg-gray-500/20'
                           }
+                          onClick={() => handleToggleActive(recipe)}
                         >
                           {recipe.is_active ? 'Активен' : 'Скрыт'}
                         </Badge>
