@@ -404,6 +404,68 @@ export default function Index() {
                 </div>
               )}
 
+              {activeSection === 'mental' && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Ментальное Здоровье</h2>
+                    <p className="text-gray-600">Медитации, дыхательные практики и управление стрессом</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center mb-4">
+                        <Icon name="Brain" className="text-purple-600" size={24} />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">Медитация</h3>
+                      <p className="text-gray-600 text-sm mb-4">Практики осознанности для снижения стресса</p>
+                      <Badge variant="secondary">10 практик</Badge>
+                    </Card>
+
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mb-4">
+                        <Icon name="Wind" className="text-blue-600" size={24} />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">Дыхание</h3>
+                      <p className="text-gray-600 text-sm mb-4">Дыхательные упражнения для расслабления</p>
+                      <Badge variant="secondary">8 техник</Badge>
+                    </Card>
+
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-pink-100 to-pink-200 flex items-center justify-center mb-4">
+                        <Icon name="Heart" className="text-pink-600" size={24} />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">Управление стрессом</h3>
+                      <p className="text-gray-600 text-sm mb-4">Техники борьбы со стрессом и тревогой</p>
+                      <Badge variant="secondary">12 методов</Badge>
+                    </Card>
+                  </div>
+
+                  <Card className="p-8">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-6">Сегодняшняя практика</h3>
+                    <div className="flex items-center gap-6 mb-6">
+                      <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                        <Icon name="Sparkles" className="text-white" size={36} />
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-semibold text-gray-900 mb-2">Утренняя медитация</h4>
+                        <p className="text-gray-600">Начните день с осознанности и спокойствия</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <Icon name="Clock" size={14} />
+                        10 минут
+                      </Badge>
+                      <Badge variant="secondary">Начальный уровень</Badge>
+                    </div>
+                    <Button className="w-full mt-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+                      <Icon name="Play" size={18} className="mr-2" />
+                      Начать практику
+                    </Button>
+                  </Card>
+                </div>
+              )}
+
               {activeSection === 'progress' && (
                 <div className="space-y-6">
                   <div>

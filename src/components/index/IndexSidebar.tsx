@@ -56,6 +56,15 @@ export default function IndexSidebar({ activeSection, setActiveSection }: IndexS
         </Button>
 
         <Button
+          variant={activeSection === 'mental' ? 'default' : 'ghost'}
+          className="w-full justify-start"
+          onClick={() => setActiveSection('mental')}
+        >
+          <Icon name="Brain" className="lg:mr-2" size={20} />
+          <span className="hidden lg:inline">Ментальное Здоровье</span>
+        </Button>
+
+        <Button
           variant={activeSection === 'community' ? 'default' : 'ghost'}
           className="w-full justify-start"
           onClick={() => setActiveSection('community')}
