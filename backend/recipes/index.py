@@ -16,7 +16,8 @@ def handler(event: dict, context) -> dict:
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token'
             },
-            'body': ''
+            'body': '',
+            'isBase64Encoded': False
         }
     
     try:
@@ -59,7 +60,7 @@ def handler(event: dict, context) -> dict:
         # GET /favorites
         if method == 'GET' and action == 'favorites':
             if not user_id:
-                return {'statusCode': 401, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Требуется авторизация'})}
+                return {'statusCode': 401, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Требуется авторизация'}), 'isBase64Encoded': False}
             
             cur.execute(f"""
                 SELECT r.* FROM {schema}.recipes r
@@ -85,7 +86,7 @@ def handler(event: dict, context) -> dict:
         # POST /{id}/favorite
         if method == 'POST' and action == 'favorite' and recipe_id:
             if not user_id:
-                return {'statusCode': 401, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Требуется авторизация'})}
+                return {'statusCode': 401, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Требуется авторизация'}), 'isBase64Encoded': False}
             
             cur.execute(f"SELECT id FROM {schema}.user_favorites WHERE user_id = %s AND recipe_id = %s", (user_id, recipe_id))
             existing = cur.fetchone()
@@ -100,7 +101,7 @@ def handler(event: dict, context) -> dict:
             conn.commit()
             cur.close()
             conn.close()
-            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True, 'is_favorite': is_favorite})}
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True, 'is_favorite': is_favorite}), 'isBase64Encoded': False}
         
         # GET /{id}
         if method == 'GET' and recipe_id:
@@ -110,7 +111,7 @@ def handler(event: dict, context) -> dict:
             if not row:
                 cur.close()
                 conn.close()
-                return {'statusCode': 404, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Рецепт не найден'})}
+                return {'statusCode': 404, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Рецепт не найден'}), 'isBase64Encoded': False}
             
             is_favorite = False
             if user_id:
@@ -127,7 +128,7 @@ def handler(event: dict, context) -> dict:
             
             cur.close()
             conn.close()
-            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps(recipe)}
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps(recipe), 'isBase64Encoded': False}
         
         # GET /
         if method == 'GET':
@@ -176,17 +177,17 @@ def handler(event: dict, context) -> dict:
             
             cur.close()
             conn.close()
-            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'recipes': recipes})}
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'recipes': recipes}), 'isBase64Encoded': False}
         
         # POST /
         if method == 'POST' and not recipe_id:
             if not user_id:
-                return {'statusCode': 401, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Требуется авторизация'})}
+                return {'statusCode': 401, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Требуется авторизация'}), 'isBase64Encoded': False}
             
             body = json.loads(event.get('body', '{}'))
             
             if not body.get('title') or not body.get('ingredients') or not body.get('instructions'):
-                return {'statusCode': 400, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Отсутствуют обязательные поля'})}
+                return {'statusCode': 400, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Отсутствуют обязательные поля'}), 'isBase64Encoded': False}
             
             cur.execute(f"""
                 INSERT INTO {schema}.recipes 
@@ -204,21 +205,21 @@ def handler(event: dict, context) -> dict:
             conn.commit()
             cur.close()
             conn.close()
-            return {'statusCode': 201, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True, 'id': new_id})}
+            return {'statusCode': 201, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True, 'id': new_id}), 'isBase64Encoded': False}
         
         # PUT /{id}
         if method == 'PUT' and recipe_id:
             if not user_id:
-                return {'statusCode': 401, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Требуется авторизация'})}
+                return {'statusCode': 401, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Требуется авторизация'}), 'isBase64Encoded': False}
             
             cur.execute(f"SELECT created_by FROM {schema}.recipes WHERE id = %s", (recipe_id,))
             recipe = cur.fetchone()
             
             if not recipe:
-                return {'statusCode': 404, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Рецепт не найден'})}
+                return {'statusCode': 404, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Рецепт не найден'}), 'isBase64Encoded': False}
             
             if not is_admin and recipe[0] != user_id:
-                return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Нет прав'})}
+                return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Нет прав'}), 'isBase64Encoded': False}
             
             body = json.loads(event.get('body', '{}'))
             
@@ -244,22 +245,22 @@ def handler(event: dict, context) -> dict:
             conn.commit()
             cur.close()
             conn.close()
-            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True})}
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True}), 'isBase64Encoded': False}
         
         # DELETE /{id}
         if method == 'DELETE' and recipe_id:
             if not is_admin:
-                return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Только администратор'})}
+                return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Только администратор'}), 'isBase64Encoded': False}
             
             cur.execute(f"UPDATE {schema}.recipes SET is_active = false WHERE id = %s", (recipe_id,))
             conn.commit()
             cur.close()
             conn.close()
-            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True})}
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True}), 'isBase64Encoded': False}
         
         cur.close()
         conn.close()
-        return {'statusCode': 405, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Method not allowed'})}
+        return {'statusCode': 405, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Method not allowed'}), 'isBase64Encoded': False}
         
     except Exception as e:
-        return {'statusCode': 500, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': str(e)})}
+        return {'statusCode': 500, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': str(e)}), 'isBase64Encoded': False}
