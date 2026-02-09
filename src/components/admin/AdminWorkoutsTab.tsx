@@ -2,24 +2,6 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -30,6 +12,8 @@ import {
 } from '@/components/ui/table';
 import { TabsContent } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
+import AddWorkoutDialog from './workouts/AddWorkoutDialog';
+import EditWorkoutDialog from './workouts/EditWorkoutDialog';
 
 const WORKOUTS_API = 'https://functions.poehali.dev/10bc33f4-9e4c-47aa-a7b9-5097af1fdfeb';
 
@@ -249,187 +233,18 @@ export default function AdminWorkoutsTab() {
               <CardTitle className="text-[#748c6d]">Тренировки</CardTitle>
               <CardDescription>Управление программами тренировок</CardDescription>
             </div>
-            <Dialog open={isAddWorkoutDialogOpen} onOpenChange={setIsAddWorkoutDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-[#748c6d] hover:bg-[#5f7459]">
-                  <Icon name="Plus" size={18} className="mr-2" />
-                  Добавить тренировку
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Добавить новую тренировку</DialogTitle>
-                  <DialogDescription>Заполните информацию о тренировке</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="workout-title">Название</Label>
-                    <Input
-                      id="workout-title"
-                      placeholder="Название тренировки"
-                      value={newWorkout.title}
-                      onChange={(e) => setNewWorkout({ ...newWorkout, title: e.target.value })}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="workout-description">Описание</Label>
-                    <Textarea
-                      id="workout-description"
-                      placeholder="Описание тренировки"
-                      value={newWorkout.description}
-                      onChange={(e) => setNewWorkout({ ...newWorkout, description: e.target.value })}
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="workout-category">Категория</Label>
-                      <Select
-                        value={newWorkout.category}
-                        onValueChange={(value) => setNewWorkout({ ...newWorkout, category: value as 'cardio' | 'strength' | 'flexibility' })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cardio">Кардио</SelectItem>
-                          <SelectItem value="strength">Сила</SelectItem>
-                          <SelectItem value="flexibility">Гибкость</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="workout-difficulty">Сложность</Label>
-                      <Select
-                        value={newWorkout.difficulty}
-                        onValueChange={(value) => setNewWorkout({ ...newWorkout, difficulty: value as 'beginner' | 'intermediate' | 'advanced' })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="beginner">Начальный</SelectItem>
-                          <SelectItem value="intermediate">Средний</SelectItem>
-                          <SelectItem value="advanced">Продвинутый</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="workout-duration">Длительность (мин)</Label>
-                      <Input
-                        id="workout-duration"
-                        type="number"
-                        placeholder="30"
-                        value={newWorkout.duration_minutes || ''}
-                        onChange={(e) => setNewWorkout({ ...newWorkout, duration_minutes: parseInt(e.target.value) || 0 })}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="workout-calories">Калории</Label>
-                      <Input
-                        id="workout-calories"
-                        type="number"
-                        placeholder="250"
-                        value={newWorkout.calories || ''}
-                        onChange={(e) => setNewWorkout({ ...newWorkout, calories: parseInt(e.target.value) || 0 })}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="workout-date">Дата публикации</Label>
-                    <Input
-                      id="workout-date"
-                      type="date"
-                      value={newWorkout.published_date}
-                      onChange={(e) => setNewWorkout({ ...newWorkout, published_date: e.target.value })}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="workout-video">Видео (необязательно)</Label>
-                    <Input
-                      id="workout-video"
-                      type="file"
-                      accept="video/mp4"
-                      onChange={handleVideoUpload}
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label>Упражнения</Label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={addExercise}
-                        disabled={exercises.length >= 10}
-                      >
-                        <Icon name="Plus" size={14} className="mr-1" />
-                        Добавить
-                      </Button>
-                    </div>
-
-                    {exercises.map((exercise, index) => (
-                      <div key={index} className="flex gap-2 items-start">
-                        <div className="flex-1">
-                          <Input
-                            placeholder="Название упражнения"
-                            value={exercise.name}
-                            onChange={(e) => updateExercise(index, 'name', e.target.value)}
-                          />
-                        </div>
-                        <div className="w-32">
-                          <Input
-                            placeholder="Подходы"
-                            value={exercise.sets}
-                            onChange={(e) => updateExercise(index, 'sets', e.target.value)}
-                          />
-                        </div>
-                        <div className="w-24">
-                          <Input
-                            type="number"
-                            placeholder="Отдых (сек)"
-                            value={exercise.rest_seconds || ''}
-                            onChange={(e) => updateExercise(index, 'rest_seconds', parseInt(e.target.value) || 0)}
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeExercise(index)}
-                          disabled={exercises.length === 1}
-                        >
-                          <Icon name="X" size={16} />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setIsAddWorkoutDialogOpen(false)}>
-                      Отмена
-                    </Button>
-                    <Button
-                      className="bg-[#748c6d] hover:bg-[#5f7459]"
-                      onClick={handleAddWorkout}
-                      disabled={!newWorkout.title || !newWorkout.duration_minutes || !newWorkout.calories}
-                    >
-                      Добавить
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <AddWorkoutDialog
+              isOpen={isAddWorkoutDialogOpen}
+              onOpenChange={setIsAddWorkoutDialogOpen}
+              newWorkout={newWorkout}
+              setNewWorkout={setNewWorkout}
+              exercises={exercises}
+              addExercise={addExercise}
+              removeExercise={removeExercise}
+              updateExercise={updateExercise}
+              handleVideoUpload={handleVideoUpload}
+              handleAddWorkout={handleAddWorkout}
+            />
           </div>
         </CardHeader>
         <CardContent>
@@ -496,142 +311,16 @@ export default function AdminWorkoutsTab() {
         </CardContent>
       </Card>
 
-      <Dialog open={isEditWorkoutDialogOpen} onOpenChange={setIsEditWorkoutDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Редактировать тренировку</DialogTitle>
-            <DialogDescription>Измените информацию о тренировке</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-workout-title">Название</Label>
-              <Input
-                id="edit-workout-title"
-                value={newWorkout.title}
-                onChange={(e) => setNewWorkout({ ...newWorkout, title: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="edit-workout-description">Описание</Label>
-              <Textarea
-                id="edit-workout-description"
-                value={newWorkout.description}
-                onChange={(e) => setNewWorkout({ ...newWorkout, description: e.target.value })}
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-workout-category">Категория</Label>
-                <Select
-                  value={newWorkout.category}
-                  onValueChange={(value) => setNewWorkout({ ...newWorkout, category: value as 'cardio' | 'strength' | 'flexibility' })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cardio">Кардио</SelectItem>
-                    <SelectItem value="strength">Сила</SelectItem>
-                    <SelectItem value="flexibility">Гибкость</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="edit-workout-difficulty">Сложность</Label>
-                <Select
-                  value={newWorkout.difficulty}
-                  onValueChange={(value) => setNewWorkout({ ...newWorkout, difficulty: value as 'beginner' | 'intermediate' | 'advanced' })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="beginner">Начальный</SelectItem>
-                    <SelectItem value="intermediate">Средний</SelectItem>
-                    <SelectItem value="advanced">Продвинутый</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-workout-duration">Длительность (мин)</Label>
-                <Input
-                  id="edit-workout-duration"
-                  type="number"
-                  value={newWorkout.duration_minutes || ''}
-                  onChange={(e) => setNewWorkout({ ...newWorkout, duration_minutes: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="edit-workout-calories">Калории</Label>
-                <Input
-                  id="edit-workout-calories"
-                  type="number"
-                  value={newWorkout.calories || ''}
-                  onChange={(e) => setNewWorkout({ ...newWorkout, calories: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="edit-workout-date">Дата публикации</Label>
-              <Input
-                id="edit-workout-date"
-                type="date"
-                value={newWorkout.published_date}
-                onChange={(e) => setNewWorkout({ ...newWorkout, published_date: e.target.value })}
-              />
-            </div>
-
-            {editingWorkout?.video_url && (
-              <div className="p-4 bg-emerald-50 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Icon name="Video" size={20} className="text-emerald-600" />
-                    <span className="text-sm text-emerald-700">Видео загружено</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDeleteVideo}
-                  >
-                    <Icon name="Trash2" size={16} />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <Label htmlFor="edit-video">Загрузить новое видео</Label>
-              <Input
-                id="edit-video"
-                type="file"
-                accept="video/mp4"
-                onChange={handleVideoUpload}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsEditWorkoutDialogOpen(false)}>
-                Отмена
-              </Button>
-              <Button
-                className="bg-[#748c6d] hover:bg-[#5f7459]"
-                onClick={handleUpdateWorkout}
-              >
-                Сохранить
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <EditWorkoutDialog
+        isOpen={isEditWorkoutDialogOpen}
+        onOpenChange={setIsEditWorkoutDialogOpen}
+        editingWorkout={editingWorkout}
+        newWorkout={newWorkout}
+        setNewWorkout={setNewWorkout}
+        handleVideoUpload={handleVideoUpload}
+        handleUpdateWorkout={handleUpdateWorkout}
+        handleDeleteVideo={handleDeleteVideo}
+      />
     </TabsContent>
   );
 }
