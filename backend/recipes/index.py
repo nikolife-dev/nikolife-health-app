@@ -6,9 +6,13 @@ def handler(event: dict, context) -> dict:
     """
     API для управления рецептами
     """
+    print(f"[RECIPES] Входящий запрос: method={event.get('httpMethod')}, path={event.get('path')}")
+    print(f"[RECIPES] Headers: {event.get('headers')}")
+    
     method = event.get('httpMethod', 'GET')
     
     if method == 'OPTIONS':
+        print("[RECIPES] OPTIONS запрос - возвращаю CORS headers")
         return {
             'statusCode': 200,
             'headers': {
@@ -23,6 +27,7 @@ def handler(event: dict, context) -> dict:
     try:
         # Получаем токен
         auth_token = event.get('headers', {}).get('X-Auth-Token') or event.get('headers', {}).get('x-auth-token')
+        print(f"[RECIPES] Токен: {'найден' if auth_token else 'НЕ найден'}")
         user_id = None
         is_admin = False
         
@@ -37,6 +42,9 @@ def handler(event: dict, context) -> dict:
             if user_data:
                 user_id = user_data[0]
                 is_admin = user_data[1] if len(user_data) > 1 else False
+                print(f"[RECIPES] Пользователь: id={user_id}, is_admin={is_admin}")
+            else:
+                print("[RECIPES] ⚠️ Пользователь с таким токеном не найден в БД")
             
             cur.close()
             conn.close()
@@ -52,6 +60,8 @@ def handler(event: dict, context) -> dict:
                 action = path_parts[1]
         elif len(path_parts) >= 1:
             action = path_parts[0]
+        
+        print(f"[RECIPES] Разбор пути: path={path}, recipe_id={recipe_id}, action={action}")
         
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
         cur = conn.cursor()
@@ -209,19 +219,24 @@ def handler(event: dict, context) -> dict:
         
         # PUT /{id}
         if method == 'PUT' and recipe_id:
+            print(f"[RECIPES] PUT запрос для рецепта #{recipe_id}, user_id={user_id}, is_admin={is_admin}")
             if not user_id:
+                print("[RECIPES] ❌ Пользователь не авторизован")
                 return {'statusCode': 401, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Требуется авторизация'}), 'isBase64Encoded': False}
             
             cur.execute(f"SELECT created_by FROM {schema}.recipes WHERE id = %s", (recipe_id,))
             recipe = cur.fetchone()
             
             if not recipe:
+                print(f"[RECIPES] ❌ Рецепт #{recipe_id} не найден")
                 return {'statusCode': 404, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Рецепт не найден'}), 'isBase64Encoded': False}
             
             if not is_admin and recipe[0] != user_id:
+                print(f"[RECIPES] ❌ Нет прав: создатель={recipe[0]}, текущий юзер={user_id}")
                 return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Нет прав'}), 'isBase64Encoded': False}
             
             body = json.loads(event.get('body', '{}'))
+            print(f"[RECIPES] Body получен, размер: {len(event.get('body', ''))} байт")
             
             cur.execute(f"""
                 UPDATE {schema}.recipes SET
@@ -249,18 +264,26 @@ def handler(event: dict, context) -> dict:
         
         # DELETE /{id}
         if method == 'DELETE' and recipe_id:
+            print(f"[RECIPES] DELETE запрос для рецепта #{recipe_id}, is_admin={is_admin}, user_id={user_id}")
             if not is_admin:
+                print(f"[RECIPES] ❌ Доступ запрещен: пользователь не администратор")
                 return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Только администратор'}), 'isBase64Encoded': False}
             
+            print(f"[RECIPES] Помечаю рецепт #{recipe_id} как неактивный")
             cur.execute(f"UPDATE {schema}.recipes SET is_active = false WHERE id = %s", (recipe_id,))
             conn.commit()
             cur.close()
             conn.close()
+            print(f"[RECIPES] ✅ Рецепт #{recipe_id} успешно удален")
             return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True}), 'isBase64Encoded': False}
         
         cur.close()
         conn.close()
+        print(f"[RECIPES] ⚠️ Неподдерживаемый метод или путь: method={method}, recipe_id={recipe_id}, action={action}")
         return {'statusCode': 405, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Method not allowed'}), 'isBase64Encoded': False}
         
     except Exception as e:
+        print(f"[RECIPES] ❌ КРИТИЧЕСКАЯ ОШИБКА: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {'statusCode': 500, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': str(e)}), 'isBase64Encoded': False}
