@@ -179,13 +179,15 @@ export default function AdminUsersTab() {
         setIsAddDialogOpen(false);
         loadUsers();
       } else {
-        logError(`Ошибка создания: ${data.error || 'unknown'}`);
-        toast({ title: 'Ошибка', description: data.error || 'Не удалось создать пользователя', variant: 'destructive' });
+        const errorMsg = data.code ? `[${data.code}] ${data.error}` : data.error || 'Не удалось создать пользователя';
+        logError(`Ошибка создания: ${errorMsg}`);
+        toast({ title: 'Ошибка', description: errorMsg, variant: 'destructive' });
       }
     } catch (error) {
-      logError(`Критическая ошибка: ${error instanceof Error ? error.message : 'unknown'}`);
+      const errorMsg = error instanceof Error ? error.message : 'unknown';
+      logError(`Критическая ошибка: ${errorMsg}`);
       console.error('Failed to add user:', error);
-      toast({ title: 'Ошибка', description: 'Не удалось создать пользователя', variant: 'destructive' });
+      toast({ title: 'Ошибка', description: `Критическая ошибка: ${errorMsg}`, variant: 'destructive' });
     }
   };
 
@@ -210,13 +212,15 @@ export default function AdminUsersTab() {
         setEditingUser(null);
         loadUsers();
       } else {
-        logError(`Ошибка обновления: ${data.error || 'unknown'}`);
-        toast({ title: 'Ошибка', description: data.error || 'Не удалось обновить', variant: 'destructive' });
+        const errorMsg = data.code ? `[${data.code}] ${data.error}` : data.error || 'Не удалось обновить';
+        logError(`Ошибка обновления: ${errorMsg}`);
+        toast({ title: 'Ошибка', description: errorMsg, variant: 'destructive' });
       }
     } catch (error) {
-      logError(`Критическая ошибка: ${error instanceof Error ? error.message : 'unknown'}`);
+      const errorMsg = error instanceof Error ? error.message : 'unknown';
+      logError(`Критическая ошибка: ${errorMsg}`);
       console.error('Failed to update user:', error);
-      toast({ title: 'Ошибка', description: 'Не удалось обновить', variant: 'destructive' });
+      toast({ title: 'Ошибка', description: `Критическая ошибка: ${errorMsg}`, variant: 'destructive' });
     }
   };
 
@@ -241,13 +245,15 @@ export default function AdminUsersTab() {
         toast({ title: 'Успешно', description: 'Пользователь удалён' });
         loadUsers();
       } else {
-        logError(`Ошибка удаления: ${data.error || 'unknown'}`);
-        toast({ title: 'Ошибка', description: data.error || 'Не удалось удалить', variant: 'destructive' });
+        const errorMsg = data.code ? `[${data.code}] ${data.error}` : data.error || 'Не удалось удалить';
+        logError(`Ошибка удаления: ${errorMsg}`);
+        toast({ title: 'Ошибка', description: errorMsg, variant: 'destructive' });
       }
     } catch (error) {
-      logError(`Критическая ошибка удаления: ${error instanceof Error ? error.message : 'unknown'}`);
+      const errorMsg = error instanceof Error ? error.message : 'unknown';
+      logError(`Критическая ошибка удаления: ${errorMsg}`);
       console.error('Failed to delete user:', error);
-      toast({ title: 'Ошибка', description: 'Не удалось удалить', variant: 'destructive' });
+      toast({ title: 'Ошибка', description: `Критическая ошибка: ${errorMsg}`, variant: 'destructive' });
     }
   };
 

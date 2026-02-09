@@ -107,174 +107,225 @@ def handler(event: dict, context) -> dict:
                 }
 
         elif method == 'POST':
-            data = json.loads(event.get('body', '{}'))
-            name = data.get('name')
-            email = data.get('email')
-            password = data.get('password', 'temp123')
-            selected_plan = data.get('selected_plan', 'free')
-            is_admin = data.get('is_admin', False)
-            telegram_username = data.get('telegram_username')
-            
-            health_params = data.get('health_parameters', {})
-            goal = health_params.get('goal')
-            activity_level = health_params.get('activity_level')
-            age = health_params.get('age')
-            weight = health_params.get('weight')
-            height = health_params.get('height')
-            diet_preference = health_params.get('diet_preference')
+            try:
+                data = json.loads(event.get('body', '{}'))
+                name = data.get('name', '').strip()
+                email = data.get('email', '').strip()
+                password = data.get('password', 'temp123')
+                selected_plan = data.get('selected_plan', 'free')
+                is_admin = data.get('is_admin', False)
+                telegram_username = data.get('telegram_username', '').strip() or None
+                
+                health_params = data.get('health_parameters', {})
+                goal = health_params.get('goal', '').strip() or None
+                activity_level = health_params.get('activity_level', '').strip() or None
+                age_str = health_params.get('age', '').strip()
+                weight_str = health_params.get('weight', '').strip()
+                height_str = health_params.get('height', '').strip()
+                diet_preference = health_params.get('diet_preference', '').strip() or None
 
-            if not name or not email:
-                return {
-                    'statusCode': 400,
-                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                    'body': json.dumps({'error': 'Name and email required'}),
-                    'isBase64Encoded': False
-                }
+                if not name or not email:
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Имя и email обязательны', 'code': 400}),
+                        'isBase64Encoded': False
+                    }
 
-            cur.execute("""
-                SELECT id FROM t_p76837068_nikolife_health_app.users WHERE email = %s
-            """, (email,))
-            existing = cur.fetchone()
-            
-            if existing:
-                return {
-                    'statusCode': 400,
-                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                    'body': json.dumps({'error': 'Email already exists'}),
-                    'isBase64Encoded': False
-                }
+                age = int(age_str) if age_str else None
+                weight = float(weight_str) if weight_str else None
+                height = float(height_str) if height_str else None
 
-            password_hash = hashlib.sha256(password.encode()).hexdigest()
-            auth_token = secrets.token_urlsafe(32)
-
-            cur.execute("""
-                INSERT INTO t_p76837068_nikolife_health_app.users 
-                (name, email, password_hash, auth_token, selected_plan, is_admin, telegram_username, onboarding_completed)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id, name, email, selected_plan, is_admin, telegram_username
-            """, (name, email, password_hash, auth_token, selected_plan, is_admin, telegram_username, True))
-            
-            new_user = cur.fetchone()
-            user_id = new_user['id']
-            
-            if any([goal, activity_level, age, weight, height, diet_preference]):
                 cur.execute("""
-                    INSERT INTO t_p76837068_nikolife_health_app.health_parameters
-                    (user_id, goal, activity_level, age, weight, height, diet_preference)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (user_id, goal, activity_level, age, weight, height, diet_preference))
-            
-            conn.commit()
+                    SELECT id FROM t_p76837068_nikolife_health_app.users WHERE email = %s
+                """, (email,))
+                existing = cur.fetchone()
+                
+                if existing:
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': f'Email {email} уже существует', 'code': 400}),
+                        'isBase64Encoded': False
+                    }
 
-            return {
-                'statusCode': 201,
-                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'success': True, 'user': dict(new_user)}, default=str),
-                'isBase64Encoded': False
-            }
+                password_hash = hashlib.sha256(password.encode()).hexdigest()
+                auth_token = secrets.token_urlsafe(32)
+
+                cur.execute("""
+                    INSERT INTO t_p76837068_nikolife_health_app.users 
+                    (name, email, password_hash, auth_token, selected_plan, is_admin, telegram_username, onboarding_completed)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id, name, email, selected_plan, is_admin, telegram_username
+                """, (name, email, password_hash, auth_token, selected_plan, is_admin, telegram_username, True))
+                
+                new_user = cur.fetchone()
+                user_id = new_user['id']
+                
+                if any([goal, activity_level, age, weight, height, diet_preference]):
+                    cur.execute("""
+                        INSERT INTO t_p76837068_nikolife_health_app.health_parameters
+                        (user_id, goal, activity_level, age, weight, height, diet_preference)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (user_id, goal, activity_level, age, weight, height, diet_preference))
+                
+                conn.commit()
+
+                return {
+                    'statusCode': 201,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'success': True, 'user': dict(new_user)}, default=str),
+                    'isBase64Encoded': False
+                }
+            except ValueError as e:
+                conn.rollback()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': f'Некорректные данные: {str(e)}', 'code': 400}),
+                    'isBase64Encoded': False
+                }
+            except Exception as e:
+                conn.rollback()
+                return {
+                    'statusCode': 500,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': f'Ошибка сервера: {str(e)}', 'code': 500}),
+                    'isBase64Encoded': False
+                }
 
         elif method == 'PUT':
-            user_id = event.get('queryStringParameters', {}).get('id')
-            if not user_id:
-                return {
-                    'statusCode': 400,
-                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                    'body': json.dumps({'error': 'User ID required'}),
-                    'isBase64Encoded': False
-                }
+            try:
+                user_id = event.get('queryStringParameters', {}).get('id')
+                if not user_id:
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'ID пользователя обязателен', 'code': 400}),
+                        'isBase64Encoded': False
+                    }
 
-            data = json.loads(event.get('body', '{}'))
-            name = data.get('name')
-            email = data.get('email')
-            selected_plan = data.get('selected_plan')
-            is_admin = data.get('is_admin', False)
-            telegram_username = data.get('telegram_username')
-            
-            health_params = data.get('health_parameters', {})
-            goal = health_params.get('goal')
-            activity_level = health_params.get('activity_level')
-            age = health_params.get('age')
-            weight = health_params.get('weight')
-            height = health_params.get('height')
-            diet_preference = health_params.get('diet_preference')
+                data = json.loads(event.get('body', '{}'))
+                name = data.get('name', '').strip()
+                email = data.get('email', '').strip()
+                selected_plan = data.get('selected_plan')
+                is_admin = data.get('is_admin', False)
+                telegram_username = data.get('telegram_username', '').strip() or None
+                
+                health_params = data.get('health_parameters', {})
+                goal = health_params.get('goal', '').strip() or None
+                activity_level = health_params.get('activity_level', '').strip() or None
+                age_str = health_params.get('age', '').strip()
+                weight_str = health_params.get('weight', '').strip()
+                height_str = health_params.get('height', '').strip()
+                diet_preference = health_params.get('diet_preference', '').strip() or None
 
-            if not name or not email:
-                return {
-                    'statusCode': 400,
-                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                    'body': json.dumps({'error': 'Name and email required'}),
-                    'isBase64Encoded': False
-                }
+                if not name or not email:
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Имя и email обязательны', 'code': 400}),
+                        'isBase64Encoded': False
+                    }
 
-            cur.execute("""
-                UPDATE t_p76837068_nikolife_health_app.users 
-                SET name = %s, email = %s, selected_plan = %s, is_admin = %s, telegram_username = %s
-                WHERE id = %s
-                RETURNING id, name, email, selected_plan, is_admin, telegram_username
-            """, (name, email, selected_plan, is_admin, telegram_username, user_id))
-            
-            updated_user = cur.fetchone()
-            
-            if any([goal, activity_level, age, weight, height, diet_preference]):
+                age = int(age_str) if age_str else None
+                weight = float(weight_str) if weight_str else None
+                height = float(height_str) if height_str else None
+
                 cur.execute("""
-                    INSERT INTO t_p76837068_nikolife_health_app.health_parameters
-                    (user_id, goal, activity_level, age, weight, height, diet_preference)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (user_id) 
-                    DO UPDATE SET 
-                        goal = EXCLUDED.goal,
-                        activity_level = EXCLUDED.activity_level,
-                        age = EXCLUDED.age,
-                        weight = EXCLUDED.weight,
-                        height = EXCLUDED.height,
-                        diet_preference = EXCLUDED.diet_preference,
-                        updated_at = NOW()
-                """, (user_id, goal, activity_level, age, weight, height, diet_preference))
-            
-            conn.commit()
+                    UPDATE t_p76837068_nikolife_health_app.users 
+                    SET name = %s, email = %s, selected_plan = %s, is_admin = %s, telegram_username = %s
+                    WHERE id = %s
+                    RETURNING id, name, email, selected_plan, is_admin, telegram_username
+                """, (name, email, selected_plan, is_admin, telegram_username, user_id))
+                
+                updated_user = cur.fetchone()
+                
+                if any([goal, activity_level, age, weight, height, diet_preference]):
+                    cur.execute("""
+                        INSERT INTO t_p76837068_nikolife_health_app.health_parameters
+                        (user_id, goal, activity_level, age, weight, height, diet_preference)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (user_id) 
+                        DO UPDATE SET 
+                            goal = EXCLUDED.goal,
+                            activity_level = EXCLUDED.activity_level,
+                            age = EXCLUDED.age,
+                            weight = EXCLUDED.weight,
+                            height = EXCLUDED.height,
+                            diet_preference = EXCLUDED.diet_preference,
+                            updated_at = NOW()
+                    """, (user_id, goal, activity_level, age, weight, height, diet_preference))
+                
+                conn.commit()
 
-            return {
-                'statusCode': 200,
-                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'success': True, 'user': dict(updated_user)}, default=str),
-                'isBase64Encoded': False
-            }
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'success': True, 'user': dict(updated_user)}, default=str),
+                    'isBase64Encoded': False
+                }
+            except ValueError as e:
+                conn.rollback()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': f'Некорректные данные: {str(e)}', 'code': 400}),
+                    'isBase64Encoded': False
+                }
+            except Exception as e:
+                conn.rollback()
+                return {
+                    'statusCode': 500,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': f'Ошибка сервера: {str(e)}', 'code': 500}),
+                    'isBase64Encoded': False
+                }
 
         elif method == 'DELETE':
-            user_id = event.get('queryStringParameters', {}).get('id')
-            if not user_id:
+            try:
+                user_id = event.get('queryStringParameters', {}).get('id')
+                if not user_id:
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'ID пользователя обязателен', 'code': 400}),
+                        'isBase64Encoded': False
+                    }
+
+                print(f'[DELETE] Attempting to delete user_id={user_id}')
+                
+                cur.execute("""
+                    DELETE FROM t_p76837068_nikolife_health_app.health_parameters 
+                    WHERE user_id = %s
+                """, (user_id,))
+                deleted_health = cur.rowcount
+                print(f'[DELETE] Deleted {deleted_health} health_parameters records')
+                
+                cur.execute("""
+                    DELETE FROM t_p76837068_nikolife_health_app.users 
+                    WHERE id = %s
+                """, (user_id,))
+                deleted_user = cur.rowcount
+                print(f'[DELETE] Deleted {deleted_user} user records')
+                
+                conn.commit()
+                print(f'[DELETE] Successfully deleted user_id={user_id}')
+
                 return {
-                    'statusCode': 400,
+                    'statusCode': 200,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                    'body': json.dumps({'error': 'User ID required'}),
+                    'body': json.dumps({'success': True, 'deleted': deleted_user > 0}),
                     'isBase64Encoded': False
                 }
-
-            print(f'[DELETE] Attempting to delete user_id={user_id}')
-            
-            cur.execute("""
-                DELETE FROM t_p76837068_nikolife_health_app.health_parameters 
-                WHERE user_id = %s
-            """, (user_id,))
-            deleted_health = cur.rowcount
-            print(f'[DELETE] Deleted {deleted_health} health_parameters records')
-            
-            cur.execute("""
-                DELETE FROM t_p76837068_nikolife_health_app.users 
-                WHERE id = %s
-            """, (user_id,))
-            deleted_user = cur.rowcount
-            print(f'[DELETE] Deleted {deleted_user} user records')
-            
-            conn.commit()
-            print(f'[DELETE] Successfully deleted user_id={user_id}')
-
-            return {
-                'statusCode': 200,
-                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'success': True, 'deleted': deleted_user > 0}),
-                'isBase64Encoded': False
-            }
+            except Exception as e:
+                conn.rollback()
+                return {
+                    'statusCode': 500,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': f'Ошибка при удалении: {str(e)}', 'code': 500}),
+                    'isBase64Encoded': False
+                }
 
     finally:
         cur.close()
