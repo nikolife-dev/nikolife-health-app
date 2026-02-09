@@ -222,7 +222,9 @@ def handler(event: dict, context) -> dict:
                         'user': {
                             'id': user_id,
                             'name': name,
-                            'email': email
+                            'email': email,
+                            'selected_plan': None,
+                            'onboarding_completed': False
                         },
                         'token': token
                     }),
@@ -241,7 +243,7 @@ def handler(event: dict, context) -> dict:
                 
                 schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
                 cur.execute(f"""
-                    SELECT id, name, email, password_hash FROM {schema}.users WHERE email = %s
+                    SELECT id, name, email, password_hash, selected_plan, onboarding_completed FROM {schema}.users WHERE email = %s
                 """, (email,))
                 
                 row = cur.fetchone()
@@ -260,7 +262,7 @@ def handler(event: dict, context) -> dict:
                     }
                 
                 token = generate_token()
-                user_id, name, email_db = row[0], row[1], row[2]
+                user_id, name, email_db, selected_plan, onboarding_completed = row[0], row[1], row[2], row[4], row[5]
                 
                 cur.execute(f"""
                     UPDATE {schema}.users SET auth_token = %s, last_login = NOW() WHERE id = %s
@@ -282,7 +284,9 @@ def handler(event: dict, context) -> dict:
                         'user': {
                             'id': user_id,
                             'name': name,
-                            'email': email_db
+                            'email': email_db,
+                            'selected_plan': selected_plan,
+                            'onboarding_completed': onboarding_completed
                         },
                         'token': token
                     }),
