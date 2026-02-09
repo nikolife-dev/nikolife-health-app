@@ -21,10 +21,10 @@ import Icon from '@/components/ui/icon';
 import AdminLibraryTab from '@/components/admin/AdminLibraryTab';
 import AdminWorkoutsTab from '@/components/admin/AdminWorkoutsTab';
 import AdminMentalHealthTab from '@/components/admin/AdminMentalHealthTab';
+import AdminUsersTab from '@/components/admin/AdminUsersTab';
 
 export default function Admin() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
 
   const stats: Array<{
     title: string;
@@ -60,54 +60,6 @@ export default function Admin() {
       change: '+5%',
       icon: 'UserPlus',
       trend: 'up'
-    }
-  ];
-
-  const users = [
-    {
-      id: 1,
-      name: 'Алексей Иванов',
-      email: 'alexey@example.com',
-      plan: 'Премиум',
-      status: 'active',
-      joinedDate: '15.01.2026',
-      lastActive: '2 часа назад'
-    },
-    {
-      id: 2,
-      name: 'Мария Петрова',
-      email: 'maria@example.com',
-      plan: 'Стандарт',
-      status: 'active',
-      joinedDate: '14.01.2026',
-      lastActive: '1 день назад'
-    },
-    {
-      id: 3,
-      name: 'Дмитрий Сидоров',
-      email: 'dmitry@example.com',
-      plan: 'Премиум',
-      status: 'active',
-      joinedDate: '13.01.2026',
-      lastActive: '5 часов назад'
-    },
-    {
-      id: 4,
-      name: 'Елена Васильева',
-      email: 'elena@example.com',
-      plan: 'Базовый',
-      status: 'inactive',
-      joinedDate: '12.02.2026',
-      lastActive: '3 дня назад'
-    },
-    {
-      id: 5,
-      name: 'Сергей Козлов',
-      email: 'sergey@example.com',
-      plan: 'Стандарт',
-      status: 'active',
-      joinedDate: '11.02.2026',
-      lastActive: '6 часов назад'
     }
   ];
 
@@ -243,57 +195,7 @@ export default function Admin() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users" className="space-y-4">
-            <Card className="bg-white/80 backdrop-blur border-[#748c6d]/20">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-[#748c6d]">Пользователи</CardTitle>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Имя</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>План</TableHead>
-                      <TableHead>Статус</TableHead>
-                      <TableHead>Дата регистрации</TableHead>
-                      <TableHead className="text-right">Последняя активность</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium text-[#4a5446]">
-                          {user.name}
-                        </TableCell>
-                        <TableCell className="text-[#4a5446]/80">
-                          {user.email}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="border-[#748c6d]/30">
-                            {user.plan}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(user.status)}
-                        </TableCell>
-                        <TableCell className="text-[#4a5446]/80">
-                          {user.joinedDate}
-                        </TableCell>
-                        <TableCell className="text-right text-[#4a5446]/60">
-                          {user.lastActive}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <AdminUsersTab />
 
           <TabsContent value="subscriptions" className="space-y-4">
             <Card className="bg-white/80 backdrop-blur border-[#748c6d]/20">
