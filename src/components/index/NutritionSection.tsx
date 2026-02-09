@@ -144,6 +144,11 @@ export default function NutritionSection({
       
       console.log("[MENU] RAW RESPONSE:", JSON.stringify(data, null, 2));
       logInfo(`[MENU] Response keys: ${Object.keys(data || {}).join(", ")}`);
+      
+      if (data?.error) {
+        logError(`[MENU] Backend error: ${data.error}`);
+      }
+      
       logInfo(`[MENU] Has menu? ${!!data?.menu} (type: ${typeof data?.menu}, isArray: ${Array.isArray(data?.menu)})`);
       logInfo(`[MENU] Has week_dates? ${!!data?.week_dates} (type: ${typeof data?.week_dates}, isArray: ${Array.isArray(data?.week_dates)})`);
       
