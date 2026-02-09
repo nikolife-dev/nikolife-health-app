@@ -141,6 +141,14 @@ export default function NutritionSection({
       });
 
       const data = await response.json();
+      
+      dbg("[MENU] loadMenu: raw response keys", Object.keys(data || {}));
+      dbg("[MENU] loadMenu: full response", data);
+      dbg("[MENU] loadMenu: menu field type", typeof data?.menu);
+      dbg("[MENU] loadMenu: menu field value", data?.menu);
+      dbg("[MENU] loadMenu: week_dates field type", typeof data?.week_dates);
+      dbg("[MENU] loadMenu: week_dates field value", data?.week_dates);
+      
       dbg("[MENU] loadMenu: json", {
         hasMenu: !!data?.menu,
         menuLength: Array.isArray(data?.menu) ? data.menu.length : null,
