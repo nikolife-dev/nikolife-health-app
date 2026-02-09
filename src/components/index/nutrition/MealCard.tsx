@@ -48,13 +48,13 @@ export default function MealCard({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h4 className="font-semibold text-lg text-gray-700 flex items-center gap-2">
-          <Icon name={getMealIcon(mealKey)} size={20} />
-          {label}
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="font-semibold text-base sm:text-lg text-gray-700 flex items-center gap-2">
+          <Icon name={getMealIcon(mealKey)} size={18} className="sm:w-5 sm:h-5" />
+          <span className="truncate">{label}</span>
         </h4>
         {mealRecipes.length > 0 && (
-          <div className="flex items-center gap-1 text-sm">
+          <div className="flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
             <Icon name="Flame" size={14} className="text-orange-500" />
             <span
               className={`font-medium ${totalCalories > 600 ? "text-red-600" : "text-gray-600"}`}

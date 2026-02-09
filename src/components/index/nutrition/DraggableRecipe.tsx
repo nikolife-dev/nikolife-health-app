@@ -49,19 +49,19 @@ export default function DraggableRecipe({ menuItem, onDelete }: DraggableRecipeP
       style={style}
       {...attributes}
       {...listeners}
-      className="border rounded-lg p-3 bg-white hover:shadow-md transition-shadow group cursor-move"
+      className="border rounded-lg p-3 bg-white hover:shadow-md transition-shadow group cursor-move touch-none"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-gray-900 text-sm truncate">
+          <p className="font-medium text-gray-900 text-sm break-words">
             {menuItem.recipe.title}
           </p>
-          <div className="flex gap-3 text-xs text-gray-500 mt-1">
-            <span className="flex items-center gap-1">
+          <div className="flex flex-wrap gap-2 sm:gap-3 text-xs text-gray-500 mt-1">
+            <span className="flex items-center gap-1 whitespace-nowrap">
               <Icon name="Clock" size={12} />
               {menuItem.recipe.cooking_time}м
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 whitespace-nowrap">
               <Icon name="Flame" size={12} />
               {menuItem.recipe.calories} ккал
             </span>
@@ -72,7 +72,7 @@ export default function DraggableRecipe({ menuItem, onDelete }: DraggableRecipeP
             e.stopPropagation();
             onDelete(menuItem.id);
           }}
-          className="text-red-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+          className="text-red-500 hover:text-red-600 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0 min-w-[24px] min-h-[24px] flex items-center justify-center"
           title="Удалить"
         >
           <Icon name="X" size={18} />
