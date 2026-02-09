@@ -161,7 +161,7 @@ export default function AdminMentalHealthTab() {
                   Добавить подкаст
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                 <DialogHeader>
                   <DialogTitle>Добавить подкаст</DialogTitle>
                   <DialogDescription>Заполните информацию о новом подкасте</DialogDescription>
@@ -226,6 +226,7 @@ export default function AdminMentalHealthTab() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -269,6 +270,7 @@ export default function AdminMentalHealthTab() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditPodcast(podcast)}
+                          className="min-w-[44px] min-h-[44px]"
                         >
                           <Icon name="Pencil" size={16} />
                         </Button>
@@ -276,6 +278,7 @@ export default function AdminMentalHealthTab() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeletePodcast(podcast.id)}
+                          className="min-w-[44px] min-h-[44px]"
                         >
                           <Icon name="Trash2" size={16} />
                         </Button>
@@ -286,6 +289,7 @@ export default function AdminMentalHealthTab() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

@@ -248,6 +248,7 @@ export default function AdminWorkoutsTab() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -298,6 +299,7 @@ export default function AdminWorkoutsTab() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditWorkout(workout)}
+                          className="min-w-[44px] min-h-[44px]"
                         >
                           <Icon name="Pencil" size={16} />
                         </Button>
@@ -308,6 +310,7 @@ export default function AdminWorkoutsTab() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

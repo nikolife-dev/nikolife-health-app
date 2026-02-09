@@ -130,7 +130,7 @@ export default function AdminLibraryTab() {
                   Добавить статью
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                 <DialogHeader>
                   <DialogTitle>Добавить новую статью</DialogTitle>
                   <DialogDescription>
@@ -206,7 +206,7 @@ export default function AdminLibraryTab() {
         <CardContent>
           <div className="mb-4">
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Все категории" />
               </SelectTrigger>
               <SelectContent>
@@ -218,6 +218,7 @@ export default function AdminLibraryTab() {
             </Select>
           </div>
           
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -259,6 +260,7 @@ export default function AdminLibraryTab() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteArticle(article.id)}
+                        className="min-w-[44px] min-h-[44px]"
                       >
                         <Icon name="Trash2" size={16} />
                       </Button>
@@ -268,6 +270,7 @@ export default function AdminLibraryTab() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </TabsContent>

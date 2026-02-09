@@ -171,6 +171,7 @@ export default function AdminUsersTab() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -229,6 +230,7 @@ export default function AdminUsersTab() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditClick(user)}
+                          className="min-w-[44px] min-h-[44px]"
                         >
                           <Icon name="Pencil" size={16} />
                         </Button>
@@ -236,7 +238,7 @@ export default function AdminUsersTab() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 min-w-[44px] min-h-[44px]"
                         >
                           <Icon name="Trash2" size={16} />
                         </Button>
@@ -247,11 +249,12 @@ export default function AdminUsersTab() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Редактировать пользователя</DialogTitle>
             <DialogDescription>

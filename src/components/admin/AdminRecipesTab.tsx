@@ -215,21 +215,21 @@ export default function AdminRecipesTab() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <Input
               placeholder="Поиск по названию..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && loadRecipes()}
-              className="max-w-md"
+              className="flex-1 max-w-md"
             />
-            <Button onClick={loadRecipes} variant="outline">
+            <Button onClick={loadRecipes} variant="outline" className="min-h-[44px]">
               <Icon name="Search" size={18} className="mr-2" />
               Найти
             </Button>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {categories.map((cat) => (
               <Badge
                 key={cat}
@@ -239,6 +239,7 @@ export default function AdminRecipesTab() {
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
                 onClick={() => setCategory(cat)}
+                style={{ minHeight: '36px', padding: '8px 16px' }}
               >
                 {cat === 'all' ? 'Все' : cat.charAt(0).toUpperCase() + cat.slice(1)}
               </Badge>
@@ -250,6 +251,7 @@ export default function AdminRecipesTab() {
               <Icon name="Loader2" size={48} className="animate-spin text-[#748c6d]" />
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -307,8 +309,8 @@ export default function AdminRecipesTab() {
                         <Badge
                           className={
                             recipe.is_active
-                              ? 'bg-green-500/10 text-green-700 cursor-pointer hover:bg-green-500/20'
-                              : 'bg-gray-500/10 text-gray-700 cursor-pointer hover:bg-gray-500/20'
+                              ? 'bg-green-500/10 text-green-700 cursor-pointer hover:bg-green-500/20 min-h-[36px] px-3'
+                              : 'bg-gray-500/10 text-gray-700 cursor-pointer hover:bg-gray-500/20 min-h-[36px] px-3'
                           }
                           onClick={() => handleToggleActive(recipe)}
                         >
@@ -321,6 +323,7 @@ export default function AdminRecipesTab() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEdit(recipe)}
+                            className="min-w-[44px] min-h-[44px]"
                           >
                             <Icon name="Pencil" size={16} />
                           </Button>
@@ -328,7 +331,7 @@ export default function AdminRecipesTab() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(recipe.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 min-w-[44px] min-h-[44px]"
                           >
                             <Icon name="Trash2" size={16} />
                           </Button>
@@ -339,6 +342,7 @@ export default function AdminRecipesTab() {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
