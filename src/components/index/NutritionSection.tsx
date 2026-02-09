@@ -148,9 +148,11 @@ export default function NutritionSection({
         weekDatesLength: Array.isArray(data?.week_dates)
           ? data.week_dates.length
           : null,
+        dataKeys: Object.keys(data || {}),
+        fullData: data,
       });
 
-      if (data.menu) {
+      if (data?.menu && Array.isArray(data.menu)) {
         logSuccess(`[MENU] loaded: ${data.menu.length} items`);
         setMenu(data.menu);
         if (data.week_dates) setWeekDates(data.week_dates);
