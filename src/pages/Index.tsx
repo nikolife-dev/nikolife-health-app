@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import Icon from '@/components/ui/icon';
 import IndexSidebar from '@/components/index/IndexSidebar';
 import DashboardSection from '@/components/index/DashboardSection';
 import WorkoutSection from '@/components/index/WorkoutSection';
 import NutritionSection from '@/components/index/NutritionSection';
+import LibrarySection from '@/components/index/LibrarySection';
+import CommunitySection from '@/components/index/CommunitySection';
+import MentalHealthSection from '@/components/index/MentalHealthSection';
+import ProgressSection from '@/components/index/ProgressSection';
 import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 
 export default function Index() {
@@ -214,7 +212,7 @@ export default function Index() {
       lastMessage: 'Здравствуйте! Чем могу помочь с вашим здоровьем?', 
       time: 'сейчас', 
       unread: 0,
-      type: 'assistant',
+      type: 'assistant' as const,
       description: 'Задайте вопрос по здоровью, тренировкам и питанию'
     },
     { 
@@ -223,7 +221,7 @@ export default function Index() {
       lastMessage: 'Поделилась рецептом здорового завтрака!', 
       time: '15 мин', 
       unread: 3,
-      type: 'community',
+      type: 'community' as const,
       description: 'Делитесь рецептами, советами по питанию и обсуждайте кулинарию'
     },
   ];
@@ -247,106 +245,13 @@ export default function Index() {
               )}
 
               {activeSection === 'library' && (
-                <div className="space-y-6">
-                  {!selectedArticle ? (
-                    <>
-                      <div>
-                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Библиотека знаний</h2>
-                        <p className="text-gray-600">Статьи о здоровье, питании и тренировках</p>
-                      </div>
-
-                      <Tabs value={articleCategory} onValueChange={setArticleCategory} className="w-full">
-                        <TabsList>
-                          <TabsTrigger value="all">Все</TabsTrigger>
-                          <TabsTrigger value="nutrition">Питание</TabsTrigger>
-                          <TabsTrigger value="training">Тренировки</TabsTrigger>
-                          <TabsTrigger value="health">Здоровье</TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value={articleCategory} className="space-y-4 mt-6">
-                          {articles.length === 0 ? (
-                            <Card className="p-12">
-                              <div className="text-center text-gray-500">
-                                <Icon name="BookOpen" size={48} className="mx-auto mb-4 opacity-50" />
-                                <p>Статей пока нет</p>
-                              </div>
-                            </Card>
-                          ) : (
-                            articles.map((article) => (
-                              <Card 
-                                key={article.id} 
-                                className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                                onClick={() => setSelectedArticle(article)}
-                              >
-                                <div className="flex items-start gap-4">
-                                  <div className="h-16 w-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <Icon name="BookOpen" className="text-purple-600" size={24} />
-                                  </div>
-                                  <div className="flex-1">
-                                    <Badge variant="secondary" className="mb-2">
-                                      {article.category === 'nutrition' && 'Питание'}
-                                      {article.category === 'training' && 'Тренировки'}
-                                      {article.category === 'health' && 'Здоровье'}
-                                    </Badge>
-                                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{article.title}</h3>
-                                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                                      <span className="flex items-center gap-1">
-                                        <Icon name="Calendar" size={14} />
-                                        {new Date(article.published_date).toLocaleDateString('ru-RU')}
-                                      </span>
-                                      <span className="flex items-center gap-1">
-                                        <Icon name="Eye" size={14} />
-                                        {article.view_count} просмотров
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <Icon name="ChevronRight" className="text-gray-400" size={24} />
-                                </div>
-                              </Card>
-                            ))
-                          )}
-                        </TabsContent>
-                      </Tabs>
-                    </>
-                  ) : (
-                    <div className="space-y-6">
-                      <Button 
-                        variant="ghost" 
-                        onClick={() => setSelectedArticle(null)}
-                        className="mb-4"
-                      >
-                        <Icon name="ArrowLeft" size={18} className="mr-2" />
-                        Назад к списку
-                      </Button>
-
-                      <Card className="p-8">
-                        <Badge variant="secondary" className="mb-4">
-                          {selectedArticle.category === 'nutrition' && 'Питание'}
-                          {selectedArticle.category === 'training' && 'Тренировки'}
-                          {selectedArticle.category === 'health' && 'Здоровье'}
-                        </Badge>
-                        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                          {selectedArticle.title}
-                        </h1>
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-8">
-                          <span className="flex items-center gap-1">
-                            <Icon name="Calendar" size={14} />
-                            {new Date(selectedArticle.published_date).toLocaleDateString('ru-RU')}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Icon name="Eye" size={14} />
-                            {selectedArticle.view_count} просмотров
-                          </span>
-                        </div>
-                        <div className="prose prose-lg max-w-none">
-                          <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                            {selectedArticle.content}
-                          </p>
-                        </div>
-                      </Card>
-                    </div>
-                  )}
-                </div>
+                <LibrarySection
+                  articles={articles}
+                  selectedArticle={selectedArticle}
+                  setSelectedArticle={setSelectedArticle}
+                  articleCategory={articleCategory}
+                  setArticleCategory={setArticleCategory}
+                />
               )}
 
               {activeSection === 'workouts' && (
@@ -370,198 +275,18 @@ export default function Index() {
               )}
 
               {activeSection === 'community' && (
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Сообщество</h2>
-                    <p className="text-gray-600">Общайтесь и делитесь опытом</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    {chats.map((chat) => (
-                      <Card key={chat.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                        <div className="flex items-start gap-4">
-                          <Avatar className="h-12 w-12 flex-shrink-0">
-                            <AvatarFallback className={chat.type === 'assistant' ? 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white' : 'bg-gradient-to-br from-blue-500 to-purple-500 text-white'}>
-                              {chat.type === 'assistant' ? '🤖' : '👥'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between mb-2">
-                              <div>
-                                <h3 className="font-semibold text-gray-900">{chat.name}</h3>
-                                <p className="text-sm text-gray-600">{chat.description}</p>
-                              </div>
-                              <span className="text-xs text-gray-500 whitespace-nowrap ml-2">{chat.time}</span>
-                            </div>
-                            <p className="text-sm text-gray-700 line-clamp-2">{chat.lastMessage}</p>
-                            {chat.unread > 0 && (
-                              <Badge className="mt-2 bg-emerald-600">{chat.unread} новых</Badge>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
+                <CommunitySection chats={chats} />
               )}
 
               {activeSection === 'mental' && (
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Ментальное Здоровье</h2>
-                    <p className="text-gray-600">Аудио-подкасты для медитации и расслабления</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    {[
-                      {
-                        id: 1,
-                        title: 'Утренняя медитация для начинающих',
-                        description: 'Простая практика для спокойного начала дня',
-                        duration: '12:30',
-                        category: 'Медитация'
-                      },
-                      {
-                        id: 2,
-                        title: 'Дыхательные техники для снятия стресса',
-                        description: 'Эффективные методы управления тревожностью',
-                        duration: '8:45',
-                        category: 'Дыхание'
-                      },
-                      {
-                        id: 3,
-                        title: 'Глубокое расслабление перед сном',
-                        description: 'Настройтесь на качественный отдых',
-                        duration: '18:20',
-                        category: 'Сон'
-                      },
-                      {
-                        id: 4,
-                        title: 'Практика осознанности',
-                        description: 'Присутствуйте в моменте здесь и сейчас',
-                        duration: '15:00',
-                        category: 'Медитация'
-                      },
-                      {
-                        id: 5,
-                        title: 'Управление эмоциями через дыхание',
-                        description: 'Научитесь контролировать свои реакции',
-                        duration: '10:15',
-                        category: 'Дыхание'
-                      },
-                      {
-                        id: 6,
-                        title: 'Сканирование тела',
-                        description: 'Освободите напряжение в каждой части тела',
-                        duration: '20:00',
-                        category: 'Расслабление'
-                      },
-                      {
-                        id: 7,
-                        title: 'Благодарность и позитивное мышление',
-                        description: 'Практика для улучшения настроения',
-                        duration: '7:30',
-                        category: 'Позитив'
-                      },
-                      {
-                        id: 8,
-                        title: 'Преодоление тревожности',
-                        description: 'Техники борьбы с беспокойством',
-                        duration: '14:45',
-                        category: 'Стресс'
-                      }
-                    ].map((podcast) => (
-                      <Card key={podcast.id} className="p-6 hover:shadow-lg transition-shadow">
-                        <div className="flex items-start gap-4">
-                          <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center flex-shrink-0">
-                            <Icon name="Headphones" className="text-emerald-600" size={28} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-4 mb-2">
-                              <div className="flex-1">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-1">{podcast.title}</h3>
-                                <p className="text-sm text-gray-600 mb-3">{podcast.description}</p>
-                                <Badge variant="secondary" className="flex items-center gap-1">
-                                  <Icon name="Clock" size={14} />
-                                  {podcast.duration}
-                                </Badge>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  if (favoritePodcasts.includes(podcast.id)) {
-                                    setFavoritePodcasts(favoritePodcasts.filter(id => id !== podcast.id));
-                                  } else {
-                                    setFavoritePodcasts([...favoritePodcasts, podcast.id]);
-                                  }
-                                }}
-                                className="flex-shrink-0"
-                              >
-                                <Icon
-                                  name={favoritePodcasts.includes(podcast.id) ? 'Heart' : 'Heart'}
-                                  size={20}
-                                  className={favoritePodcasts.includes(podcast.id) ? 'fill-emerald-600 text-emerald-600' : 'text-gray-400'}
-                                />
-                              </Button>
-                            </div>
-                            <div className="flex items-center gap-2 mt-4">
-                              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-                                <Icon name="Play" size={16} className="mr-1" />
-                                Слушать
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
+                <MentalHealthSection
+                  favoritePodcasts={favoritePodcasts}
+                  setFavoritePodcasts={setFavoritePodcasts}
+                />
               )}
 
               {activeSection === 'progress' && (
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Ваш прогресс</h2>
-                    <p className="text-gray-600">Отслеживайте достижения и статистику</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-gray-900">Вес</h3>
-                        <Icon name="TrendingDown" className="text-emerald-600" size={20} />
-                      </div>
-                      <p className="text-3xl font-bold text-gray-900 mb-2">68.2 кг</p>
-                      <p className="text-sm text-emerald-600">-3.2 кг за месяц</p>
-                    </Card>
-
-                    <Card className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-gray-900">Активность</h3>
-                        <Icon name="Activity" className="text-blue-600" size={20} />
-                      </div>
-                      <p className="text-3xl font-bold text-gray-900 mb-2">21</p>
-                      <p className="text-sm text-blue-600">тренировок в месяц</p>
-                    </Card>
-
-                    <Card className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-gray-900">Стрик</h3>
-                        <Icon name="Flame" className="text-orange-600" size={20} />
-                      </div>
-                      <p className="text-3xl font-bold text-gray-900 mb-2">14</p>
-                      <p className="text-sm text-orange-600">дней подряд</p>
-                    </Card>
-                  </div>
-
-                  <Card className="p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-6">Статистика за 30 дней</h3>
-                    <div className="h-64 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg flex items-center justify-center">
-                      <p className="text-gray-500">График прогресса</p>
-                    </div>
-                  </Card>
-                </div>
+                <ProgressSection />
               )}
             </div>
           </ScrollArea>
