@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,12 +18,27 @@ type AuthMode = 'login' | 'register' | 'reset';
 
 export default function Auth() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { refreshUser } = useAuth();
   const { toast } = useToast();
   const { logs, clearLogs, logInfo, logSuccess, logError, logWarning } = useLiveLogs();
-  const [mode, setMode] = useState<AuthMode>('login');
+  
+  // Определяем режим из URL
+  const getInitialMode = (): AuthMode => {
+    if (location.pathname === '/register') return 'register';
+    if (location.pathname === '/login') return 'login';
+    return 'login';
+  };
+  
+  const [mode, setMode] = useState<AuthMode>(getInitialMode());
   const [authMethod, setAuthMethod] = useState<'telegram' | 'email'>('telegram');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Логируем загрузку страницы Auth
+  useEffect(() => {
+    console.log('[AUTH PAGE] Страница загружена, path:', location.pathname, 'mode:', mode);
+    logInfo(`Страница авторизации загружена: ${location.pathname}, режим: ${mode}`);
+  }, []);
   
   // Form states
   const [email, setEmail] = useState('');
