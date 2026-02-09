@@ -105,7 +105,14 @@ export default function EditRecipeDialog({
   };
 
   const handleSubmit = async () => {
+    console.log('[EditRecipe] Начало сохранения рецепта', { recipeId: recipe?.id });
+    
     if (!formData.title || !formData.category || !recipe) {
+      console.warn('[EditRecipe] Валидация не пройдена', { 
+        hasTitle: !!formData.title, 
+        hasCategory: !!formData.category, 
+        hasRecipe: !!recipe 
+      });
       toast({
         title: 'Заполните обязательные поля',
         description: 'Название и категория обязательны',
@@ -118,6 +125,7 @@ export default function EditRecipeDialog({
 
     try {
       const token = localStorage.getItem('auth_token');
+      console.log('[EditRecipe] Токен получен', { hasToken: !!token });
 
       const ingredients = formData.ingredients
         .split('\n')
@@ -139,7 +147,17 @@ export default function EditRecipeDialog({
         is_active: formData.is_active,
       };
 
+      console.log('[EditRecipe] Payload подготовлен', { 
+        hasImage: !!imageFile, 
+        ingredientsCount: ingredients.length,
+        payloadSize: JSON.stringify(payload).length 
+      });
+
       if (imageFile) {
+        console.log('[EditRecipe] Конвертация изображения в base64', { 
+          fileName: imageFile.name, 
+          fileSize: imageFile.size 
+        });
         const reader = new FileReader();
         const base64Promise = new Promise<string>((resolve) => {
           reader.onloadend = () => resolve(reader.result as string);
@@ -147,9 +165,17 @@ export default function EditRecipeDialog({
         });
         const base64 = await base64Promise;
         payload.image_base64 = base64;
+        console.log('[EditRecipe] Изображение конвертировано', { base64Length: base64.length });
       }
 
-      const response = await fetch(`${RECIPES_API}/${recipe.id}`, {
+      const url = `${RECIPES_API}/${recipe.id}`;
+      console.log('[EditRecipe] Отправка PUT запроса', { 
+        url, 
+        recipeId: recipe.id,
+        payloadSize: JSON.stringify(payload).length 
+      });
+
+      const response = await fetch(url, {
         method: 'PUT',
         headers: {
           'X-Auth-Token': token!,
@@ -158,18 +184,35 @@ export default function EditRecipeDialog({
         body: JSON.stringify(payload),
       });
 
+      console.log('[EditRecipe] Ответ получен', { 
+        status: response.status, 
+        ok: response.ok,
+        statusText: response.statusText 
+      });
+
       const data = await response.json();
+      console.log('[EditRecipe] Данные распарсены', { data });
 
       if (response.ok && data.success) {
+        console.log('[EditRecipe] ✅ Рецепт успешно обновлен');
         toast({
           title: 'Успешно!',
           description: 'Рецепт обновлен',
         });
         onSuccess();
       } else {
+        console.error('[EditRecipe] ❌ Ошибка от сервера', { 
+          error: data.error, 
+          data 
+        });
         throw new Error(data.error || 'Ошибка обновления рецепта');
       }
     } catch (error) {
+      console.error('[EditRecipe] ❌ Ошибка при обновлении', { 
+        error, 
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined 
+      });
       toast({
         title: 'Ошибка',
         description:
@@ -178,6 +221,7 @@ export default function EditRecipeDialog({
       });
     } finally {
       setIsSubmitting(false);
+      console.log('[EditRecipe] Завершение операции');
     }
   };
 

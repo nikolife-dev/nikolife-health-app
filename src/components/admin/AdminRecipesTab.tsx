@@ -97,25 +97,44 @@ export default function AdminRecipesTab() {
   const handleDelete = async (id: number) => {
     if (!confirm('Удалить этот рецепт?')) return;
 
+    console.log('[DeleteRecipe] Начало удаления рецепта', { id });
     logInfo(`[DELETE] Удаление рецепта #${id}`);
     
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${RECIPES_API}/${id}`, {
+      console.log('[DeleteRecipe] Токен получен', { hasToken: !!token });
+      
+      const url = `${RECIPES_API}/${id}`;
+      console.log('[DeleteRecipe] Отправка DELETE запроса', { url, id });
+      
+      const response = await fetch(url, {
         method: 'DELETE',
         headers: { 'X-Auth-Token': token! }
       });
 
+      console.log('[DeleteRecipe] Ответ получен', { 
+        status: response.status, 
+        ok: response.ok,
+        statusText: response.statusText 
+      });
+
       if (response.ok) {
+        console.log('[DeleteRecipe] ✅ Рецепт успешно удален');
         logSuccess(`[DELETE] Рецепт #${id} удален`);
         toast({ title: 'Успешно', description: 'Рецепт удален' });
         loadRecipes();
       } else {
         const data = await response.json();
+        console.error('[DeleteRecipe] ❌ Ошибка от сервера', { error: data.error, data });
         logError(`[DELETE] Ошибка: ${data.error || 'unknown'}`);
         throw new Error(data.error || 'Ошибка удаления');
       }
     } catch (error) {
+      console.error('[DeleteRecipe] ❌ Ошибка при удалении', { 
+        error, 
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined 
+      });
       logError(`[DELETE] Exception: ${error instanceof Error ? error.message : 'unknown'}`);
       toast({
         title: 'Ошибка',
@@ -123,6 +142,7 @@ export default function AdminRecipesTab() {
         variant: 'destructive'
       });
     }
+    console.log('[DeleteRecipe] Завершение операции');
   };
 
   const handleEdit = (recipe: Recipe) => {
