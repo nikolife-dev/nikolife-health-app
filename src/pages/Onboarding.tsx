@@ -35,43 +35,55 @@ export default function Onboarding() {
   const progress = (step / totalSteps) * 100;
 
   const handleNext = async () => {
+    console.log('[ONBOARDING handleNext] Вызван, step:', step, 'totalSteps:', totalSteps);
+    
     if (step < totalSteps) {
+      console.log('[ONBOARDING handleNext] Переход на следующий шаг:', step + 1);
       setStep(step + 1);
-    } else {
-      console.log('[ONBOARDING] Завершение онбординга, данные:', data);
-      // Сохраняем данные онбординга в базу
-      try {
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          console.log('[ONBOARDING] Отправляем данные в backend...');
-          const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ onboarding_data: data })
-          });
+      return;
+    }
+    
+    console.log('[ONBOARDING handleNext] Последний шаг, завершение онбординга');
+    console.log('[ONBOARDING handleNext] Данные:', data);
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      console.log('[ONBOARDING handleNext] Token:', token ? 'есть' : 'НЕТ');
+      
+      if (!token) {
+        console.error('[ONBOARDING handleNext] Нет токена!');
+        return;
+      }
+      
+      console.log('[ONBOARDING handleNext] Отправка данных в backend...');
+      const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ onboarding_data: data })
+      });
 
-          const result = await response.json();
-          console.log('[ONBOARDING] Ответ backend:', result);
+      console.log('[ONBOARDING handleNext] Response status:', response.status);
+      const result = await response.json();
+      console.log('[ONBOARDING handleNext] Response data:', result);
 
-          if (response.ok) {
-            console.log('[ONBOARDING] Успешно сохранено, обновляем контекст...');
-            await refreshUser();
-            console.log('[ONBOARDING] Контекст обновлен, переход на /pricing');
-            navigate('/pricing');
-          } else {
-            console.error('[ONBOARDING] Ошибка сохранения, но всё равно переход на /pricing');
-            navigate('/pricing');
-          }
-        }
-      } catch (error) {
-        console.error('[ONBOARDING] Ошибка сохранения:', error);
-        // Даже если ошибка, переходим дальше
-        console.log('[ONBOARDING] Переход на /pricing (после ошибки)');
+      if (response.ok) {
+        console.log('[ONBOARDING handleNext] Успешно! Обновляем контекст...');
+        await refreshUser();
+        console.log('[ONBOARDING handleNext] Контекст обновлен!');
+        console.log('[ONBOARDING handleNext] Вызываем navigate("/pricing")...');
+        navigate('/pricing');
+        console.log('[ONBOARDING handleNext] navigate() вызван');
+      } else {
+        console.error('[ONBOARDING handleNext] Ошибка response, переход на /pricing');
         navigate('/pricing');
       }
+    } catch (error) {
+      console.error('[ONBOARDING handleNext] Exception:', error);
+      console.log('[ONBOARDING handleNext] Переход на /pricing после ошибки');
+      navigate('/pricing');
     }
   };
 
@@ -103,8 +115,8 @@ export default function Onboarding() {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium text-gray-600">Шаг {step} из {totalSteps}</h2>
             <Button variant="ghost" size="sm" onClick={async () => {
-              console.log('[ONBOARDING] Пропуск онбординга, сохраняем дефолтные значения');
-              // Сохраняем дефолтные значения при пропуске
+              console.log('[ONBOARDING SKIP] Нажата кнопка Пропустить');
+              
               const defaultData = {
                 goal: 'maintain',
                 activityLevel: 'sedentary',
@@ -114,28 +126,44 @@ export default function Onboarding() {
                 dietPreference: 'no_preference'
               };
               
+              console.log('[ONBOARDING SKIP] Дефолтные данные:', defaultData);
+              
               try {
                 const token = localStorage.getItem('auth_token');
-                if (token) {
-                  const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
-                    method: 'PUT',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'X-Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ onboarding_data: defaultData })
-                  });
-                  
-                  if (response.ok) {
-                    console.log('[ONBOARDING] Дефолтные значения сохранены, обновляем контекст');
-                    await refreshUser();
-                  }
+                console.log('[ONBOARDING SKIP] Token:', token ? 'есть' : 'НЕТ');
+                
+                if (!token) {
+                  console.error('[ONBOARDING SKIP] Нет токена, но переходим на /pricing');
+                  navigate('/pricing');
+                  return;
+                }
+                
+                console.log('[ONBOARDING SKIP] Отправка в backend...');
+                const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({ onboarding_data: defaultData })
+                });
+                
+                console.log('[ONBOARDING SKIP] Response status:', response.status);
+                const result = await response.json();
+                console.log('[ONBOARDING SKIP] Response data:', result);
+                
+                if (response.ok) {
+                  console.log('[ONBOARDING SKIP] Успешно! Обновляем контекст...');
+                  await refreshUser();
+                  console.log('[ONBOARDING SKIP] Контекст обновлен!');
                 }
               } catch (error) {
-                console.error('[ONBOARDING] Ошибка при пропуске:', error);
+                console.error('[ONBOARDING SKIP] Exception:', error);
               }
               
+              console.log('[ONBOARDING SKIP] Вызываем navigate("/pricing")...');
               navigate('/pricing');
+              console.log('[ONBOARDING SKIP] navigate() вызван');
             }}>
               Пропустить
             </Button>
