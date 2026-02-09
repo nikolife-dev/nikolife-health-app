@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Habit {
   name: string;
@@ -46,10 +47,12 @@ export default function DashboardSection({
   meals,
   onSectionChange 
 }: DashboardSectionProps) {
+  const { user } = useAuth();
+  
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Добро пожаловать в Nikolife! 🌿</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{user?.name}, Добро пожаловать в Nikolife!</h2>
         <p className="text-sm sm:text-base text-gray-600">Ваш персональный помощник для здорового образа жизни</p>
       </div>
 
