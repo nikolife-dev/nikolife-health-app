@@ -21,7 +21,7 @@ interface PricingPlan {
 
 export default function Pricing() {
   const navigate = useNavigate();
-  const { logout, refreshUser } = useAuth();
+  const { logout } = useAuth();
   const [isYearly, setIsYearly] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
@@ -82,30 +82,8 @@ export default function Pricing() {
   const handleSelectPlan = async (planId: string) => {
     setSelectedPlan(planId);
     
-    // Сохраняем выбранный тариф в профиле
-    try {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ selected_plan: planId })
-        });
-
-        if (response.ok) {
-          // Обновляем данные пользователя в контексте
-          await refreshUser();
-        }
-      }
-    } catch (error) {
-      console.error('Failed to save plan selection:', error);
-    }
-    
     if (planId === 'free') {
-      navigate('/', { replace: true });
+      navigate('/');
       return;
     }
 
@@ -132,7 +110,7 @@ export default function Pricing() {
             variant="outline" 
             onClick={() => {
               logout();
-              navigate('/auth');
+              navigate('/login');
             }}
           >
             <Icon name="LogOut" size={20} className="mr-2" />
@@ -199,7 +177,7 @@ export default function Pricing() {
                         : 'bg-gradient-to-br from-gray-100 to-gray-200'
                     }`}>
                       <Icon 
-                        name={plan.icon as "Heart" | "Sparkles" | "Users"} 
+                        name={plan.icon as any} 
                         size={32} 
                         className={plan.popular ? 'text-white' : 'text-gray-600'} 
                       />

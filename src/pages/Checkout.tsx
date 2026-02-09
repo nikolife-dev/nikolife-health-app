@@ -12,7 +12,7 @@ import Icon from '@/components/ui/icon';
 export default function Checkout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, refreshUser } = useAuth();
+  const { logout } = useAuth();
   const { planId, planName, price, isYearly } = location.state || {};
 
   const [paymentMethod, setPaymentMethod] = useState('card');
@@ -52,22 +52,7 @@ export default function Checkout() {
       const result = await response.json();
 
       if (result.success) {
-        // Обновляем выбранный тариф после оплаты
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ selected_plan: planId })
-          });
-          await refreshUser();
-        }
-        
-        // После успешной оплаты переходим в личный кабинет
-        navigate('/', { replace: true });
+        navigate('/payment-success');
       } else {
         throw new Error(result.error);
       }
@@ -107,7 +92,7 @@ export default function Checkout() {
             variant="outline" 
             onClick={() => {
               logout();
-              navigate('/auth');
+              navigate('/login');
             }}
           >
             <Icon name="LogOut" size={20} className="mr-2" />
