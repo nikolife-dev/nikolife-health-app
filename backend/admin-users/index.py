@@ -296,11 +296,35 @@ def handler(event: dict, context) -> dict:
                 print(f'[DELETE] Attempting to delete user_id={user_id}')
                 
                 cur.execute("""
+                    DELETE FROM t_p76837068_nikolife_health_app.user_favorites 
+                    WHERE user_id = %s
+                """, (user_id,))
+                print(f'[DELETE] Deleted {cur.rowcount} user_favorites records')
+                
+                cur.execute("""
+                    DELETE FROM t_p76837068_nikolife_health_app.subscriptions 
+                    WHERE user_id = %s
+                """, (user_id,))
+                print(f'[DELETE] Deleted {cur.rowcount} subscriptions records')
+                
+                cur.execute("""
+                    DELETE FROM t_p76837068_nikolife_health_app.weekly_menus 
+                    WHERE user_id = %s
+                """, (user_id,))
+                print(f'[DELETE] Deleted {cur.rowcount} weekly_menus records')
+                
+                cur.execute("""
                     DELETE FROM t_p76837068_nikolife_health_app.health_parameters 
                     WHERE user_id = %s
                 """, (user_id,))
-                deleted_health = cur.rowcount
-                print(f'[DELETE] Deleted {deleted_health} health_parameters records')
+                print(f'[DELETE] Deleted {cur.rowcount} health_parameters records')
+                
+                cur.execute("""
+                    UPDATE t_p76837068_nikolife_health_app.recipes 
+                    SET created_by = NULL 
+                    WHERE created_by = %s
+                """, (user_id,))
+                print(f'[DELETE] Unlinked {cur.rowcount} recipes from user')
                 
                 cur.execute("""
                     DELETE FROM t_p76837068_nikolife_health_app.users 
@@ -320,6 +344,7 @@ def handler(event: dict, context) -> dict:
                 }
             except Exception as e:
                 conn.rollback()
+                print(f'[DELETE ERROR] {str(e)}')
                 return {
                     'statusCode': 500,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
