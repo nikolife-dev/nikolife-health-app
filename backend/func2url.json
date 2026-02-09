@@ -1,4 +1,7 @@
 {
+  "seed-workouts": "https://functions.poehali.dev/c9c379c2-659d-4c2b-a0d9-ce1efe43ab7b",
+  "workouts": "https://functions.poehali.dev/10bc33f4-9e4c-47aa-a7b9-5097af1fdfeb",
+  "articles": "https://functions.poehali.dev/cea33162-065b-4e11-8767-9b4ffd23fa04",
   "recipes": "https://functions.poehali.dev/1fb55aac-7fec-4f7c-a5a0-625b2cfed416",
   "weekly-menu": "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6",
   "profile": "https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c",

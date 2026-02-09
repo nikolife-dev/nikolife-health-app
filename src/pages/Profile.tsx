@@ -19,11 +19,13 @@ import {
 import Icon from '@/components/ui/icon';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 
 export default function Profile() {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { toast } = useToast();
+  const { logs, clearLogs, logInfo, logSuccess, logError, logWarning } = useLiveLogs();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -69,21 +71,31 @@ export default function Profile() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
+    logInfo('Начало процесса выхода из системы');
     try {
+      logInfo('Вызов функции logout()...');
       await logout();
+      logSuccess('Выход выполнен успешно');
+      logInfo('Очистка токена из localStorage');
+      localStorage.removeItem('auth_token');
+      logInfo('Перенаправление на страницу авторизации');
       navigate('/auth');
     } catch (error) {
+      logError(`Ошибка при выходе: ${error instanceof Error ? error.message : 'неизвестная'}`);
       console.error('Logout error:', error);
       setIsLoggingOut(false);
     }
   };
 
   useEffect(() => {
+    logInfo('Инициализация страницы профиля');
     loadProfile();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleEditClick = () => {
+    logInfo('Открытие диалога редактирования профиля');
+    logInfo(`Текущие данные: name="${userProfile.name}", email="${userProfile.email}"`);
     setEditForm({
       name: userProfile.name,
       email: userProfile.email
@@ -92,29 +104,48 @@ export default function Profile() {
   };
 
   const loadProfile = async () => {
+    logInfo('Загрузка профиля пользователя...');
     const token = localStorage.getItem('auth_token');
+    
     if (!token) {
+      logError('Токен авторизации не найден в localStorage');
+      logWarning('Перенаправление на страницу авторизации');
       navigate('/auth');
       return;
     }
+    
+    logInfo(`Токен найден: ${token.substring(0, 10)}...`);
 
     try {
+      logInfo('Отправка GET запроса на /profile endpoint');
+      logInfo(`Headers: X-Authorization=Bearer ${token.substring(0, 15)}...`);
       const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'X-Authorization': `Bearer ${token}`
         }
       });
 
+      logInfo(`Получен ответ: status=${response.status} ${response.statusText}`);
+
       if (response.ok) {
         const data = await response.json();
+        logInfo(`Данные профиля получены: ${JSON.stringify(data).substring(0, 150)}...`);
+        
         if (data.success) {
+          logSuccess(`Профиль загружен успешно: user=${data.user.name}, email=${data.user.email}`);
+          logInfo(`План: ${data.user.selected_plan || 'не выбран'}`);
+          logInfo(`Telegram: ${data.user.telegram_username || 'не привязан'}`);
           setUserProfile(data.user);
+        } else {
+          logError('Ответ содержит success=false');
         }
       } else {
+        logError(`HTTP ошибка ${response.status}: перенаправление на /login`);
         navigate('/login');
       }
     } catch (error) {
+      logError(`Критическая ошибка загрузки профиля: ${error instanceof Error ? error.message : 'unknown'}`);
       console.error('Profile load error:', error);
       toast({
         title: 'Ошибка',
@@ -122,38 +153,60 @@ export default function Profile() {
         variant: 'destructive'
       });
     } finally {
+      logInfo('Завершение загрузки профиля (setIsLoadingProfile=false)');
       setIsLoadingProfile(false);
     }
   };
 
   const handleSaveProfile = async () => {
     setIsSaving(true);
+    logInfo('Начало сохранения профиля');
+    
     const token = localStorage.getItem('auth_token');
+    if (!token) {
+      logError('Токен не найден при попытке сохранения');
+      setIsSaving(false);
+      return;
+    }
+    
+    logInfo(`Изменения: name="${editForm.name}" (было "${userProfile.name}")`);
+    logInfo(`Изменения: email="${editForm.email}" (было "${userProfile.email}")`);
     
     try {
+      logInfo('Отправка PUT запроса на /profile endpoint');
+      const requestBody = {
+        name: editForm.name,
+        email: editForm.email
+      };
+      logInfo(`Body запроса: ${JSON.stringify(requestBody)}`);
+      logInfo(`Headers: X-Authorization=Bearer ${token.substring(0, 15)}...`);
+      
       const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'X-Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          name: editForm.name,
-          email: editForm.email
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      logInfo(`Получен ответ: status=${response.status} ${response.statusText}`);
       const data = await response.json();
+      logInfo(`Данные ответа: ${JSON.stringify(data).substring(0, 150)}...`);
 
       if (response.ok && data.success) {
+        logSuccess('Профиль успешно обновлён на сервере');
+        logInfo(`Новые данные: name="${data.user.name}", email="${data.user.email}"`);
         setUserProfile(data.user);
         setIsEditDialogOpen(false);
+        logInfo('Диалог редактирования закрыт');
         
         toast({
           title: 'Профиль обновлен',
           description: 'Ваши данные успешно сохранены',
         });
       } else {
+        logError(`Не удалось сохранить: ${data.error || 'unknown error'}`);
         toast({
           title: 'Ошибка',
           description: data.error || 'Не удалось сохранить данные',
@@ -161,6 +214,7 @@ export default function Profile() {
         });
       }
     } catch (error) {
+      logError(`Критическая ошибка сохранения: ${error instanceof Error ? error.message : 'unknown'}`);
       console.error('Profile update error:', error);
       toast({
         title: 'Ошибка',
@@ -168,6 +222,7 @@ export default function Profile() {
         variant: 'destructive'
       });
     } finally {
+      logInfo('Завершение операции сохранения (setIsSaving=false)');
       setIsSaving(false);
     }
   };
@@ -465,6 +520,8 @@ export default function Profile() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <LiveLogs logs={logs} onClear={clearLogs} position="bottom-right" />
     </div>
   );
 }
