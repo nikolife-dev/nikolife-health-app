@@ -72,26 +72,26 @@ export default function MentalHealthSection({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Ментальное Здоровье</h2>
-        <p className="text-gray-600">Аудио-подкасты для медитации и расслабления</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Ментальное Здоровье</h2>
+        <p className="text-sm sm:text-base text-gray-600">Аудио-подкасты для медитации и расслабления</p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {podcasts.map((podcast) => (
-          <Card key={podcast.id} className="p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-start gap-4">
-              <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center flex-shrink-0">
-                <Icon name="Headphones" className="text-emerald-600" size={28} />
+          <Card key={podcast.id} className="p-4 sm:p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center flex-shrink-0">
+                <Icon name="Headphones" className="text-emerald-600" size={20} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-4 mb-2">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{podcast.title}</h3>
-                    <p className="text-sm text-gray-600 mb-3">{podcast.description}</p>
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      <Icon name="Clock" size={14} />
+                <div className="flex items-start justify-between gap-2 sm:gap-4 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 line-clamp-2">{podcast.title}</h3>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-2">{podcast.description}</p>
+                    <Badge variant="secondary" className="inline-flex items-center gap-1 text-xs">
+                      <Icon name="Clock" size={12} />
                       {podcast.duration}
                     </Badge>
                   </div>
@@ -105,19 +105,19 @@ export default function MentalHealthSection({
                         setFavoritePodcasts([...favoritePodcasts, podcast.id]);
                       }
                     }}
-                    className="flex-shrink-0"
+                    className="flex-shrink-0 min-w-[40px] min-h-[40px] p-2"
                   >
                     <Icon
                       name={favoritePodcasts.includes(podcast.id) ? 'Heart' : 'Heart'}
-                      size={20}
+                      size={18}
                       className={favoritePodcasts.includes(podcast.id) ? 'fill-emerald-600 text-emerald-600' : 'text-gray-400'}
                     />
                   </Button>
                 </div>
                 <div className="flex items-center gap-2 mt-4">
-                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px] w-full sm:w-auto">
                     <Icon name="Play" size={16} className="mr-1" />
-                    Слушать
+                    <span className="text-sm sm:text-base">Слушать</span>
                   </Button>
                 </div>
               </div>

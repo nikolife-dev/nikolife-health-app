@@ -110,12 +110,12 @@ export default function WorkoutSection({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {selectedWorkout === null ? (
         <>
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Тренировки</h2>
-            <p className="text-gray-600">Выберите тренировку и начните заниматься</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Тренировки</h2>
+            <p className="text-sm sm:text-base text-gray-600">Выберите тренировку и начните заниматься</p>
           </div>
 
           <Tabs value={workoutCategory} onValueChange={setWorkoutCategory} className="w-full">
@@ -128,47 +128,48 @@ export default function WorkoutSection({
 
             <TabsContent value={workoutCategory} className="space-y-4 mt-6">
               {workouts.length === 0 ? (
-                <Card className="p-12">
+                <Card className="p-6 sm:p-12">
                   <div className="text-center text-gray-500">
-                    <Icon name="Dumbbell" size={48} className="mx-auto mb-4 opacity-50" />
-                    <p>Тренировок пока нет</p>
+                    <Icon name="Dumbbell" size={40} className="mx-auto mb-4 opacity-50 sm:w-12 sm:h-12" />
+                    <p className="text-sm sm:text-base">Тренировок пока нет</p>
                   </div>
                 </Card>
               ) : (
                 workouts.map((workout) => (
-                  <Card key={workout.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedWorkout(workout.id)}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                            <Icon name="Dumbbell" className="text-emerald-600" size={24} />
+                  <Card key={workout.id} className="p-4 sm:p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedWorkout(workout.id)}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 sm:gap-3 mb-3">
+                          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <Icon name="Dumbbell" className="text-emerald-600" size={20} />
                           </div>
-                          <div>
-                            <h3 className="text-xl font-semibold text-gray-900">{workout.title}</h3>
-                            <p className="text-sm text-gray-600">{getCategoryLabel(workout.category)}</p>
+                          <div className="min-w-0">
+                            <h3 className="text-base sm:text-xl font-semibold text-gray-900 truncate">{workout.title}</h3>
+                            <p className="text-xs sm:text-sm text-gray-600">{getCategoryLabel(workout.category)}</p>
                           </div>
                         </div>
-                        <p className="text-gray-600 mb-4">{workout.description}</p>
-                        <div className="flex items-center gap-4 text-sm">
+                        <p className="text-sm sm:text-base text-gray-600 mb-4 line-clamp-2">{workout.description}</p>
+                        <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
                           <Badge variant="secondary" className="flex items-center gap-1">
-                            <Icon name="Clock" size={14} />
-                            {workout.duration_minutes} мин
+                            <Icon name="Clock" size={12} />
+                            <span className="text-xs">{workout.duration_minutes} мин</span>
                           </Badge>
                           <Badge variant="secondary" className="flex items-center gap-1">
-                            <Icon name="TrendingUp" size={14} />
-                            {getDifficultyLabel(workout.difficulty)}
+                            <Icon name="TrendingUp" size={12} />
+                            <span className="text-xs hidden sm:inline">{getDifficultyLabel(workout.difficulty)}</span>
+                            <span className="text-xs sm:hidden">{workout.difficulty === 'beginner' ? 'Нач.' : workout.difficulty === 'intermediate' ? 'Сред.' : 'Прод.'}</span>
                           </Badge>
                           <Badge variant="secondary" className="flex items-center gap-1">
-                            <Icon name="Flame" size={14} />
-                            {workout.calories} ккал
+                            <Icon name="Flame" size={12} />
+                            <span className="text-xs">{workout.calories}</span>
                           </Badge>
                           <Badge variant="secondary" className="flex items-center gap-1">
-                            <Icon name="Eye" size={14} />
-                            {workout.view_count}
+                            <Icon name="Eye" size={12} />
+                            <span className="text-xs">{workout.view_count}</span>
                           </Badge>
                         </div>
                       </div>
-                      <Icon name="ChevronRight" className="text-gray-400 ml-4" size={24} />
+                      <Icon name="ChevronRight" className="text-gray-400 flex-shrink-0" size={20} />
                     </div>
                   </Card>
                 ))
@@ -179,41 +180,41 @@ export default function WorkoutSection({
           </Tabs>
         </>
       ) : (
-        <div className="space-y-6">
-          <Button variant="ghost" onClick={() => setSelectedWorkout(null)} className="mb-4">
+        <div className="space-y-4 sm:space-y-6">
+          <Button variant="ghost" onClick={() => setSelectedWorkout(null)} className="mb-4 min-h-[44px]">
             <Icon name="ArrowLeft" size={18} className="mr-2" />
-            Назад к списку
+            <span className="text-sm sm:text-base">Назад к списку</span>
           </Button>
 
           {selectedWorkoutDetails && (
             <>
-              <Card className="p-8">
+              <Card className="p-4 sm:p-6 lg:p-8">
                 <div className="mb-6">
                   <Badge variant="secondary" className="mb-3">
                     {getCategoryLabel(selectedWorkoutDetails.category)}
                   </Badge>
-                  <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
                     {selectedWorkoutDetails.title}
                   </h1>
-                  <p className="text-gray-600 text-lg mb-6">
+                  <p className="text-sm sm:text-base lg:text-lg text-gray-600 mb-6">
                     {selectedWorkoutDetails.description}
                   </p>
-                  <div className="flex items-center gap-6">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-6">
                     <div className="flex items-center gap-2 text-gray-700">
-                      <Icon name="Clock" size={20} />
-                      <span className="font-medium">{selectedWorkoutDetails.duration_minutes} мин</span>
+                      <Icon name="Clock" size={18} />
+                      <span className="font-medium text-sm sm:text-base">{selectedWorkoutDetails.duration_minutes} мин</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
-                      <Icon name="TrendingUp" size={20} />
-                      <span className="font-medium">{getDifficultyLabel(selectedWorkoutDetails.difficulty)}</span>
+                      <Icon name="TrendingUp" size={18} />
+                      <span className="font-medium text-sm sm:text-base">{getDifficultyLabel(selectedWorkoutDetails.difficulty)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
-                      <Icon name="Flame" size={20} />
-                      <span className="font-medium">{selectedWorkoutDetails.calories} ккал</span>
+                      <Icon name="Flame" size={18} />
+                      <span className="font-medium text-sm sm:text-base">{selectedWorkoutDetails.calories} ккал</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
-                      <Icon name="Eye" size={20} />
-                      <span className="font-medium">{selectedWorkoutDetails.view_count} просмотров</span>
+                      <Icon name="Eye" size={18} />
+                      <span className="font-medium text-sm sm:text-base">{selectedWorkoutDetails.view_count}</span>
                     </div>
                   </div>
                 </div>
@@ -225,42 +226,42 @@ export default function WorkoutSection({
                 ) : (
                   <div className="mb-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg aspect-video flex items-center justify-center">
                     <div className="text-center">
-                      <Icon name="Play" size={64} className="mx-auto mb-4 text-gray-400" />
-                      <p className="text-gray-500">Видео тренировки</p>
+                      <Icon name="Play" size={48} className="mx-auto mb-4 text-gray-400 sm:w-16 sm:h-16" />
+                      <p className="text-sm sm:text-base text-gray-500">Видео тренировки</p>
                     </div>
                   </div>
                 )}
               </Card>
 
-              <Card className="p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Упражнения</h2>
+              <Card className="p-4 sm:p-6 lg:p-8">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Упражнения</h2>
                   {workoutProgress.length === 0 ? (
-                    <Button onClick={handleStartWorkout} className="bg-emerald-600 hover:bg-emerald-700">
+                    <Button onClick={handleStartWorkout} className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px] w-full sm:w-auto">
                       <Icon name="Play" size={18} className="mr-2" />
-                      Начать тренировку
+                      <span className="text-sm sm:text-base">Начать тренировку</span>
                     </Button>
                   ) : (
-                    <Badge className="bg-emerald-600 text-white px-4 py-2">
+                    <Badge className="bg-emerald-600 text-white px-3 sm:px-4 py-2 text-xs sm:text-sm">
                       {workoutProgress.filter(p => p === 100).length} / {workoutProgress.length} выполнено
                     </Badge>
                   )}
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {selectedWorkoutDetails.exercises?.map((exercise, index) => (
-                    <Card key={index} className={`p-6 ${workoutProgress[index] === 100 ? 'bg-emerald-50 border-emerald-200' : ''}`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">{exercise.exercise_name}</h3>
-                          <div className="flex items-center gap-6 text-sm text-gray-600">
+                    <Card key={index} className={`p-4 sm:p-6 ${workoutProgress[index] === 100 ? 'bg-emerald-50 border-emerald-200' : ''}`}>
+                      <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">{exercise.exercise_name}</h3>
+                          <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs sm:text-sm text-gray-600">
                             <span className="flex items-center gap-2">
-                              <Icon name="Repeat" size={16} />
-                              {exercise.sets}
+                              <Icon name="Repeat" size={14} />
+                              <span className="whitespace-nowrap">{exercise.sets}</span>
                             </span>
                             <span className="flex items-center gap-2">
-                              <Icon name="Timer" size={16} />
-                              Отдых: {exercise.rest_seconds} сек
+                              <Icon name="Timer" size={14} />
+                              <span className="whitespace-nowrap">Отдых: {exercise.rest_seconds} сек</span>
                             </span>
                           </div>
                         </div>
@@ -270,15 +271,15 @@ export default function WorkoutSection({
                             size="sm"
                             onClick={() => handleCompleteExercise(index)}
                             disabled={workoutProgress[index] === 100}
-                            className={workoutProgress[index] === 100 ? 'bg-emerald-600 text-white border-emerald-600' : ''}
+                            className={`min-h-[44px] w-full sm:w-auto ${workoutProgress[index] === 100 ? 'bg-emerald-600 text-white border-emerald-600' : ''}`}
                           >
                             {workoutProgress[index] === 100 ? (
                               <>
                                 <Icon name="Check" size={16} className="mr-2" />
-                                Выполнено
+                                <span className="text-sm sm:text-base">Выполнено</span>
                               </>
                             ) : (
-                              'Отметить'
+                              <span className="text-sm sm:text-base">Отметить</span>
                             )}
                           </Button>
                         )}
