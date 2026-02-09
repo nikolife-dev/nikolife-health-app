@@ -42,7 +42,21 @@ export default function Recipes() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [weekDates, setWeekDates] = useState<WeekDate[]>([]);
 
-  const categories = ['завтрак', 'обед', 'ужин'];
+  const categories = [
+    'Гарниры',
+    'Десерты',
+    'Завтраки',
+    'Закуски',
+    'Ланч-боксы',
+    'Напитки',
+    'Основные блюда',
+    'Перекусы',
+    'Салаты',
+    'Смузи',
+    'Соусы и заправки',
+    'Супы',
+    'Хлеб без глютена'
+  ];
   
   // Для бесплатного тарифа - ограничение 30 рецептов
   const isFreeUser = user?.selected_plan === 'free';
