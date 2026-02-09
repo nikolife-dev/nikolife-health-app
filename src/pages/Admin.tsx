@@ -22,6 +22,7 @@ import AdminLibraryTab from '@/components/admin/AdminLibraryTab';
 import AdminWorkoutsTab from '@/components/admin/AdminWorkoutsTab';
 import AdminMentalHealthTab from '@/components/admin/AdminMentalHealthTab';
 import AdminUsersTab from '@/components/admin/AdminUsersTab';
+import AdminRecipesTab from '@/components/admin/AdminRecipesTab';
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -265,20 +266,7 @@ export default function Admin() {
 
           <AdminLibraryTab />
           <AdminWorkoutsTab />
-
-          <TabsContent value="nutrition" className="space-y-4">
-            <Card className="bg-white/80 backdrop-blur border-[#748c6d]/20">
-              <CardHeader>
-                <CardTitle className="text-[#748c6d]">Питание</CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center justify-center h-64">
-                <div className="text-center text-[#4a5446]/60">
-                  <Icon name="Apple" size={48} className="mx-auto mb-4 opacity-50" />
-                  <p>Раздел питания будет настроен позже</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <AdminRecipesTab />
 
           <AdminMentalHealthTab />
         </Tabs>
