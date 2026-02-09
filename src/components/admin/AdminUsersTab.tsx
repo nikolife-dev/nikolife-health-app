@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
+import { useToast } from '@/hooks/use-toast';
 import {
   Select,
   SelectContent,
@@ -64,6 +66,8 @@ interface UserDetail extends User {
 }
 
 export default function AdminUsersTab() {
+  const { logs, clearLogs, logInfo, logSuccess, logError, logWarning } = useLiveLogs();
+  const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -90,16 +94,21 @@ export default function AdminUsersTab() {
   }, []);
 
   const loadUsers = async () => {
+    logInfo('Загрузка списка пользователей...');
     try {
       const response = await fetch(USERS_API);
+      logInfo(`Ответ GET ${USERS_API}: status=${response.status}`);
       const data = await response.json();
+      logSuccess(`Загружено ${data.length} пользователей`);
       setUsers(data);
     } catch (error) {
+      logError(`Ошибка загрузки: ${error instanceof Error ? error.message : 'unknown'}`);
       console.error('Failed to load users:', error);
     }
   };
 
   const handleAddClick = () => {
+    logInfo('Открытие диалога добавления пользователя');
     setEditForm({
       name: '',
       email: '',
@@ -120,9 +129,13 @@ export default function AdminUsersTab() {
   };
 
   const handleEditClick = async (user: User) => {
+    logInfo(`Открытие редактирования: user_id=${user.id}, name="${user.name}"`);
     try {
+      logInfo(`GET ${USERS_API}?id=${user.id}`);
       const response = await fetch(`${USERS_API}?id=${user.id}`);
+      logInfo(`Ответ: status=${response.status}`);
       const userDetail: UserDetail = await response.json();
+      logSuccess('Детальные данные пользователя загружены');
       
       setEditingUser(user);
       setEditForm({
@@ -143,60 +156,98 @@ export default function AdminUsersTab() {
       });
       setIsEditDialogOpen(true);
     } catch (error) {
+      logError(`Ошибка загрузки деталей: ${error instanceof Error ? error.message : 'unknown'}`);
       console.error('Failed to load user details:', error);
     }
   };
 
   const handleAddUser = async () => {
+    logInfo('Создание нового пользователя...');
+    logInfo(`Данные: email="${editForm.email}", name="${editForm.name}", plan=${editForm.selected_plan}`);
     try {
       const response = await fetch(USERS_API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm)
       });
+      logInfo(`Ответ POST: status=${response.status}`);
+      const data = await response.json();
 
       if (response.ok) {
+        logSuccess(`Пользователь создан: id=${data.user?.id}`);
+        toast({ title: 'Успешно', description: 'Пользователь добавлен' });
         setIsAddDialogOpen(false);
         loadUsers();
+      } else {
+        logError(`Ошибка создания: ${data.error || 'unknown'}`);
+        toast({ title: 'Ошибка', description: data.error || 'Не удалось создать пользователя', variant: 'destructive' });
       }
     } catch (error) {
+      logError(`Критическая ошибка: ${error instanceof Error ? error.message : 'unknown'}`);
       console.error('Failed to add user:', error);
+      toast({ title: 'Ошибка', description: 'Не удалось создать пользователя', variant: 'destructive' });
     }
   };
 
   const handleUpdateUser = async () => {
     if (!editingUser) return;
 
+    logInfo(`Обновление пользователя: user_id=${editingUser.id}`);
+    logInfo(`Новые данные: name="${editForm.name}", email="${editForm.email}"`);
     try {
       const response = await fetch(`${USERS_API}?id=${editingUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm)
       });
+      logInfo(`Ответ PUT: status=${response.status}`);
+      const data = await response.json();
 
       if (response.ok) {
+        logSuccess('Пользователь успешно обновлён');
+        toast({ title: 'Успешно', description: 'Данные обновлены' });
         setIsEditDialogOpen(false);
         setEditingUser(null);
         loadUsers();
+      } else {
+        logError(`Ошибка обновления: ${data.error || 'unknown'}`);
+        toast({ title: 'Ошибка', description: data.error || 'Не удалось обновить', variant: 'destructive' });
       }
     } catch (error) {
+      logError(`Критическая ошибка: ${error instanceof Error ? error.message : 'unknown'}`);
       console.error('Failed to update user:', error);
+      toast({ title: 'Ошибка', description: 'Не удалось обновить', variant: 'destructive' });
     }
   };
 
-  const handleDeleteUser = async (id: number) => {
-    if (!confirm('Удалить пользователя? Это действие нельзя отменить.')) return;
+  const handleDeleteUser = async (id: number, userName: string) => {
+    logWarning(`Попытка удаления: user_id=${id}, name="${userName}"`);
+    if (!confirm(`Удалить пользователя "${userName}"? Это действие нельзя отменить.`)) {
+      logInfo('Удаление отменено пользователем');
+      return;
+    }
 
+    logInfo(`DELETE ${USERS_API}?id=${id}`);
     try {
       const response = await fetch(`${USERS_API}?id=${id}`, {
         method: 'DELETE'
       });
+      logInfo(`Ответ DELETE: status=${response.status}`);
+      const data = await response.json();
+      logInfo(`Данные ответа: ${JSON.stringify(data)}`);
 
       if (response.ok) {
+        logSuccess(`Пользователь id=${id} успешно удалён`);
+        toast({ title: 'Успешно', description: 'Пользователь удалён' });
         loadUsers();
+      } else {
+        logError(`Ошибка удаления: ${data.error || 'unknown'}`);
+        toast({ title: 'Ошибка', description: data.error || 'Не удалось удалить', variant: 'destructive' });
       }
     } catch (error) {
+      logError(`Критическая ошибка удаления: ${error instanceof Error ? error.message : 'unknown'}`);
       console.error('Failed to delete user:', error);
+      toast({ title: 'Ошибка', description: 'Не удалось удалить', variant: 'destructive' });
     }
   };
 
@@ -329,7 +380,7 @@ export default function AdminUsersTab() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDeleteUser(user.id)}
+                          onClick={() => handleDeleteUser(user.id, user.name)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50 min-w-[44px] min-h-[44px]"
                         >
                           <Icon name="Trash2" size={16} />
@@ -728,6 +779,8 @@ export default function AdminUsersTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <LiveLogs logs={logs} onClear={clearLogs} position="bottom-right" />
     </TabsContent>
   );
 }

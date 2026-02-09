@@ -250,16 +250,29 @@ def handler(event: dict, context) -> dict:
                     'isBase64Encoded': False
                 }
 
+            print(f'[DELETE] Attempting to delete user_id={user_id}')
+            
+            cur.execute("""
+                DELETE FROM t_p76837068_nikolife_health_app.health_parameters 
+                WHERE user_id = %s
+            """, (user_id,))
+            deleted_health = cur.rowcount
+            print(f'[DELETE] Deleted {deleted_health} health_parameters records')
+            
             cur.execute("""
                 DELETE FROM t_p76837068_nikolife_health_app.users 
                 WHERE id = %s
             """, (user_id,))
+            deleted_user = cur.rowcount
+            print(f'[DELETE] Deleted {deleted_user} user records')
+            
             conn.commit()
+            print(f'[DELETE] Successfully deleted user_id={user_id}')
 
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'success': True}),
+                'body': json.dumps({'success': True, 'deleted': deleted_user > 0}),
                 'isBase64Encoded': False
             }
 
