@@ -318,7 +318,7 @@ export default function AdminRecipesTab() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {recipe.category && recipe.category.length > 0 ? (
+                          {recipe.category && Array.isArray(recipe.category) && recipe.category.length > 0 ? (
                             recipe.category.map((cat, idx) => (
                               <Badge key={idx} className={getCategoryBadge(cat)}>
                                 {cat}

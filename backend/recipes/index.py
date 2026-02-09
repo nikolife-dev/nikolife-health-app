@@ -1,6 +1,7 @@
 import json
 import os
 import psycopg2
+import psycopg2.extras
 import boto3
 import base64
 import uuid
@@ -37,6 +38,7 @@ def handler(event: dict, context) -> dict:
         
         if auth_token:
             conn = psycopg2.connect(os.environ['DATABASE_URL'])
+            psycopg2.extras.register_default_jsonb(conn)
             cur = conn.cursor()
             schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
             
@@ -67,6 +69,7 @@ def handler(event: dict, context) -> dict:
         print(f"[RECIPES] Параметры: recipe_id={recipe_id}, action={action}")
         
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        psycopg2.extras.register_default_jsonb(conn)
         cur = conn.cursor()
         schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
         
@@ -84,11 +87,17 @@ def handler(event: dict, context) -> dict:
             
             recipes = []
             for row in cur.fetchall():
+                category = row[12]
+                if isinstance(category, str):
+                    try:
+                        category = json.loads(category)
+                    except:
+                        category = [category] if category else []
                 recipes.append({
                     'id': row[0], 'title': row[1], 'description': row[2], 'ingredients': row[3],
                     'instructions': row[4], 'cooking_time': row[5], 'servings': row[6], 'calories': row[7],
                     'protein': float(row[8]) if row[8] else None, 'carbs': float(row[9]) if row[9] else None,
-                    'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': row[12],
+                    'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': category,
                     'tags': row[13], 'is_favorite': True
                 })
             
@@ -155,8 +164,8 @@ def handler(event: dict, context) -> dict:
             query_params = []
             
             if category:
-                query += " AND category = %s"
-                query_params.append(category)
+                query += " AND category @> %s::jsonb"
+                query_params.append(json.dumps([category]))
             
             if search:
                 query += " AND (title ILIKE %s OR description ILIKE %s)"
@@ -172,11 +181,17 @@ def handler(event: dict, context) -> dict:
             recipe_ids = []
             for row in cur.fetchall():
                 recipe_ids.append(row[0])
+                category = row[12]
+                if isinstance(category, str):
+                    try:
+                        category = json.loads(category)
+                    except:
+                        category = [category] if category else []
                 recipes.append({
                     'id': row[0], 'title': row[1], 'description': row[2], 'ingredients': row[3],
                     'instructions': row[4], 'cooking_time': row[5], 'servings': row[6], 'calories': row[7],
                     'protein': float(row[8]) if row[8] else None, 'carbs': float(row[9]) if row[9] else None,
-                    'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': row[12],
+                    'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': category,
                     'tags': row[13], 'is_favorite': False
                 })
             
@@ -205,13 +220,13 @@ def handler(event: dict, context) -> dict:
             cur.execute(f"""
                 INSERT INTO {schema}.recipes 
                 (title, description, ingredients, instructions, cooking_time, servings, calories, protein, carbs, fats, image_url, category, tags, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s)
                 RETURNING id
             """, (
                 body.get('title'), body.get('description'), json.dumps(body.get('ingredients')),
                 body.get('instructions'), body.get('cooking_time'), body.get('servings', 1),
                 body.get('calories'), body.get('protein'), body.get('carbs'), body.get('fats'),
-                body.get('image_url'), body.get('category'), json.dumps(body.get('tags', [])), user_id
+                body.get('image_url'), json.dumps(body.get('category', [])), json.dumps(body.get('tags', [])), user_id
             ))
             
             new_id = cur.fetchone()[0]
@@ -288,7 +303,7 @@ def handler(event: dict, context) -> dict:
                     cooking_time = COALESCE(%s, cooking_time), servings = COALESCE(%s, servings),
                     calories = COALESCE(%s, calories), protein = COALESCE(%s, protein),
                     carbs = COALESCE(%s, carbs), fats = COALESCE(%s, fats),
-                    image_url = COALESCE(%s, image_url), category = COALESCE(%s, category),
+                    image_url = COALESCE(%s, image_url), category = COALESCE(%s::jsonb, category),
                     tags = COALESCE(%s, tags), is_active = COALESCE(%s, is_active), updated_at = NOW()
                 WHERE id = %s
             """, (
@@ -296,7 +311,7 @@ def handler(event: dict, context) -> dict:
                 json.dumps(body.get('ingredients')) if body.get('ingredients') else None,
                 body.get('instructions'), body.get('cooking_time'), body.get('servings'),
                 body.get('calories'), body.get('protein'), body.get('carbs'), body.get('fats'),
-                image_url, body.get('category'),
+                image_url, json.dumps(body.get('category')) if body.get('category') else None,
                 json.dumps(body.get('tags')) if body.get('tags') else None, 
                 body.get('is_active') if 'is_active' in body else None,
                 recipe_id
