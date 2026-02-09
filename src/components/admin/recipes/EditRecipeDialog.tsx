@@ -101,15 +101,15 @@ export default function EditRecipeDialog({
   const handleSubmit = async () => {
     console.log('[EditRecipe] Начало сохранения рецепта', { recipeId: recipe?.id });
     
-    if (!formData.title || !formData.category || !recipe) {
+    if (!formData.title || formData.categories.length === 0 || !recipe) {
       console.warn('[EditRecipe] Валидация не пройдена', { 
         hasTitle: !!formData.title, 
-        hasCategory: !!formData.category, 
+        hasCategories: formData.categories.length > 0, 
         hasRecipe: !!recipe 
       });
       toast({
         title: 'Заполните обязательные поля',
-        description: 'Название и категория обязательны',
+        description: 'Название и минимум одна категория обязательны',
         variant: 'destructive',
       });
       return;
