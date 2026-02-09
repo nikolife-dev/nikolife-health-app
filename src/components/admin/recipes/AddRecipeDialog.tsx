@@ -9,15 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import CategorySelector from './CategorySelector';
 
 const RECIPES_API = 'https://functions.poehali.dev/1fb55aac-7fec-4f7c-a5a0-625b2cfed416';
 
@@ -40,7 +34,7 @@ export default function AddRecipeDialog({
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'обед',
+    categories: [] as string[],
     cooking_time: '',
     servings: '',
     calories: '',
@@ -64,10 +58,10 @@ export default function AddRecipeDialog({
   };
 
   const handleSubmit = async () => {
-    if (!formData.title || !formData.category) {
+    if (!formData.title || formData.categories.length === 0) {
       toast({
         title: 'Заполните обязательные поля',
-        description: 'Название и категория обязательны',
+        description: 'Название и минимум одна категория обязательны',
         variant: 'destructive',
       });
       return;
@@ -86,7 +80,7 @@ export default function AddRecipeDialog({
       const payload: Record<string, unknown> = {
         title: formData.title,
         description: formData.description,
-        category: formData.category,
+        category: formData.categories,
         cooking_time: parseInt(formData.cooking_time) || 0,
         servings: parseInt(formData.servings) || 1,
         calories: parseInt(formData.calories) || 0,
@@ -143,7 +137,7 @@ export default function AddRecipeDialog({
     setFormData({
       title: '',
       description: '',
-      category: 'обед',
+      categories: [],
       cooking_time: '',
       servings: '',
       calories: '',
@@ -191,37 +185,23 @@ export default function AddRecipeDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="category">Категория *</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, category: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="завтрак">Завтрак</SelectItem>
-                  <SelectItem value="обед">Обед</SelectItem>
-                  <SelectItem value="ужин">Ужин</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <CategorySelector
+            selectedCategories={formData.categories}
+            onChange={(categories) =>
+              setFormData({ ...formData, categories })
+            }
+          />
 
-            <div>
-              <Label htmlFor="cooking_time">Время приготовления (мин)</Label>
-              <Input
-                id="cooking_time"
-                type="number"
-                value={formData.cooking_time}
-                onChange={(e) =>
-                  setFormData({ ...formData, cooking_time: e.target.value })
-                }
-              />
-            </div>
+          <div>
+            <Label htmlFor="cooking_time">Время приготовления (мин)</Label>
+            <Input
+              id="cooking_time"
+              type="number"
+              value={formData.cooking_time}
+              onChange={(e) =>
+                setFormData({ ...formData, cooking_time: e.target.value })
+              }
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

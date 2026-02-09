@@ -31,7 +31,7 @@ interface Recipe {
   carbs: number;
   fats: number;
   image_url: string | null;
-  category: string;
+  category: string[];
   ingredients: string[];
   instructions: string;
   is_active: boolean;
@@ -50,7 +50,22 @@ export default function AdminRecipesTab() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
 
-  const categories = ['all', 'завтрак', 'обед', 'ужин'];
+  const categories = [
+    'all',
+    'Гарниры',
+    'Десерты',
+    'Завтраки',
+    'Закуски',
+    'Ланч-боксы',
+    'Напитки',
+    'Основные блюда',
+    'Перекусы',
+    'Салаты',
+    'Смузи',
+    'Соусы и заправки',
+    'Супы',
+    'Хлеб без глютена'
+  ];
 
   useEffect(() => {
     loadRecipes();
@@ -192,9 +207,19 @@ export default function AdminRecipesTab() {
 
   const getCategoryBadge = (cat: string) => {
     const colors: Record<string, string> = {
-      'завтрак': 'bg-yellow-500/10 text-yellow-700',
-      'обед': 'bg-orange-500/10 text-orange-700',
-      'ужин': 'bg-blue-500/10 text-blue-700'
+      'Гарниры': 'bg-amber-500/10 text-amber-700',
+      'Десерты': 'bg-pink-500/10 text-pink-700',
+      'Завтраки': 'bg-yellow-500/10 text-yellow-700',
+      'Закуски': 'bg-lime-500/10 text-lime-700',
+      'Ланч-боксы': 'bg-teal-500/10 text-teal-700',
+      'Напитки': 'bg-cyan-500/10 text-cyan-700',
+      'Основные блюда': 'bg-orange-500/10 text-orange-700',
+      'Перекусы': 'bg-green-500/10 text-green-700',
+      'Салаты': 'bg-emerald-500/10 text-emerald-700',
+      'Смузи': 'bg-purple-500/10 text-purple-700',
+      'Соусы и заправки': 'bg-red-500/10 text-red-700',
+      'Супы': 'bg-blue-500/10 text-blue-700',
+      'Хлеб без глютена': 'bg-stone-500/10 text-stone-700'
     };
     return colors[cat] || 'bg-gray-500/10 text-gray-700';
   };
@@ -292,9 +317,17 @@ export default function AdminRecipesTab() {
                         {recipe.title}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getCategoryBadge(recipe.category)}>
-                          {recipe.category}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {recipe.category && recipe.category.length > 0 ? (
+                            recipe.category.map((cat, idx) => (
+                              <Badge key={idx} className={getCategoryBadge(cat)}>
+                                {cat}
+                              </Badge>
+                            ))
+                          ) : (
+                            <Badge className="bg-gray-500/10 text-gray-700">Без категории</Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-[#4a5446]/80">
                         {recipe.cooking_time} мин
