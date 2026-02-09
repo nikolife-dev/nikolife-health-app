@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
-import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 
 declare global {
   interface Window {
@@ -20,7 +19,6 @@ export default function Auth() {
   const navigate = useNavigate();
   const { login: authLogin } = useAuth();
   const { toast } = useToast();
-  const { logs, clearLogs, logInfo, logSuccess, logError, logWarning } = useLiveLogs();
   const [mode, setMode] = useState<AuthMode>('login');
   const [authMethod, setAuthMethod] = useState<'telegram' | 'email'>('telegram');
   const [isLoading, setIsLoading] = useState(false);
@@ -34,7 +32,6 @@ export default function Auth() {
   // Load Telegram widget
   useEffect(() => {
     if (authMethod === 'telegram') {
-      logInfo('Загрузка Telegram виджета...');
       const script = document.createElement('script');
       script.src = 'https://telegram.org/js/telegram-widget.js?22';
       script.setAttribute('data-telegram-login', 'nikolife_health_bot');
@@ -48,15 +45,11 @@ export default function Auth() {
       if (container) {
         container.innerHTML = '';
         container.appendChild(script);
-        logSuccess('Telegram виджет добавлен в DOM');
-      } else {
-        logWarning('Контейнер telegram-login-container не найден');
       }
 
       return () => {
         if (container) {
           container.innerHTML = '';
-          logInfo('Telegram виджет очищен');
         }
       };
     }
@@ -65,13 +58,11 @@ export default function Auth() {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    logInfo(`Начало авторизации: mode=${mode}, email=${email}`);
 
     try {
       if (mode === 'register') {
         // Регистрация
         if (password !== confirmPassword) {
-          logError('Пароли не совпадают');
           toast({
             title: 'Ошибка',
             description: 'Пароли не совпадают',
@@ -81,23 +72,18 @@ export default function Auth() {
           return;
         }
 
-        logInfo('Отправка запроса регистрации...');
         const response = await fetch('https://functions.poehali.dev/5d61e550-4be2-483e-a685-bb7eaaaea724', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, password }),
         });
 
-        logInfo(`Получен ответ: status=${response.status}`);
         const data = await response.json();
-        logInfo(`Данные ответа: ${JSON.stringify(data).substring(0, 100)}...`);
 
         if (!response.ok || !data.success) {
-          logError(`Ошибка регистрации: ${data.error || 'неизвестная ошибка'}`);
           throw new Error(data.error || 'Ошибка регистрации');
         }
 
-        logSuccess('Регистрация успешна, сохранение токена...');
         localStorage.setItem('auth_token', data.token);
         toast({
           title: 'Успешно!',
@@ -106,43 +92,34 @@ export default function Auth() {
         
         // Проверяем тариф
         if (data.user?.selected_plan) {
-          logInfo('Переход на главную (тариф выбран)');
           navigate('/', { replace: true });
         } else {
-          logInfo('Переход на страницу выбора тарифа');
           navigate('/pricing', { replace: true });
         }
 
       } else if (mode === 'login') {
         // Вход
-        logInfo('Отправка запроса на вход...');
         const response = await fetch('https://functions.poehali.dev/5d61e550-4be2-483e-a685-bb7eaaaea724', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
 
-        logInfo(`Получен ответ: status=${response.status}`);
         const data = await response.json();
-        logInfo(`Данные ответа: ${JSON.stringify(data).substring(0, 100)}...`);
 
         if (!response.ok || !data.success) {
-          logError(`Ошибка входа: ${data.error || 'неверные данные'}`);
           throw new Error(data.error || 'Неверный email или пароль');
         }
 
-        logSuccess('Вход успешен, сохранение токена...');
         localStorage.setItem('auth_token', data.token);
         toast({
           title: 'Успешно!',
           description: 'Вы вошли в систему',
         });
-        logInfo('Переход на главную страницу');
         navigate('/', { replace: true });
 
       } else if (mode === 'reset') {
         // Восстановление пароля
-        logInfo('Отправка инструкций для восстановления пароля');
         toast({
           title: 'Инструкции отправлены',
           description: 'Проверьте вашу почту для восстановления пароля',
@@ -151,7 +128,6 @@ export default function Auth() {
       }
 
     } catch (error) {
-      logError(`Критическая ошибка: ${error instanceof Error ? error.message : 'неизвестная'}`);
       toast({
         title: 'Ошибка',
         description: error instanceof Error ? error.message : 'Произошла ошибка',
@@ -384,8 +360,6 @@ export default function Auth() {
           </p>
         </div>
       </Card>
-
-      <LiveLogs logs={logs} onClear={clearLogs} position="inline" />
     </div>
   );
 }

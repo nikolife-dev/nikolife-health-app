@@ -56,6 +56,15 @@ export default function IndexSidebar({ activeSection, setActiveSection }: IndexS
         </Button>
 
         <Button
+          variant="ghost"
+          className="w-full justify-start"
+          onClick={() => navigate('/recipes')}
+        >
+          <Icon name="UtensilsCrossed" className="lg:mr-2" size={20} />
+          <span className="hidden lg:inline">Все рецепты</span>
+        </Button>
+
+        <Button
           variant={activeSection === 'community' ? 'default' : 'ghost'}
           className="w-full justify-start"
           onClick={() => setActiveSection('community')}

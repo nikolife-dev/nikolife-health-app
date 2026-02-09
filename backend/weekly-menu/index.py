@@ -108,8 +108,8 @@ def handler(event: dict, context) -> dict:
                     'isBase64Encoded': False
                 }
             
-            # Получаем все активные рецепты с калориями
-            cur.execute(f"SELECT id, category, calories FROM {schema}.recipes WHERE is_active = true")
+            # Получаем все активные рецепты
+            cur.execute(f"SELECT id, category FROM {schema}.recipes WHERE is_active = true")
             all_recipes = cur.fetchall()
             
             if not all_recipes:
@@ -120,74 +120,46 @@ def handler(event: dict, context) -> dict:
                     'isBase64Encoded': False
                 }
             
-            # Группируем рецепты по категориям с данными о калориях
+            # Группируем рецепты по категориям
             recipes_by_category = {}
-            for recipe_id, category, calories in all_recipes:
+            for recipe_id, category in all_recipes:
                 if category not in recipes_by_category:
                     recipes_by_category[category] = []
-                recipes_by_category[category].append({
-                    'id': recipe_id,
-                    'calories': calories or 300  # если нет данных, ставим среднее
-                })
+                recipes_by_category[category].append(recipe_id)
             
             # Удаляем старое меню на эту неделю
             cur.execute(f"DELETE FROM {schema}.weekly_menus WHERE user_id = %s AND week_start_date = %s", 
                        (use_user_id, week_start))
             
-            # Генерируем меню на 7 дней
+            # Генерируем меню на 7 дней (1-5 рецептов на каждый прием пищи)
             meal_types = {
-                'breakfast': recipes_by_category.get('завтрак', []),
-                'lunch': recipes_by_category.get('обед', []),
-                'dinner': recipes_by_category.get('ужин', [])
+                'breakfast': recipes_by_category.get('завтрак', recipes_by_category.get('breakfast', [])),
+                'lunch': recipes_by_category.get('обед', recipes_by_category.get('lunch', [])),
+                'dinner': recipes_by_category.get('ужин', recipes_by_category.get('dinner', []))
             }
             
             # Если нет рецептов по категориям, используем все
-            all_recipes_list = [{'id': r[0], 'calories': r[2] or 300} for r in all_recipes]
             for meal_type in meal_types:
                 if not meal_types[meal_type]:
-                    meal_types[meal_type] = all_recipes_list
+                    meal_types[meal_type] = [r[0] for r in all_recipes]
             
             generated_count = 0
-            target_calories = 600  # Целевая калорийность на прием пищи
-            
             for day in range(1, 8):  # 1-7 (Пн-Вс)
-                for meal_type, recipes_pool in meal_types.items():
-                    if not recipes_pool:
-                        continue
-                    
-                    # Подбираем рецепты так, чтобы суммарно было ~600 ккал
-                    selected_recipes = []
-                    total_calories = 0
-                    available = recipes_pool.copy()
-                    random.shuffle(available)
-                    
-                    # Пытаемся набрать ~600 ккал, но не более
-                    for recipe in available:
-                        if len(selected_recipes) >= 5:  # Максимум 5 рецептов
-                            break
+                for meal_type, recipe_ids in meal_types.items():
+                    if recipe_ids:
+                        # Генерируем от 1 до 3 рецептов на прием пищи
+                        num_recipes = random.randint(1, min(3, len(recipe_ids)))
+                        selected_recipes = random.sample(recipe_ids, num_recipes)
                         
-                        # Если добавление этого рецепта не превысит 600 ккал
-                        if total_calories + recipe['calories'] <= target_calories:
-                            selected_recipes.append(recipe['id'])
-                            total_calories += recipe['calories']
-                        
-                        # Если мы близко к цели (±100 ккал), останавливаемся
-                        if abs(total_calories - target_calories) <= 100:
-                            break
-                    
-                    # Если ничего не набрали, берем хотя бы один рецепт с наименьшими калориями
-                    if not selected_recipes and available:
-                        min_cal_recipe = min(available, key=lambda r: r['calories'])
-                        selected_recipes.append(min_cal_recipe['id'])
-                    
-                    # Сохраняем выбранные рецепты
-                    for position, recipe_id in enumerate(selected_recipes, start=1):
-                        cur.execute(f"""
-                            INSERT INTO {schema}.weekly_menus 
-                            (user_id, week_start_date, day_of_week, meal_type, recipe_id, position)
-                            VALUES (%s, %s, %s, %s, %s, %s)
-                        """, (use_user_id, week_start, day, meal_type, recipe_id, position))
-                        generated_count += 1
+                        for position, recipe_id in enumerate(selected_recipes, start=1):
+                            cur.execute(f"""
+                                INSERT INTO {schema}.weekly_menus 
+                                (user_id, week_start_date, day_of_week, meal_type, recipe_id, position)
+                                VALUES (%s, %s, %s, %s, %s, %s)
+                                ON CONFLICT (user_id, week_start_date, day_of_week, meal_type, position) 
+                                DO UPDATE SET recipe_id = EXCLUDED.recipe_id
+                            """, (use_user_id, week_start, day, meal_type, recipe_id, position))
+                            generated_count += 1
             
             conn.commit()
             cur.close()

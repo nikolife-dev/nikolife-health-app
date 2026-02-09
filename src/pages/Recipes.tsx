@@ -14,7 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 
 interface Recipe {
   id: number;
@@ -39,7 +38,6 @@ export default function Recipes() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { logs, clearLogs, logInfo, logSuccess, logError } = useLiveLogs();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -59,7 +57,6 @@ export default function Recipes() {
   const recipeLimit = isFreeUser ? 30 : 1000;
 
   useEffect(() => {
-    logInfo('Загрузка страницы рецептов');
     loadRecipes();
     loadWeekDates();
   }, [category]);
@@ -97,7 +94,6 @@ export default function Recipes() {
 
   const loadRecipes = async () => {
     setIsLoading(true);
-    logInfo(`Загрузка рецептов: category=${category || 'все'}, search=${search || 'нет'}`);
     try {
       const token = localStorage.getItem('auth_token');
       const params = new URLSearchParams();
@@ -114,11 +110,9 @@ export default function Recipes() {
 
       const data = await response.json();
       if (data.recipes) {
-        logSuccess(`Загружено ${data.recipes.length} рецептов`);
         setRecipes(data.recipes);
       }
     } catch (error) {
-      logError('Не удалось загрузить рецепты');
       toast({
         title: 'Ошибка',
         description: 'Не удалось загрузить рецепты',
@@ -130,11 +124,9 @@ export default function Recipes() {
   };
 
   const toggleFavorite = async (recipeId: number) => {
-    logInfo(`Переключение избранного для рецепта #${recipeId}`);
     try {
       const token = localStorage.getItem('auth_token');
       if (!token) {
-        logError('Нет токена авторизации');
         toast({
           title: 'Требуется авторизация',
           description: 'Войдите, чтобы добавлять в избранное',
@@ -153,13 +145,11 @@ export default function Recipes() {
 
       const data = await response.json();
       if (data.success) {
-        logSuccess(`Избранное обновлено: ${data.is_favorite ? 'добавлено' : 'удалено'}`);
         setRecipes(recipes.map(r =>
           r.id === recipeId ? { ...r, is_favorite: data.is_favorite } : r
         ));
       }
     } catch (error) {
-      logError('Не удалось обновить избранное');
       toast({
         title: 'Ошибка',
         description: 'Не удалось обновить избранное',
@@ -177,7 +167,6 @@ export default function Recipes() {
     if (!selectedRecipe || !selectedDay || !selectedMeal) return;
 
     setIsAddingToMenu(true);
-    logInfo(`Добавление рецепта "${selectedRecipe.title}" в меню (день ${selectedDay}, ${selectedMeal})`);
     try {
       const token = localStorage.getItem('auth_token');
       const response = await fetch(
@@ -198,7 +187,6 @@ export default function Recipes() {
 
       const data = await response.json();
       if (data.success) {
-        logSuccess('Рецепт успешно добавлен в план');
         toast({ 
           title: 'Добавлено!', 
           description: 'Рецепт добавлен в план питания' 
@@ -208,12 +196,10 @@ export default function Recipes() {
         
         // Если пришли с параметрами, возвращаемся на главную с секцией "Питание"
         if (searchParams.get('addToMenu') === 'true') {
-          logInfo('Переход на главную страницу (секция "Питание")');
           navigate('/?section=nutrition');
         }
       }
     } catch (error) {
-      logError('Не удалось добавить рецепт в план');
       toast({
         title: 'Ошибка',
         description: 'Не удалось добавить в план',
@@ -442,8 +428,6 @@ export default function Recipes() {
           </div>
         </DialogContent>
       </Dialog>
-      
-      <LiveLogs logs={logs} onClear={clearLogs} position="bottom-right" />
     </div>
   );
 }
