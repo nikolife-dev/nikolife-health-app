@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Icon from "@/components/ui/icon";
 import { useToast } from "@/hooks/use-toast";
@@ -17,9 +18,6 @@ import {
 } from "@dnd-kit/core";
 import DraggableRecipe from "./nutrition/DraggableRecipe";
 import DayCard from "./nutrition/DayCard";
-import RecipeDetailsDialog from "./nutrition/RecipeDetailsDialog";
-import RecipeCard from "./nutrition/RecipeCard";
-import MealPlanControls from "./nutrition/MealPlanControls";
 
 interface Recipe {
   id: number;
@@ -270,8 +268,7 @@ export default function NutritionSection({
       const rawText = await response.text();
       dbg("[DEL] response rawText", rawText || "[empty body]");
 
-      let data: { success?: boolean; error?: string; message?: string } | null =
-        null;
+      let data: { success?: boolean; error?: string; message?: string } | null = null;
       try {
         data = rawText ? JSON.parse(rawText) : null;
       } catch {
@@ -293,414 +290,294 @@ export default function NutritionSection({
         return;
       }
 
-      logSuccess("[DEL] success");
-      toast({ title: "Успешно!", description: "Блюдо удалено из меню" });
+      const success = data?.success ?? true;
 
-      setMenu((prev) => prev.filter((item) => item.id !== menuItemId));
+      if (success) {
+        logSuccess("[DEL] success");
+        setMenu((prev) => prev.filter((item) => item.id !== menuItemId));
+        toast({ title: "Удалено", description: "Рецепт удален из плана" });
+      } else {
+        const msg = data?.error || data?.message || "success=false";
+        logError(`[DEL] failed: ${msg}`);
+        toast({
+          title: "Ошибка удаления",
+          description: msg,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      logError(
-        `[DEL] exception: ${error instanceof Error ? error.message : "unknown"}`,
-      );
-      console.error("Delete error:", error);
+      logError("[DEL] exception");
+      dbg("[DEL] exception payload", { error });
       toast({
         title: "Ошибка",
         description:
-          error instanceof Error ? error.message : "Не удалось удалить блюдо",
+          error instanceof Error ? error.message : "Не удалось удалить рецепт",
         variant: "destructive",
       });
-      dbg("[DEL] exception payload", { error });
+    } finally {
+      dbg("[DEL] deleteRecipe: end");
     }
   };
 
-  const clearMenu = async () => {
-    dbg("[CLEAR] clearMenu: start");
-    try {
-      const token = localStorage.getItem("auth_token");
-      if (!token) {
-        logError("[CLEAR] no auth token");
-        toast({
-          title: "Ошибка",
-          description: "Нет токена авторизации",
-          variant: "destructive",
-        });
-        return;
-      }
+  const getRecipesForMeal = (dayNumber: number, mealType: string) => {
+    return menu
+      .filter((m) => m.day_of_week === dayNumber && m.meal_type === mealType)
+      .sort((a, b) => a.position - b.position);
+  };
 
-      const url =
-        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/clear";
-      dbg("[CLEAR] request", { url, method: "POST" });
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "X-Auth-Token": token, "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      dbg("[CLEAR] response", { status: response.status, ok: response.ok });
-      const data = await response.json();
-      dbg("[CLEAR] json", data);
-
-      if (!response.ok) {
-        logError(`[CLEAR] failed: ${data.error || "unknown"}`);
-        throw new Error(data.error || "Ошибка очистки меню");
-      }
-
-      if (data.success) {
-        logSuccess("[CLEAR] success");
-        toast({
-          title: "Успешно!",
-          description: "Меню очищено",
-        });
-        setMenu([]);
-        setWeekDates([]);
-      } else {
-        logError("[CLEAR] not successful");
-        throw new Error(data.error || "Не удалось очистить меню");
-      }
-    } catch (error) {
-      logError(
-        `[CLEAR] exception: ${error instanceof Error ? error.message : "unknown"}`,
-      );
-      console.error("Clear menu error:", error);
-      toast({
-        title: "Ошибка",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Не удалось очистить меню",
-        variant: "destructive",
-      });
-      dbg("[CLEAR] exception payload", { error });
-    }
+  const getTotalCaloriesForMeal = (dayNumber: number, mealType: string) => {
+    const recipes = getRecipesForMeal(dayNumber, mealType);
+    return recipes.reduce((sum, item) => sum + (item.recipe.calories || 0), 0);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    dbg("[DND] DragStart", { id: event.active.id });
+    dbg("[DND] dragStart", { activeId: event.active?.id });
     setActiveId(String(event.active.id));
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    dbg("[DND] DragEnd", {
-      activeId: active.id,
-      overId: over?.id,
-      hasOver: !!over,
-    });
-
     setActiveId(null);
 
+    dbg("[DND] dragEnd raw", {
+      activeId: active?.id,
+      overId: over?.id,
+    });
+
     if (!over) {
-      dbg("[DND] no drop target");
+      dbg("[DND] drop cancelled: over is null/undefined");
       return;
     }
 
-    const sourceId = String(active.id);
-    const [sourceDayStr, sourceMealType] = sourceId.split("-");
-    const sourceDay = parseInt(sourceDayStr, 10);
+    const activeIdStr = String(active.id);
+    const overIdStr = String(over.id);
 
-    const targetId = String(over.id);
-    const [targetDayStr, targetMealType] = targetId.split("-");
-    const targetDay = parseInt(targetDayStr, 10);
-
-    dbg("[DND] Parsed identifiers", {
-      sourceDay,
-      sourceMealType,
-      targetDay,
-      targetMealType,
-    });
-
-    if (sourceId === targetId) {
-      dbg("[DND] dropped to same slot => no-op");
+    if (activeIdStr === overIdStr) {
+      dbg("[DND] drop ignored: same element", { activeIdStr, overIdStr });
       return;
     }
 
-    const sourceItems = menu.filter(
-      (m) => m.day_of_week === sourceDay && m.meal_type === sourceMealType,
-    );
-    const targetItems = menu.filter(
-      (m) => m.day_of_week === targetDay && m.meal_type === targetMealType,
-    );
+    const activeItem = menu.find((m) => String(m.id) === activeIdStr);
+    const overItem = menu.find((m) => String(m.id) === overIdStr);
 
-    dbg("[DND] matched items", {
-      source: sourceItems.length,
-      target: targetItems.length,
-    });
-
-    const optimisticUpdate = menu.map((item) => {
-      if (item.day_of_week === sourceDay && item.meal_type === sourceMealType) {
-        return { ...item, day_of_week: targetDay, meal_type: targetMealType };
-      }
-      if (item.day_of_week === targetDay && item.meal_type === targetMealType) {
-        return { ...item, day_of_week: sourceDay, meal_type: sourceMealType };
-      }
-      return item;
-    });
-
-    setMenu(optimisticUpdate);
-    dbg("[DND] applied optimistic update");
-
-    try {
-      const token = localStorage.getItem("auth_token");
-      if (!token) {
-        logError("[DND] no auth token");
-        toast({
-          title: "Ошибка",
-          description: "Нет токена авторизации",
-          variant: "destructive",
-        });
-        setMenu(menu);
-        return;
-      }
-
-      const sourceRecipeId = sourceItems[0]?.id;
-      const targetRecipeId = targetItems[0]?.id;
-
-      if (!sourceRecipeId) {
-        dbg("[DND] source slot is empty => no server call needed");
-        return;
-      }
-
-      const url =
-        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/swap";
-      dbg("[DND] request", { url, method: "POST" });
-
-      const body: {
-        source_id: number;
-        target_day: number;
-        target_meal: string;
-        target_id?: number;
-      } = {
-        source_id: sourceRecipeId,
-        target_day: targetDay,
-        target_meal: targetMealType,
-      };
-
-      if (targetRecipeId) {
-        body.target_id = targetRecipeId;
-      }
-
-      dbg("[DND] request body", body);
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "X-Auth-Token": token,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
+    if (!activeItem || !overItem) {
+      logError("[DND] item(s) not found in menu");
+      dbg("[DND] not found details", {
+        activeIdStr,
+        overIdStr,
+        activeFound: !!activeItem,
+        overFound: !!overItem,
+        menuIds: menu.map((m) => m.id),
       });
+      return;
+    }
 
-      dbg("[DND] response", { status: response.status, ok: response.ok });
-      const data = await response.json();
-      dbg("[DND] json", data);
+    const sourceCell = {
+      day: activeItem.day_of_week,
+      meal: activeItem.meal_type,
+    };
+    const targetCell = { day: overItem.day_of_week, meal: overItem.meal_type };
+    const sameCell =
+      sourceCell.day === targetCell.day && sourceCell.meal === targetCell.meal;
 
-      if (!response.ok) {
-        logError(`[DND] swap failed: ${data.error || "unknown"}`);
-        throw new Error(data.error || "Ошибка перестановки");
-      }
+    dbg("[DND] resolved items", {
+      active: { id: activeItem.id, ...sourceCell, pos: activeItem.position },
+      over: { id: overItem.id, ...targetCell, pos: overItem.position },
+      sameCell,
+    });
 
-      if (data.success) {
-        logSuccess("[DND] swap success");
-        await loadMenu();
-      } else {
-        logError("[DND] swap not successful");
-        throw new Error(data.error || "Не удалось переставить блюда");
-      }
-    } catch (error) {
-      logError(
-        `[DND] exception: ${error instanceof Error ? error.message : "unknown"}`,
+    const sourceItems = menu
+      .filter(
+        (m) =>
+          m.day_of_week === sourceCell.day && m.meal_type === sourceCell.meal,
+      )
+      .sort((a, b) => a.position - b.position);
+
+    const targetItems = sameCell
+      ? sourceItems
+      : menu
+          .filter(
+            (m) =>
+              m.day_of_week === targetCell.day &&
+              m.meal_type === targetCell.meal,
+          )
+          .sort((a, b) => a.position - b.position);
+
+    const fromIndex = sourceItems.findIndex(
+      (m) => String(m.id) === activeIdStr,
+    );
+    const toIndex = targetItems.findIndex((m) => String(m.id) === overIdStr);
+
+    dbg("[DND] indexes", { fromIndex, toIndex });
+
+    if (fromIndex === -1 || toIndex === -1) {
+      logError("[DND] invalid indexes");
+      dbg("[DND] invalid indexes details", { activeIdStr, overIdStr });
+      return;
+    }
+
+    const moved = { ...activeItem };
+
+    const newSource = sourceItems.slice();
+    newSource.splice(fromIndex, 1);
+
+    const newTarget = sameCell ? newSource.slice() : targetItems.slice();
+    newTarget.splice(toIndex, 0, moved);
+
+    const normalizedSource = newSource.map((it, idx) => ({
+      ...it,
+      position: idx + 1,
+    }));
+    const normalizedTarget = newTarget.map((it, idx) => ({
+      ...it,
+      position: idx + 1,
+      day_of_week: targetCell.day,
+      meal_type: targetCell.meal,
+    }));
+
+    dbg("[DND] normalized", {
+      source: normalizedSource.map((x) => ({ id: x.id, pos: x.position })),
+      target: normalizedTarget.map((x) => ({ id: x.id, pos: x.position })),
+    });
+
+    setMenu((prev) => {
+      const sourceMap = new Map<number, MenuItem>(
+        normalizedSource.map((x) => [x.id, x]),
       );
-      console.error("Drag end error:", error);
-      setMenu(menu);
-      toast({
-        title: "Ошибка",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Не удалось переставить блюда",
-        variant: "destructive",
+      const targetMap = new Map<number, MenuItem>(
+        normalizedTarget.map((x) => [x.id, x]),
+      );
+
+      return prev.map((item) => {
+        const inTarget = targetMap.get(item.id);
+        if (inTarget) return inTarget;
+
+        const inSource = sourceMap.get(item.id);
+        if (inSource) return inSource;
+
+        return item;
       });
-      dbg("[DND] exception payload", { error });
-    }
+    });
+
+    logSuccess("[DND] menu updated");
+    toast({
+      title: "Готово",
+      description: sameCell ? "Рецепты поменялись местами" : "Рецепт перенесён",
+    });
   };
 
-  const [selectedRecipeDetail, setSelectedRecipeDetail] =
-    useState<Recipe | null>(null);
-
-  const getMenuForDay = (dayNum: number) => {
-    return menu.filter((m) => m.day_of_week === dayNum);
-  };
-
-  const formatDate = (dayNum: number) => {
-    const wd = weekDates.find((w) => w.day_number === dayNum);
-    return wd ? `${wd.date} (${wd.day_name})` : `День ${dayNum}`;
-  };
-
-  const getMealCalories = (dayNum: number, mealType: string) => {
-    const items = menu.filter(
-      (m) => m.day_of_week === dayNum && m.meal_type === mealType,
-    );
-    return items.reduce((sum, item) => sum + item.recipe.calories, 0);
-  };
-
-  const getMealIcon = (mealType: string) => {
-    if (mealType === "breakfast") return "Coffee";
-    if (mealType === "lunch") return "UtensilsCrossed";
-    if (mealType === "dinner") return "Moon";
-    return "UtensilsCrossed";
-  };
-
-  const activeDragItem = activeId
-    ? menu.find((m) => {
-        const [dayStr, mealType] = activeId.split("-");
-        const day = parseInt(dayStr, 10);
-        return m.day_of_week === day && m.meal_type === mealType;
-      })
-    : null;
-
-  if (!localStorage.getItem("auth_token")) {
+  if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Питание</h2>
-          <p className="text-gray-600">
-            Планируйте своё питание на неделю вперёд
-          </p>
-        </div>
-        <Card className="p-8">
-          <div className="text-center">
-            <Icon
-              name="Lock"
-              size={48}
-              className="mx-auto mb-4 text-gray-400"
-            />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Войдите в систему
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Для доступа к планировщику питания необходима авторизация
-            </p>
-            <MealPlanControls
-              isGenerating={false}
-              hasMenu={false}
-              onGenerate={() => navigate("/auth")}
-              onClear={() => {}}
-            />
-          </div>
-        </Card>
+      <div className="flex items-center justify-center py-12">
+        <Icon
+          name="Loader2"
+          size={48}
+          className="animate-spin text-[#748c6d]"
+        />
       </div>
     );
   }
 
+  const activeDragItem = activeId ? menu.find((m) => String(m.id) === activeId) : null;
+
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Питание</h2>
-          <p className="text-gray-600">
-            Планируйте своё питание на неделю вперёд
-          </p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            План питания
+          </h2>
+          <p className="text-gray-600">Моё меню на неделю</p>
         </div>
-
-        <Tabs defaultValue="plan" className="w-full">
-          <TabsList>
-            <TabsTrigger value="plan">План питания</TabsTrigger>
-            <TabsTrigger value="recipes">Рецепты</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="plan" className="space-y-6 mt-6">
-            <MealPlanControls
-              isGenerating={isGenerating}
-              hasMenu={menu.length > 0}
-              onGenerate={generateMenu}
-              onClear={clearMenu}
-            />
-
-            {isLoading && (
-              <Card className="p-12">
-                <div className="text-center">
-                  <Icon
-                    name="Loader2"
-                    size={48}
-                    className="mx-auto mb-4 text-emerald-600 animate-spin"
-                  />
-                  <p className="text-gray-600">Загрузка меню...</p>
-                </div>
-              </Card>
+        <div className="flex gap-2">
+          <Button
+            onClick={generateMenu}
+            disabled={isGenerating}
+            className="bg-[#748c6d] hover:bg-[#5a7052]"
+          >
+            {isGenerating ? (
+              <>
+                <Icon name="Loader2" size={20} className="mr-2 animate-spin" />
+                Генерация...
+              </>
+            ) : (
+              <>
+                <Icon name="Wand2" size={20} className="mr-2" />
+                Сгенерировать
+              </>
             )}
-
-            {!isLoading && menu.length === 0 && (
-              <Card className="p-12">
-                <div className="text-center">
-                  <Icon
-                    name="UtensilsCrossed"
-                    size={48}
-                    className="mx-auto mb-4 text-gray-400"
-                  />
-                  <p className="text-gray-600">
-                    Меню пока пусто. Сгенерируйте план питания на неделю!
-                  </p>
-                </div>
-              </Card>
-            )}
-
-            {!isLoading && menu.length > 0 && (
-              <div className="space-y-6">
-                {[1, 2, 3, 4, 5, 6, 7].map((dayNum) => {
-                  const dayMenu = getMenuForDay(dayNum);
-                  if (dayMenu.length === 0) return null;
-                  return (
-                    <DayCard
-                      key={dayNum}
-                      dayNum={dayNum}
-                      formatDate={formatDate}
-                      meals={meals}
-                      getMealIcon={getMealIcon}
-                      menu={menu}
-                      getMealCalories={getMealCalories}
-                      deleteRecipe={deleteRecipe}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="recipes" className="space-y-4 mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {menu
-                .map((item) => item.recipe)
-                .filter(
-                  (recipe, index, self) =>
-                    self.findIndex((r) => r.id === recipe.id) === index,
-                )
-                .map((recipe) => (
-                  <RecipeCard
-                    key={recipe.id}
-                    recipe={recipe}
-                    onClick={() => setSelectedRecipeDetail(recipe)}
-                  />
-                ))}
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        <RecipeDetailsDialog
-          recipe={selectedRecipeDetail}
-          onClose={() => setSelectedRecipeDetail(null)}
-        />
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/recipes")}>
+            <Icon name="Plus" size={20} className="mr-2" />
+            Добавить рецепт
+          </Button>
+        </div>
       </div>
 
-      <DragOverlay>
-        {activeDragItem && (
-          <DraggableRecipe recipe={activeDragItem.recipe} isOverlay />
-        )}
-      </DragOverlay>
-    </DndContext>
+      <Tabs defaultValue="week" className="w-full">
+        <TabsList>
+          <TabsTrigger value="week">Моё меню</TabsTrigger>
+          <TabsTrigger value="recipes" onClick={() => navigate("/recipes")}>
+            Все рецепты
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="week" className="space-y-6 mt-6">
+          {weekDates.length === 0 && menu.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Icon
+                name="CalendarDays"
+                size={64}
+                className="mx-auto mb-4 text-gray-400"
+              />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Меню пока пусто
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Сгенерируйте автоматический план питания или добавьте рецепты
+                вручную
+              </p>
+              <Button
+                onClick={generateMenu}
+                className="bg-[#748c6d] hover:bg-[#5a7052]"
+              >
+                <Icon name="Wand2" size={20} className="mr-2" />
+                Сгенерировать план
+              </Button>
+            </Card>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="space-y-6">
+                {weekDates.map((day) => (
+                  <DayCard
+                    key={day.day_number}
+                    day={day}
+                    meals={meals}
+                    getRecipesForMeal={getRecipesForMeal}
+                    getTotalCaloriesForMeal={getTotalCaloriesForMeal}
+                    onDelete={deleteRecipe}
+                    onAddClick={() => navigate("/recipes")}
+                  />
+                ))}
+              </div>
+
+              <DragOverlay>
+                {activeDragItem ? (
+                  <DraggableRecipe
+                    menuItem={activeDragItem}
+                    onDelete={() => {}}
+                  />
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
