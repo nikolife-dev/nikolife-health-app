@@ -473,21 +473,18 @@ export default function Index() {
                     ].map((podcast) => (
                       <Card key={podcast.id} className="p-6 hover:shadow-lg transition-shadow">
                         <div className="flex items-start gap-4">
-                          <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-                            <Icon name="Headphones" className="text-white" size={28} />
+                          <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center flex-shrink-0">
+                            <Icon name="Headphones" className="text-emerald-600" size={28} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-4 mb-2">
                               <div className="flex-1">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-1">{podcast.title}</h3>
                                 <p className="text-sm text-gray-600 mb-3">{podcast.description}</p>
-                                <div className="flex items-center gap-3">
-                                  <Badge variant="secondary" className="flex items-center gap-1">
-                                    <Icon name="Clock" size={14} />
-                                    {podcast.duration}
-                                  </Badge>
-                                  <Badge variant="outline">{podcast.category}</Badge>
-                                </div>
+                                <Badge variant="secondary" className="flex items-center gap-1">
+                                  <Icon name="Clock" size={14} />
+                                  {podcast.duration}
+                                </Badge>
                               </div>
                               <Button
                                 variant="ghost"
@@ -504,12 +501,12 @@ export default function Index() {
                                 <Icon
                                   name={favoritePodcasts.includes(podcast.id) ? 'Heart' : 'Heart'}
                                   size={20}
-                                  className={favoritePodcasts.includes(podcast.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}
+                                  className={favoritePodcasts.includes(podcast.id) ? 'fill-emerald-600 text-emerald-600' : 'text-gray-400'}
                                 />
                               </Button>
                             </div>
                             <div className="flex items-center gap-2 mt-4">
-                              <Button size="sm" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+                              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
                                 <Icon name="Play" size={16} className="mr-1" />
                                 Слушать
                               </Button>
