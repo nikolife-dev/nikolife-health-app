@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -21,9 +21,17 @@ interface PricingPlan {
 
 export default function Pricing() {
   const navigate = useNavigate();
-  const { logout, refreshUser } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [isYearly, setIsYearly] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+
+  // Автоматический редирект, если план уже выбран
+  useEffect(() => {
+    if (user?.selected_plan) {
+      console.log('[PRICING] План уже выбран:', user.selected_plan, '→ редирект на /');
+      navigate('/', { replace: true });
+    }
+  }, [user?.selected_plan, navigate]);
 
   const plans: PricingPlan[] = [
     {
