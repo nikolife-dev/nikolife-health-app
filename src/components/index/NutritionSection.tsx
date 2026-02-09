@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Icon from "@/components/ui/icon";
 import { useToast } from "@/hooks/use-toast";
-import { useLiveLogs } from "@/components/LiveLogs";
+import { LiveLogs, useLiveLogs } from "@/components/LiveLogs";
 import {
   DndContext,
   DragEndEvent,
@@ -76,7 +76,7 @@ export default function NutritionSection({
 }: NutritionSectionProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { logInfo, logSuccess, logError } = useLiveLogs();
+  const { logs, clearLogs, logInfo, logSuccess, logError } = useLiveLogs();
 
   const DEBUG = true;
 
@@ -578,6 +578,8 @@ export default function NutritionSection({
           )}
         </TabsContent>
       </Tabs>
+      
+      <LiveLogs logs={logs} onClear={clearLogs} position="bottom-right" />
     </div>
   );
 }
