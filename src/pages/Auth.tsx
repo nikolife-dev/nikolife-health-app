@@ -64,6 +64,7 @@ export default function Auth() {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[AUTH] handleEmailAuth вызван, mode:', mode, 'email:', email);
     setIsLoading(true);
     logInfo(`Начало авторизации: mode=${mode}, email=${email}`);
 
@@ -98,6 +99,7 @@ export default function Auth() {
         }
 
         logSuccess('Регистрация успешна, сохранение токена...');
+        console.log('[AUTH] Регистрация успешна, токен:', data.token);
         localStorage.setItem('auth_token', data.token);
         toast({
           title: 'Успешно!',
@@ -108,18 +110,23 @@ export default function Auth() {
         const hasPlan = !!data.user?.selected_plan;
         const onboardingCompleted = data.user?.onboarding_completed === true;
         
+        console.log('[AUTH] Проверка статуса:', { hasPlan, onboardingCompleted, user: data.user });
         logInfo(`Статус: hasPlan=${hasPlan}, onboardingCompleted=${onboardingCompleted}`);
         
         if (hasPlan) {
+          console.log('[AUTH] Редирект на / (план выбран)');
           logInfo('Переход на главную (план выбран)');
           navigate('/', { replace: true });
         } else if (onboardingCompleted) {
+          console.log('[AUTH] Редирект на /pricing (онбординг пройден)');
           logInfo('Переход на /pricing (онбординг пройден, план не выбран)');
           navigate('/pricing', { replace: true });
         } else {
+          console.log('[AUTH] Редирект на /onboarding (новый пользователь)');
           logInfo('Переход на /onboarding (новый пользователь)');
           navigate('/onboarding', { replace: true });
         }
+        console.log('[AUTH] navigate() вызван');
 
       } else if (mode === 'login') {
         // Вход
@@ -140,6 +147,7 @@ export default function Auth() {
         }
 
         logSuccess('Вход успешен, сохранение токена...');
+        console.log('[AUTH] Вход успешен, токен:', data.token);
         localStorage.setItem('auth_token', data.token);
         toast({
           title: 'Успешно!',
@@ -150,18 +158,23 @@ export default function Auth() {
         const hasPlan = !!data.user?.selected_plan;
         const onboardingCompleted = data.user?.onboarding_completed === true;
         
+        console.log('[AUTH] Проверка статуса:', { hasPlan, onboardingCompleted, user: data.user });
         logInfo(`Статус: hasPlan=${hasPlan}, onboardingCompleted=${onboardingCompleted}`);
         
         if (hasPlan) {
+          console.log('[AUTH] Редирект на / (план выбран)');
           logInfo('Переход на главную (план выбран)');
           navigate('/', { replace: true });
         } else if (onboardingCompleted) {
+          console.log('[AUTH] Редирект на /pricing (онбординг пройден)');
           logInfo('Переход на /pricing (онбординг пройден, план не выбран)');
           navigate('/pricing', { replace: true });
         } else {
+          console.log('[AUTH] Редирект на /onboarding (онбординг не пройден)');
           logInfo('Переход на /onboarding (онбординг не пройден)');
           navigate('/onboarding', { replace: true });
         }
+        console.log('[AUTH] navigate() вызван');
 
       } else if (mode === 'reset') {
         // Восстановление пароля
