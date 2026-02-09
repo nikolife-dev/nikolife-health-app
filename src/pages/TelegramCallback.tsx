@@ -14,6 +14,7 @@ export default function TelegramCallback() {
   useEffect(() => {
     const processTelegramAuth = async () => {
       try {
+        console.log('[TG CALLBACK] Начало обработки Telegram авторизации');
         // Получаем параметры от Telegram
         const id = searchParams.get('id');
         const first_name = searchParams.get('first_name');
@@ -22,6 +23,8 @@ export default function TelegramCallback() {
         const photo_url = searchParams.get('photo_url');
         const auth_date = searchParams.get('auth_date');
         const hash = searchParams.get('hash');
+        
+        console.log('[TG CALLBACK] Параметры:', { id, first_name, username });
 
         if (!id || !hash) {
           setError('Неверные данные авторизации');
@@ -55,6 +58,7 @@ export default function TelegramCallback() {
         }
 
         const data = await response.json();
+        console.log('[TG CALLBACK] Ответ от backend:', data);
 
         if (data.success && data.token) {
           localStorage.setItem('auth_token', data.token);
@@ -66,15 +70,25 @@ export default function TelegramCallback() {
           const isNewUser = !data.user?.selected_plan;
           const onboardingCompleted = data.user?.onboarding_completed || localStorage.getItem('onboarding_completed') === 'true';
           
+          console.log('[TG CALLBACK] Статус пользователя:', { 
+            isNewUser, 
+            onboardingCompleted, 
+            selected_plan: data.user?.selected_plan,
+            onboarding_from_db: data.user?.onboarding_completed 
+          });
+          
           if (isNewUser) {
             // Новый пользователь
             if (!onboardingCompleted) {
+              console.log('[TG CALLBACK] Новый пользователь → /onboarding');
               navigate('/onboarding', { replace: true });
             } else {
+              console.log('[TG CALLBACK] Новый пользователь с onboarding → /pricing');
               navigate('/pricing', { replace: true });
             }
           } else {
             // Существующий пользователь с выбранным планом
+            console.log('[TG CALLBACK] Существующий пользователь → /');
             navigate('/', { replace: true });
           }
         } else {

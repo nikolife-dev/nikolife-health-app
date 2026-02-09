@@ -26,20 +26,34 @@ export default function ProtectedRoute({ children, requiresPlan = false }: Prote
   // Проверяем последовательность: онбординг → pricing → главная
   const onboardingCompleted = user?.onboarding_completed || localStorage.getItem('onboarding_completed') === 'true';
   
+  console.log('[PROTECTED ROUTE]', {
+    path: location.pathname,
+    user_id: user?.id,
+    onboarding_completed: onboardingCompleted,
+    onboarding_from_db: user?.onboarding_completed,
+    selected_plan: user?.selected_plan,
+    requiresPlan
+  });
+  
   // Если не прошел онбординг и это не страница онбординга
   if (!onboardingCompleted && location.pathname !== '/onboarding') {
+    console.log('[PROTECTED ROUTE] Редирект на /onboarding (не пройден)');
     return <Navigate to="/onboarding" state={{ from: location }} replace />;
   }
 
   // Если онбординг пройден, но тариф не выбран
   if (onboardingCompleted && !user?.selected_plan && location.pathname !== '/pricing') {
+    console.log('[PROTECTED ROUTE] Редирект на /pricing (нет плана)');
     return <Navigate to="/pricing" state={{ from: location }} replace />;
   }
 
   // Если требуется тариф и он не выбран
   if (requiresPlan && !user?.selected_plan) {
+    console.log('[PROTECTED ROUTE] Редирект на /pricing (requiresPlan)');
     return <Navigate to="/pricing" state={{ from: location }} replace />;
   }
+  
+  console.log('[PROTECTED ROUTE] Доступ разрешен к', location.pathname);
 
   return <>{children}</>;
 }

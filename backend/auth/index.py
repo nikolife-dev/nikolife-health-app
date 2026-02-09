@@ -103,6 +103,7 @@ def handler(event: dict, context) -> dict:
                 
                 if user:
                     # Пользователь существует, обновляем токен
+                    print(f"[AUTH LOG] Существующий пользователь telegram_id={telegram_id}, user_id={user[0]}, onboarding={user[4]}, plan={user[3]}")
                     token = generate_token()
                     cur.execute(f"UPDATE {schema}.users SET auth_token = %s, last_login = NOW() WHERE id = %s", (token, user[0]))
                     conn.commit()
@@ -110,6 +111,7 @@ def handler(event: dict, context) -> dict:
                     cur.close()
                     conn.close()
                     
+                    print(f"[AUTH LOG] Возвращаем существующего пользователя с onboarding_completed={user[4]}, selected_plan={user[3]}")
                     return {
                         'statusCode': 200,
                         'headers': {
@@ -131,6 +133,7 @@ def handler(event: dict, context) -> dict:
                     }
                 else:
                     # Создаем нового пользователя
+                    print(f"[AUTH LOG] Создаем нового пользователя telegram_id={telegram_id}, name={full_name}")
                     token = generate_token()
                     temp_email = f"telegram_{telegram_id}@nikolife.temp"
                     temp_password = generate_token()
@@ -146,6 +149,7 @@ def handler(event: dict, context) -> dict:
                     cur.close()
                     conn.close()
                     
+                    print(f"[AUTH LOG] Новый пользователь создан user_id={user_id}, onboarding_completed=None, selected_plan=None")
                     return {
                         'statusCode': 200,
                         'headers': {
@@ -158,7 +162,8 @@ def handler(event: dict, context) -> dict:
                                 'id': user_id,
                                 'name': full_name,
                                 'email': temp_email,
-                                'selected_plan': None
+                                'selected_plan': None,
+                                'onboarding_completed': False
                             },
                             'token': token
                         }),

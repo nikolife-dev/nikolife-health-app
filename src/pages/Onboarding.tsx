@@ -36,10 +36,12 @@ export default function Onboarding() {
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
+      console.log('[ONBOARDING] Завершение онбординга, данные:', data);
       // Сохраняем данные онбординга в базу
       try {
         const token = localStorage.getItem('auth_token');
         if (token) {
+          console.log('[ONBOARDING] Отправляем данные в backend...');
           const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
             method: 'PUT',
             headers: {
@@ -49,15 +51,20 @@ export default function Onboarding() {
             body: JSON.stringify({ onboarding_data: data })
           });
 
+          const result = await response.json();
+          console.log('[ONBOARDING] Ответ backend:', result);
+
           if (response.ok) {
             localStorage.setItem('onboarding_completed', 'true');
+            console.log('[ONBOARDING] Успешно сохранено, переход на /pricing');
             navigate('/pricing');
           }
         }
       } catch (error) {
-        console.error('Failed to save onboarding data:', error);
+        console.error('[ONBOARDING] Ошибка сохранения:', error);
         // Даже если ошибка, переходим дальше
         localStorage.setItem('onboarding_completed', 'true');
+        console.log('[ONBOARDING] Переход на /pricing (после ошибки)');
         navigate('/pricing');
       }
     }

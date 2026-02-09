@@ -80,12 +80,14 @@ export default function Pricing() {
   ];
 
   const handleSelectPlan = async (planId: string) => {
+    console.log('[PRICING] Выбор плана:', planId);
     setSelectedPlan(planId);
     
     // Сохраняем выбранный тариф в профиле
     try {
       const token = localStorage.getItem('auth_token');
       if (token) {
+        console.log('[PRICING] Сохраняем план в backend...');
         const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
           method: 'PUT',
           headers: {
@@ -95,16 +97,21 @@ export default function Pricing() {
           body: JSON.stringify({ selected_plan: planId })
         });
 
+        const result = await response.json();
+        console.log('[PRICING] Ответ backend:', result);
+
         if (response.ok) {
           // Обновляем данные пользователя в контексте
           await refreshUser();
+          console.log('[PRICING] Данные пользователя обновлены');
         }
       }
     } catch (error) {
-      console.error('Failed to save plan selection:', error);
+      console.error('[PRICING] Ошибка сохранения плана:', error);
     }
     
     if (planId === 'free') {
+      console.log('[PRICING] Бесплатный план, переход на /');
       navigate('/', { replace: true });
       return;
     }
