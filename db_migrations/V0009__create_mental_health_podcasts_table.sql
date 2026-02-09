@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS mental_health_podcasts (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  description TEXT NOT NULL,
+  duration VARCHAR(10) NOT NULL,
+  audio_url TEXT,
+  popularity_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
