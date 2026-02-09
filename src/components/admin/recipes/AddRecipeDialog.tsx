@@ -68,9 +68,11 @@ export default function AddRecipeDialog({
     }
 
     setIsSubmitting(true);
+    console.log('[AddRecipe] Начало создания рецепта');
 
     try {
       const token = localStorage.getItem('auth_token');
+      console.log('[AddRecipe] Токен получен', { hasToken: !!token });
 
       const ingredients = formData.ingredients
         .split('\n')
@@ -91,7 +93,21 @@ export default function AddRecipeDialog({
         instructions: formData.instructions,
       };
 
+      console.log('[AddRecipe] Payload подготовлен', { 
+        hasImage: !!imageFile, 
+        ingredientsCount: ingredients.length,
+        imageSize: imageFile ? `${(imageFile.size / 1024).toFixed(2)} KB` : 'нет'
+      });
+
       if (imageFile) {
+        if (imageFile.size > 5 * 1024 * 1024) {
+          throw new Error('Размер изображения не должен превышать 5 МБ');
+        }
+        
+        console.log('[AddRecipe] Конвертация изображения в base64', { 
+          fileName: imageFile.name, 
+          fileSize: `${(imageFile.size / 1024).toFixed(2)} KB`
+        });
         const reader = new FileReader();
         const base64Promise = new Promise<string>((resolve) => {
           reader.onloadend = () => resolve(reader.result as string);
@@ -99,7 +115,16 @@ export default function AddRecipeDialog({
         });
         const base64 = await base64Promise;
         payload.image_base64 = base64;
+        console.log('[AddRecipe] Изображение конвертировано', { 
+          base64Length: `${(base64.length / 1024).toFixed(2)} KB` 
+        });
       }
+
+      const payloadSize = JSON.stringify(payload).length;
+      console.log('[AddRecipe] Отправка POST запроса', { 
+        url: RECIPES_API,
+        payloadSize: `${(payloadSize / 1024).toFixed(2)} KB`
+      });
 
       const response = await fetch(RECIPES_API, {
         method: 'POST',
@@ -110,26 +135,57 @@ export default function AddRecipeDialog({
         body: JSON.stringify(payload),
       });
 
+      console.log('[AddRecipe] Ответ получен', { 
+        status: response.status, 
+        ok: response.ok,
+        statusText: response.statusText 
+      });
+
+      if (response.status === 413) {
+        throw new Error('Запрос слишком большой. Попробуйте загрузить изображение меньшего размера (до 1 МБ)');
+      }
+
       const data = await response.json();
+      console.log('[AddRecipe] Данные распарсены', { data });
 
       if (response.ok && data.success) {
+        console.log('[AddRecipe] ✅ Рецепт успешно создан');
         toast({
           title: 'Успешно!',
           description: 'Рецепт добавлен',
         });
         onSuccess();
       } else {
+        console.error('[AddRecipe] ❌ Ошибка от сервера', { 
+          error: data.error, 
+          data 
+        });
         throw new Error(data.error || 'Ошибка создания рецепта');
       }
     } catch (error) {
+      console.error('[AddRecipe] ❌ Ошибка при создании', { 
+        error, 
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined 
+      });
+      
+      let errorMessage = 'Не удалось создать рецепт';
+      if (error instanceof Error) {
+        if (error.message === 'Failed to fetch') {
+          errorMessage = 'Ошибка соединения с сервером. Проверьте размер изображения (не более 1 МБ)';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: 'Ошибка',
-        description:
-          error instanceof Error ? error.message : 'Не удалось создать рецепт',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
+      console.log('[AddRecipe] Завершение операции');
     }
   };
 
