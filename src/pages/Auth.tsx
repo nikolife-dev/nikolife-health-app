@@ -18,7 +18,7 @@ type AuthMode = 'login' | 'register' | 'reset';
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { login: authLogin } = useAuth();
+  const { refreshUser } = useAuth();
   const { toast } = useToast();
   const { logs, clearLogs, logInfo, logSuccess, logError, logWarning } = useLiveLogs();
   const [mode, setMode] = useState<AuthMode>('login');
@@ -101,6 +101,13 @@ export default function Auth() {
         logSuccess('Регистрация успешна, сохранение токена...');
         console.log('[AUTH] Регистрация успешна, токен:', data.token);
         localStorage.setItem('auth_token', data.token);
+        
+        // КРИТИЧНО: обновляем контекст ПЕРЕД navigate!
+        console.log('[AUTH] Вызов refreshUser() для обновления контекста...');
+        logInfo('Обновление контекста пользователя...');
+        await refreshUser();
+        console.log('[AUTH] Контекст обновлён!');
+        
         toast({
           title: 'Успешно!',
           description: 'Регистрация прошла успешно',
@@ -149,6 +156,13 @@ export default function Auth() {
         logSuccess('Вход успешен, сохранение токена...');
         console.log('[AUTH] Вход успешен, токен:', data.token);
         localStorage.setItem('auth_token', data.token);
+        
+        // КРИТИЧНО: обновляем контекст ПЕРЕД navigate!
+        console.log('[AUTH] Вызов refreshUser() для обновления контекста...');
+        logInfo('Обновление контекста пользователя...');
+        await refreshUser();
+        console.log('[AUTH] Контекст обновлён!');
+        
         toast({
           title: 'Успешно!',
           description: 'Вы вошли в систему',
