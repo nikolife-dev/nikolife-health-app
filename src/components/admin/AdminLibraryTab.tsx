@@ -47,11 +47,19 @@ export default function AdminLibraryTab() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [newArticle, setNewArticle] = useState({
     title: '',
     category: 'nutrition' as 'nutrition' | 'training' | 'health',
     content: '',
     published_date: new Date().toISOString().split('T')[0]
+  });
+  const [editForm, setEditForm] = useState({
+    title: '',
+    category: 'nutrition' as 'nutrition' | 'training' | 'health',
+    content: '',
+    published_date: ''
   });
 
   useEffect(() => {
@@ -91,6 +99,37 @@ export default function AdminLibraryTab() {
       }
     } catch (error) {
       console.error('Failed to add article:', error);
+    }
+  };
+
+  const handleEditClick = (article: Article) => {
+    setEditingArticle(article);
+    setEditForm({
+      title: article.title,
+      category: article.category,
+      content: article.content,
+      published_date: article.published_date
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateArticle = async () => {
+    if (!editingArticle) return;
+    
+    try {
+      const response = await fetch(`${ARTICLES_API}?id=${editingArticle.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      });
+      
+      if (response.ok) {
+        setIsEditDialogOpen(false);
+        setEditingArticle(null);
+        loadArticles();
+      }
+    } catch (error) {
+      console.error('Failed to update article:', error);
     }
   };
 
@@ -256,14 +295,24 @@ export default function AdminLibraryTab() {
                       <Badge variant="secondary">{article.view_count}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteArticle(article.id)}
-                        className="min-w-[44px] min-h-[44px]"
-                      >
-                        <Icon name="Trash2" size={16} />
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditClick(article)}
+                          className="min-w-[44px] min-h-[44px]"
+                        >
+                          <Icon name="Pencil" size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteArticle(article.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 min-w-[44px] min-h-[44px]"
+                        >
+                          <Icon name="Trash2" size={16} />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -273,6 +322,79 @@ export default function AdminLibraryTab() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Редактировать статью</DialogTitle>
+            <DialogDescription>
+              Внесите изменения в статью
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-title">Название</Label>
+              <Input
+                id="edit-title"
+                placeholder="Название статьи"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="edit-category">Категория</Label>
+              <Select
+                value={editForm.category}
+                onValueChange={(value) => setEditForm({ ...editForm, category: value as 'nutrition' | 'training' | 'health' })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nutrition">Питание</SelectItem>
+                  <SelectItem value="training">Тренировки</SelectItem>
+                  <SelectItem value="health">Здоровье</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="edit-content">Содержание</Label>
+              <Textarea
+                id="edit-content"
+                placeholder="Текст статьи"
+                value={editForm.content}
+                onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
+                rows={8}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="edit-published_date">Дата публикации</Label>
+              <Input
+                id="edit-published_date"
+                type="date"
+                value={editForm.published_date}
+                onChange={(e) => setEditForm({ ...editForm, published_date: e.target.value })}
+              />
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Отмена
+              </Button>
+              <Button 
+                className="bg-[#748c6d] hover:bg-[#5f7459]"
+                onClick={handleUpdateArticle}
+                disabled={!editForm.title || !editForm.content}
+              >
+                Сохранить
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </TabsContent>
   );
 }
