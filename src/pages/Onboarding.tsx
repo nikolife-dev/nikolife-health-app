@@ -55,15 +55,16 @@ export default function Onboarding() {
           console.log('[ONBOARDING] Ответ backend:', result);
 
           if (response.ok) {
-            localStorage.setItem('onboarding_completed', 'true');
             console.log('[ONBOARDING] Успешно сохранено, переход на /pricing');
+            navigate('/pricing');
+          } else {
+            console.error('[ONBOARDING] Ошибка сохранения, но всё равно переход на /pricing');
             navigate('/pricing');
           }
         }
       } catch (error) {
         console.error('[ONBOARDING] Ошибка сохранения:', error);
         // Даже если ошибка, переходим дальше
-        localStorage.setItem('onboarding_completed', 'true');
         console.log('[ONBOARDING] Переход на /pricing (после ошибки)');
         navigate('/pricing');
       }
@@ -97,7 +98,10 @@ export default function Onboarding() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium text-gray-600">Шаг {step} из {totalSteps}</h2>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/pricing')}>
+            <Button variant="ghost" size="sm" onClick={() => {
+              console.log('[ONBOARDING] Пропуск онбординга → /pricing');
+              navigate('/pricing');
+            }}>
               Пропустить
             </Button>
           </div>

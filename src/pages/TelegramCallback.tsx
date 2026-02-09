@@ -66,30 +66,32 @@ export default function TelegramCallback() {
           // Небольшая задержка для красоты
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // Проверяем последовательность: онбординг → pricing → главная
-          const isNewUser = !data.user?.selected_plan;
-          const onboardingCompleted = data.user?.onboarding_completed || localStorage.getItem('onboarding_completed') === 'true';
+          // Правильная последовательность: онбординг → pricing → главная
+          const hasPlan = !!data.user?.selected_plan;
+          const onboardingCompleted = data.user?.onboarding_completed === true;
           
           console.log('[TG CALLBACK] Статус пользователя:', { 
-            isNewUser, 
+            hasPlan, 
             onboardingCompleted, 
             selected_plan: data.user?.selected_plan,
             onboarding_from_db: data.user?.onboarding_completed 
           });
           
-          if (isNewUser) {
-            // Новый пользователь
-            if (!onboardingCompleted) {
-              console.log('[TG CALLBACK] Новый пользователь → /onboarding');
-              navigate('/onboarding', { replace: true });
-            } else {
-              console.log('[TG CALLBACK] Новый пользователь с onboarding → /pricing');
-              navigate('/pricing', { replace: true });
-            }
-          } else {
-            // Существующий пользователь с выбранным планом
-            console.log('[TG CALLBACK] Существующий пользователь → /');
+          // Приоритет проверок:
+          // 1. Если план выбран → главная страница
+          if (hasPlan) {
+            console.log('[TG CALLBACK] План выбран → /');
             navigate('/', { replace: true });
+          }
+          // 2. Если онбординг не пройден → онбординг
+          else if (!onboardingCompleted) {
+            console.log('[TG CALLBACK] Онбординг не пройден → /onboarding');
+            navigate('/onboarding', { replace: true });
+          }
+          // 3. Онбординг пройден, но план не выбран → pricing
+          else {
+            console.log('[TG CALLBACK] Онбординг пройден, план не выбран → /pricing');
+            navigate('/pricing', { replace: true });
           }
         } else {
           setError(data.error || 'Ошибка авторизации через Telegram');

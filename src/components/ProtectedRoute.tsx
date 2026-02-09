@@ -24,14 +24,15 @@ export default function ProtectedRoute({ children, requiresPlan = false }: Prote
   }
 
   // Проверяем последовательность: онбординг → pricing → главная
-  const onboardingCompleted = user?.onboarding_completed || localStorage.getItem('onboarding_completed') === 'true';
+  const onboardingCompleted = user?.onboarding_completed === true;
+  const hasPlan = !!user?.selected_plan;
   
   console.log('[PROTECTED ROUTE]', {
     path: location.pathname,
     user_id: user?.id,
     onboarding_completed: onboardingCompleted,
-    onboarding_from_db: user?.onboarding_completed,
     selected_plan: user?.selected_plan,
+    hasPlan,
     requiresPlan
   });
   
@@ -41,8 +42,8 @@ export default function ProtectedRoute({ children, requiresPlan = false }: Prote
     return <Navigate to="/onboarding" state={{ from: location }} replace />;
   }
 
-  // Если онбординг пройден, но тариф не выбран
-  if (onboardingCompleted && !user?.selected_plan && location.pathname !== '/pricing') {
+  // Если онбординг пройден, но тариф не выбран, и это не /pricing
+  if (onboardingCompleted && !hasPlan && location.pathname !== '/pricing') {
     console.log('[PROTECTED ROUTE] Редирект на /pricing (нет плана)');
     return <Navigate to="/pricing" state={{ from: location }} replace />;
   }
