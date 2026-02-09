@@ -262,8 +262,8 @@ export default function AdminUsersTab() {
     });
   };
 
-  const getAuthBadge = (authType: string) => {
-    if (authType === 'telegram') {
+  const getAuthBadge = (telegram_username: string | null) => {
+    if (telegram_username) {
       return (
         <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50">
           <Icon name="MessageCircle" size={12} className="mr-1" />
@@ -353,7 +353,7 @@ export default function AdminUsersTab() {
                       {user.email}
                     </TableCell>
                     <TableCell>
-                      {getAuthBadge(user.auth_type)}
+                      {getAuthBadge(user.telegram_username)}
                     </TableCell>
                     <TableCell>
                       {getPlanBadge(user.selected_plan)}
