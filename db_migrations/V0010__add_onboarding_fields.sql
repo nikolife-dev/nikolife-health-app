@@ -1,0 +1,9 @@
+-- Добавляем поля онбординга в таблицу users
+ALTER TABLE t_p76837068_nikolife_health_app.users 
+ADD COLUMN IF NOT EXISTS goal VARCHAR(50),
+ADD COLUMN IF NOT EXISTS activity_level VARCHAR(50),
+ADD COLUMN IF NOT EXISTS age INTEGER,
+ADD COLUMN IF NOT EXISTS weight DECIMAL(5,2),
+ADD COLUMN IF NOT EXISTS height INTEGER,
+ADD COLUMN IF NOT EXISTS diet_preference VARCHAR(50),
+ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE;

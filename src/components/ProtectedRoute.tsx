@@ -23,7 +23,20 @@ export default function ProtectedRoute({ children, requiresPlan = false }: Prote
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Если требуется тариф и он не выбран, редиректим на страницу тарифов
+  // Проверяем последовательность: онбординг → pricing → главная
+  const onboardingCompleted = user?.onboarding_completed || localStorage.getItem('onboarding_completed') === 'true';
+  
+  // Если не прошел онбординг и это не страница онбординга
+  if (!onboardingCompleted && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" state={{ from: location }} replace />;
+  }
+
+  // Если онбординг пройден, но тариф не выбран
+  if (onboardingCompleted && !user?.selected_plan && location.pathname !== '/pricing') {
+    return <Navigate to="/pricing" state={{ from: location }} replace />;
+  }
+
+  // Если требуется тариф и он не выбран
   if (requiresPlan && !user?.selected_plan) {
     return <Navigate to="/pricing" state={{ from: location }} replace />;
   }

@@ -62,11 +62,20 @@ export default function TelegramCallback() {
           // Небольшая задержка для красоты
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // Проверяем, выбран ли тариф
-          if (data.user?.selected_plan) {
-            navigate('/', { replace: true });
+          // Проверяем последовательность: онбординг → pricing → главная
+          const isNewUser = !data.user?.selected_plan;
+          const onboardingCompleted = data.user?.onboarding_completed || localStorage.getItem('onboarding_completed') === 'true';
+          
+          if (isNewUser) {
+            // Новый пользователь
+            if (!onboardingCompleted) {
+              navigate('/onboarding', { replace: true });
+            } else {
+              navigate('/pricing', { replace: true });
+            }
           } else {
-            navigate('/pricing', { replace: true });
+            // Существующий пользователь с выбранным планом
+            navigate('/', { replace: true });
           }
         } else {
           setError(data.error || 'Ошибка авторизации через Telegram');

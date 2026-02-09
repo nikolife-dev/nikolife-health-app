@@ -7,6 +7,7 @@ interface User {
   telegram_id?: number;
   telegram_username?: string;
   selected_plan?: string;
+  onboarding_completed?: boolean;
 }
 
 interface AuthContextType {

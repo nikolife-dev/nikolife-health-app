@@ -32,12 +32,34 @@ export default function Onboarding() {
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
-      localStorage.setItem('onboarding_completed', 'true');
-      navigate('/pricing');
+      // Сохраняем данные онбординга в базу
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ onboarding_data: data })
+          });
+
+          if (response.ok) {
+            localStorage.setItem('onboarding_completed', 'true');
+            navigate('/pricing');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to save onboarding data:', error);
+        // Даже если ошибка, переходим дальше
+        localStorage.setItem('onboarding_completed', 'true');
+        navigate('/pricing');
+      }
     }
   };
 
@@ -102,7 +124,7 @@ export default function Onboarding() {
                   >
                     <div className="flex items-center space-x-4">
                       <RadioGroupItem value={option.value} id={option.value} />
-                      <Icon name={option.icon as any} size={24} className="text-[#748c6d]" />
+                      <Icon name={option.icon as 'TrendingDown' | 'Dumbbell' | 'Heart' | 'Activity'} size={24} className="text-[#748c6d]" />
                       <Label htmlFor={option.value} className="flex-1 cursor-pointer text-base">
                         {option.label}
                       </Label>

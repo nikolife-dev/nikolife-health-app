@@ -47,7 +47,7 @@ def handler(event: dict, context) -> dict:
         conn = psycopg2.connect(database_url)
         cur = conn.cursor()
         
-        cur.execute(f"SELECT id, name, email, telegram_id, telegram_username, selected_plan FROM {schema}.users WHERE auth_token = %s", (auth_token,))
+        cur.execute(f"SELECT id, name, email, telegram_id, telegram_username, selected_plan, onboarding_completed FROM {schema}.users WHERE auth_token = %s", (auth_token,))
         user = cur.fetchone()
         
         if not user:
@@ -60,7 +60,7 @@ def handler(event: dict, context) -> dict:
                 'isBase64Encoded': False
             }
         
-        user_id, current_name, current_email, telegram_id, telegram_username, selected_plan = user
+        user_id, current_name, current_email, telegram_id, telegram_username, selected_plan, onboarding_completed = user
         
         if method == 'GET':
             initials = ''.join([word[0] for word in current_name.split()[:2]]).upper()
@@ -80,7 +80,8 @@ def handler(event: dict, context) -> dict:
                         'avatar': initials,
                         'telegram_id': telegram_id,
                         'telegram_username': telegram_username,
-                        'selected_plan': selected_plan
+                        'selected_plan': selected_plan,
+                        'onboarding_completed': onboarding_completed
                     }
                 }),
                 'isBase64Encoded': False
@@ -93,6 +94,34 @@ def handler(event: dict, context) -> dict:
             new_telegram_id = body.get('telegram_id')
             new_telegram_username = body.get('telegram_username')
             new_selected_plan = body.get('selected_plan')
+            
+            # Обработка данных онбординга
+            onboarding_data = body.get('onboarding_data')
+            if onboarding_data:
+                cur.execute(f"""
+                    UPDATE {schema}.users 
+                    SET goal = %s, activity_level = %s, age = %s, weight = %s, height = %s, 
+                        diet_preference = %s, onboarding_completed = TRUE
+                    WHERE id = %s
+                """, (
+                    onboarding_data.get('goal'),
+                    onboarding_data.get('activityLevel'),
+                    int(onboarding_data.get('age')) if onboarding_data.get('age') else None,
+                    float(onboarding_data.get('weight')) if onboarding_data.get('weight') else None,
+                    int(onboarding_data.get('height')) if onboarding_data.get('height') else None,
+                    onboarding_data.get('dietPreference'),
+                    user_id
+                ))
+                conn.commit()
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'success': True, 'onboarding_completed': True}),
+                    'isBase64Encoded': False
+                }
+            
             
             # Если передан только selected_plan, обновляем только его
             if new_selected_plan is not None and not body.get('name') and not body.get('email'):

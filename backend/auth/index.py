@@ -98,7 +98,7 @@ def handler(event: dict, context) -> dict:
                 telegram_username = body.get('username')
                 full_name = f"{body.get('first_name', '')} {body.get('last_name', '')}".strip()
                 
-                cur.execute(f"SELECT id, name, email, selected_plan FROM {schema}.users WHERE telegram_id = %s", (telegram_id,))
+                cur.execute(f"SELECT id, name, email, selected_plan, onboarding_completed FROM {schema}.users WHERE telegram_id = %s", (telegram_id,))
                 user = cur.fetchone()
                 
                 if user:
@@ -122,7 +122,8 @@ def handler(event: dict, context) -> dict:
                                 'id': user[0],
                                 'name': user[1],
                                 'email': user[2],
-                                'selected_plan': user[3]
+                                'selected_plan': user[3],
+                                'onboarding_completed': user[4]
                             },
                             'token': token
                         }),
