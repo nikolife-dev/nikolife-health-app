@@ -184,7 +184,7 @@ export default function NutritionSection({
       }
 
       const url =
-        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/generate";
+        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6?action=generate";
       dbg("[GEN] request", { url, method: "POST" });
 
       const response = await fetch(url, {
@@ -233,6 +233,70 @@ export default function NutritionSection({
     }
   };
 
+  const clearMenu = async () => {
+    dbg("[CLEAR] clearMenu: start");
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        logError("[CLEAR] no auth token");
+        toast({
+          title: "Ошибка",
+          description: "Нет токена авторизации",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const url =
+        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6?action=clear";
+      dbg("[CLEAR] request", { url, method: "POST" });
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "X-Auth-Token": token, "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      dbg("[CLEAR] response", { status: response.status, ok: response.ok });
+      const data = await response.json();
+      dbg("[CLEAR] json", data);
+
+      if (!response.ok) {
+        logError(`[CLEAR] failed: ${data.error || "unknown"}`);
+        throw new Error(data.error || "Ошибка очистки меню");
+      }
+
+      if (data.success) {
+        logSuccess("[CLEAR] success");
+        toast({
+          title: "Успешно!",
+          description: "Меню очищено",
+        });
+        setMenu([]);
+        setWeekDates([]);
+      } else {
+        logError("[CLEAR] not successful");
+        throw new Error(data.error || "Не удалось очистить меню");
+      }
+    } catch (error) {
+      logError(
+        `[CLEAR] exception: ${error instanceof Error ? error.message : "unknown"}`,
+      );
+      console.error("Clear menu error:", error);
+      toast({
+        title: "Ошибка",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Не удалось очистить меню",
+        variant: "destructive",
+      });
+      dbg("[CLEAR] exception payload", { error });
+    } finally {
+      dbg("[CLEAR] clearMenu: end");
+    }
+  };
+
   const deleteRecipe = async (menuItemId: number) => {
     dbg("[DEL] deleteRecipe: start", { menuItemId });
 
@@ -248,7 +312,7 @@ export default function NutritionSection({
         return;
       }
 
-      const url = `https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/${menuItemId}`;
+      const url = `https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6?id=${menuItemId}`;
       dbg("[DEL] request", { url, method: "DELETE" });
 
       const response = await fetch(url, {
@@ -507,6 +571,12 @@ export default function NutritionSection({
               </>
             )}
           </Button>
+          {menu.length > 0 && (
+            <Button variant="outline" onClick={clearMenu}>
+              <Icon name="Trash2" size={20} className="mr-2" />
+              Очистить меню
+            </Button>
+          )}
           <Button variant="outline" onClick={() => navigate("/recipes")}>
             <Icon name="Plus" size={20} className="mr-2" />
             Добавить рецепт

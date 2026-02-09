@@ -19,14 +19,14 @@ def get_week_start(date_str=None):
 def handler(event: dict, context) -> dict:
     """
     API для управления меню на неделю:
-    GET /user/{user_id} - получить меню пользователя на неделю (админ может любого)
     GET / - получить меню текущего пользователя с датами
-    POST / - добавить рецепт в меню
-    POST /generate - автоматически сгенерировать меню на неделю (1-5 рецептов на прием)
-    DELETE /{id} - удалить один рецепт из меню
+    POST /?action=generate - автоматически сгенерировать меню на неделю (1-5 рецептов на прием)
+    POST /?action=clear - очистить меню пользователя на неделю
+    POST /?action=swap - поменять местами два рецепта
+    DELETE /?id={menu_id} - удалить один рецепт из меню
     """
     method = event.get('httpMethod', 'GET')
-    path = event.get('path', '/')
+    query_params = event.get('queryStringParameters', {}) or {}
     
     if method == 'OPTIONS':
         return {
@@ -72,28 +72,120 @@ def handler(event: dict, context) -> dict:
         current_user_id = user_data[0]
         is_admin = user_data[1] if len(user_data) > 1 else False
         
-        # Разбираем путь
-        path_parts = [p for p in path.split('/') if p]
-        action = None
-        target_user_id = current_user_id
-        menu_id = None
+        # Определяем action из query параметров
+        action = query_params.get('action')
+        menu_id = query_params.get('id')
         
-        if len(path_parts) >= 1:
-            if path_parts[0] == 'generate':
-                action = 'generate'
-            elif path_parts[0] == 'user' and len(path_parts) >= 2:
-                if not is_admin:
+        # Парсим menu_id если он есть
+        if menu_id:
+            try:
+                menu_id = int(menu_id)
+            except (ValueError, TypeError):
+                menu_id = None
+        
+        # POST /?action=clear - очистить меню
+        if method == 'POST' and action == 'clear':
+            body = json.loads(event.get('body', '{}'))
+            week_start = get_week_start(body.get('week_start_date'))
+            
+            cur.execute(f"DELETE FROM {schema}.weekly_menus WHERE user_id = %s AND week_start_date = %s", 
+                       (current_user_id, week_start))
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'success': True, 'message': 'Меню очищено'}),
+                'isBase64Encoded': False
+            }
+        
+        # POST /?action=swap - поменять местами два рецепта
+        if method == 'POST' and action == 'swap':
+            body = json.loads(event.get('body', '{}'))
+            source_id = body.get('source_id')
+            target_id = body.get('target_id')
+            target_day = body.get('target_day')
+            target_meal = body.get('target_meal')
+            
+            if not source_id or not target_day or not target_meal:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Необходимы параметры source_id, target_day, target_meal'}),
+                    'isBase64Encoded': False
+                }
+            
+            # Получаем данные source рецепта
+            cur.execute(f"""
+                SELECT day_of_week, meal_type, recipe_id 
+                FROM {schema}.weekly_menus 
+                WHERE id = %s AND user_id = %s
+            """, (source_id, current_user_id))
+            source_data = cur.fetchone()
+            
+            if not source_data:
+                return {
+                    'statusCode': 404,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Исходный рецепт не найден'}),
+                    'isBase64Encoded': False
+                }
+            
+            source_day, source_meal, source_recipe_id = source_data
+            
+            # Если есть target_id, делаем полный swap
+            if target_id:
+                cur.execute(f"""
+                    SELECT recipe_id 
+                    FROM {schema}.weekly_menus 
+                    WHERE id = %s AND user_id = %s
+                """, (target_id, current_user_id))
+                target_data = cur.fetchone()
+                
+                if not target_data:
                     return {
-                        'statusCode': 403,
+                        'statusCode': 404,
                         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                        'body': json.dumps({'error': 'Только администратор может просматривать меню других пользователей'}),
+                        'body': json.dumps({'error': 'Целевой рецепт не найден'}),
                         'isBase64Encoded': False
                     }
-                target_user_id = int(path_parts[1])
-            elif path_parts[0].isdigit():
-                menu_id = int(path_parts[0])
+                
+                target_recipe_id = target_data[0]
+                
+                # Меняем местами
+                cur.execute(f"""
+                    UPDATE {schema}.weekly_menus 
+                    SET day_of_week = %s, meal_type = %s 
+                    WHERE id = %s
+                """, (target_day, target_meal, source_id))
+                
+                cur.execute(f"""
+                    UPDATE {schema}.weekly_menus 
+                    SET day_of_week = %s, meal_type = %s 
+                    WHERE id = %s
+                """, (source_day, source_meal, target_id))
+            else:
+                # Просто перемещаем source в target слот
+                cur.execute(f"""
+                    UPDATE {schema}.weekly_menus 
+                    SET day_of_week = %s, meal_type = %s 
+                    WHERE id = %s
+                """, (target_day, target_meal, source_id))
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'success': True}),
+                'isBase64Encoded': False
+            }
         
-        # POST /generate - автоматическая генерация меню
+        # POST /?action=generate - автоматическая генерация меню
         if method == 'POST' and action == 'generate':
             body = json.loads(event.get('body', '{}'))
             week_start = get_week_start(body.get('week_start_date'))
