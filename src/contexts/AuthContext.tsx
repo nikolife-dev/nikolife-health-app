@@ -34,13 +34,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     const token = localStorage.getItem('auth_token');
+    console.log('[AUTH CONTEXT checkAuth] Токен:', token ? 'есть' : 'НЕТ');
     
     if (!token) {
+      console.log('[AUTH CONTEXT checkAuth] Токен отсутствует, выход');
       setIsLoading(false);
       return;
     }
 
     try {
+      console.log('[AUTH CONTEXT checkAuth] Отправка GET запроса...');
       const response = await fetch(AUTH_API_URL, {
         method: 'GET',
         headers: {
@@ -48,16 +51,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
+      console.log('[AUTH CONTEXT checkAuth] Response status:', response.status);
+      
       if (response.ok) {
         const userData = await response.json();
+        console.log('[AUTH CONTEXT checkAuth] Данные получены:', userData);
         setUser(userData);
       } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[AUTH CONTEXT checkAuth] Ошибка ответа:', response.status, errorData);
         localStorage.removeItem('auth_token');
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('[AUTH CONTEXT checkAuth] Exception:', error);
       localStorage.removeItem('auth_token');
     } finally {
+      console.log('[AUTH CONTEXT checkAuth] Завершено, isLoading = false');
       setIsLoading(false);
     }
   };
