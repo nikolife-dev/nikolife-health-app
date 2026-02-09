@@ -1,29 +1,34 @@
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 
+const WORKOUTS_API = 'https://functions.poehali.dev/10bc33f4-9e4c-47aa-a7b9-5097af1fdfeb';
+
 interface Exercise {
-  name: string;
-  duration: string;
-  rest: string;
+  exercise_name: string;
+  sets: string;
+  rest_seconds: number;
 }
 
 interface Workout {
   id: number;
   title: string;
-  duration: string;
-  level: string;
-  category: string;
   description: string;
+  category: 'cardio' | 'strength' | 'flexibility';
+  published_date: string;
+  duration_minutes: number;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
   calories: number;
-  exercises: Exercise[];
-  videoPlaceholder: boolean;
+  video_url: string | null;
+  view_count: number;
+  exercises?: Exercise[];
 }
 
 interface WorkoutSectionProps {
-  workouts: Workout[];
+  workouts?: Workout[];
   selectedWorkout: number | null;
   setSelectedWorkout: (id: number | null) => void;
   workoutProgress: number[];
@@ -31,20 +36,77 @@ interface WorkoutSectionProps {
 }
 
 export default function WorkoutSection({
-  workouts,
   selectedWorkout,
   setSelectedWorkout,
   workoutProgress,
   setWorkoutProgress
 }: WorkoutSectionProps) {
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [workoutCategory, setWorkoutCategory] = useState<string>('all');
+  const [selectedWorkoutDetails, setSelectedWorkoutDetails] = useState<Workout | null>(null);
+
+  useEffect(() => {
+    loadWorkouts();
+  }, [workoutCategory]);
+
+  useEffect(() => {
+    if (selectedWorkout !== null) {
+      loadWorkoutDetails(selectedWorkout);
+    } else {
+      setSelectedWorkoutDetails(null);
+    }
+  }, [selectedWorkout]);
+
+  const loadWorkouts = async () => {
+    try {
+      const url = workoutCategory === 'all'
+        ? WORKOUTS_API
+        : `${WORKOUTS_API}?category=${workoutCategory}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      setWorkouts(data);
+    } catch (error) {
+      console.error('Failed to load workouts:', error);
+      setWorkouts([]);
+    }
+  };
+
+  const loadWorkoutDetails = async (id: number) => {
+    try {
+      const response = await fetch(`${WORKOUTS_API}?id=${id}`);
+      const data = await response.json();
+      setSelectedWorkoutDetails(data);
+    } catch (error) {
+      console.error('Failed to load workout details:', error);
+    }
+  };
+
   const handleStartWorkout = () => {
-    setWorkoutProgress(new Array(workouts.find(w => w.id === selectedWorkout)?.exercises.length || 0).fill(0));
+    setWorkoutProgress(new Array(selectedWorkoutDetails?.exercises?.length || 0).fill(0));
   };
 
   const handleCompleteExercise = (index: number) => {
     const newProgress = [...workoutProgress];
     newProgress[index] = 100;
     setWorkoutProgress(newProgress);
+  };
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'cardio': return 'Кардио';
+      case 'strength': return 'Сила';
+      case 'flexibility': return 'Гибкость';
+      default: return category;
+    }
+  };
+
+  const getDifficultyLabel = (difficulty: string) => {
+    switch (difficulty) {
+      case 'beginner': return 'Начальный';
+      case 'intermediate': return 'Средний';
+      case 'advanced': return 'Продвинутый';
+      default: return difficulty;
+    }
   };
 
   return (
@@ -56,7 +118,7 @@ export default function WorkoutSection({
             <p className="text-gray-600">Выберите тренировку и начните заниматься</p>
           </div>
 
-          <Tabs defaultValue="all" className="w-full">
+          <Tabs value={workoutCategory} onValueChange={setWorkoutCategory} className="w-full">
             <TabsList>
               <TabsTrigger value="all">Все</TabsTrigger>
               <TabsTrigger value="cardio">Кардио</TabsTrigger>
@@ -64,282 +126,170 @@ export default function WorkoutSection({
               <TabsTrigger value="flexibility">Гибкость</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="all" className="space-y-4 mt-6">
-              {workouts.map((workout) => (
-                <Card key={workout.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedWorkout(workout.id)}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                          <Icon name="Dumbbell" className="text-emerald-600" size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900">{workout.title}</h3>
-                          <p className="text-sm text-gray-600">{workout.category}</p>
-                        </div>
-                      </div>
-                      <p className="text-gray-600 mb-4">{workout.description}</p>
-                      <div className="flex items-center gap-4 text-sm">
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="Clock" size={14} />
-                          {workout.duration}
-                        </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="TrendingUp" size={14} />
-                          {workout.level}
-                        </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="Flame" size={14} />
-                          {workout.calories} ккал
-                        </Badge>
-                      </div>
-                    </div>
-                    <Icon name="ChevronRight" className="text-gray-400 ml-4" size={24} />
+            <TabsContent value={workoutCategory} className="space-y-4 mt-6">
+              {workouts.length === 0 ? (
+                <Card className="p-12">
+                  <div className="text-center text-gray-500">
+                    <Icon name="Dumbbell" size={48} className="mx-auto mb-4 opacity-50" />
+                    <p>Тренировок пока нет</p>
                   </div>
                 </Card>
-              ))}
+              ) : (
+                workouts.map((workout) => (
+                  <Card key={workout.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedWorkout(workout.id)}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
+                            <Icon name="Dumbbell" className="text-emerald-600" size={24} />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-semibold text-gray-900">{workout.title}</h3>
+                            <p className="text-sm text-gray-600">{getCategoryLabel(workout.category)}</p>
+                          </div>
+                        </div>
+                        <p className="text-gray-600 mb-4">{workout.description}</p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <Icon name="Clock" size={14} />
+                            {workout.duration_minutes} мин
+                          </Badge>
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <Icon name="TrendingUp" size={14} />
+                            {getDifficultyLabel(workout.difficulty)}
+                          </Badge>
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <Icon name="Flame" size={14} />
+                            {workout.calories} ккал
+                          </Badge>
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <Icon name="Eye" size={14} />
+                            {workout.view_count}
+                          </Badge>
+                        </div>
+                      </div>
+                      <Icon name="ChevronRight" className="text-gray-400 ml-4" size={24} />
+                    </div>
+                  </Card>
+                ))
+              )}
             </TabsContent>
 
-            <TabsContent value="cardio" className="space-y-4 mt-6">
-              {workouts.filter(w => w.category === 'Кардио').map((workout) => (
-                <Card key={workout.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedWorkout(workout.id)}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                          <Icon name="Dumbbell" className="text-emerald-600" size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900">{workout.title}</h3>
-                          <p className="text-sm text-gray-600">{workout.category}</p>
-                        </div>
-                      </div>
-                      <p className="text-gray-600 mb-4">{workout.description}</p>
-                      <div className="flex items-center gap-4 text-sm">
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="Clock" size={14} />
-                          {workout.duration}
-                        </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="TrendingUp" size={14} />
-                          {workout.level}
-                        </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="Flame" size={14} />
-                          {workout.calories} ккал
-                        </Badge>
-                      </div>
-                    </div>
-                    <Icon name="ChevronRight" className="text-gray-400 ml-4" size={24} />
-                  </div>
-                </Card>
-              ))}
-            </TabsContent>
 
-            <TabsContent value="strength" className="space-y-4 mt-6">
-              {workouts.filter(w => w.category === 'Сила').map((workout) => (
-                <Card key={workout.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedWorkout(workout.id)}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                          <Icon name="Dumbbell" className="text-emerald-600" size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900">{workout.title}</h3>
-                          <p className="text-sm text-gray-600">{workout.category}</p>
-                        </div>
-                      </div>
-                      <p className="text-gray-600 mb-4">{workout.description}</p>
-                      <div className="flex items-center gap-4 text-sm">
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="Clock" size={14} />
-                          {workout.duration}
-                        </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="TrendingUp" size={14} />
-                          {workout.level}
-                        </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="Flame" size={14} />
-                          {workout.calories} ккал
-                        </Badge>
-                      </div>
-                    </div>
-                    <Icon name="ChevronRight" className="text-gray-400 ml-4" size={24} />
-                  </div>
-                </Card>
-              ))}
-            </TabsContent>
-
-            <TabsContent value="flexibility" className="space-y-4 mt-6">
-              {workouts.filter(w => w.category === 'Гибкость').map((workout) => (
-                <Card key={workout.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedWorkout(workout.id)}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                          <Icon name="Dumbbell" className="text-emerald-600" size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900">{workout.title}</h3>
-                          <p className="text-sm text-gray-600">{workout.category}</p>
-                        </div>
-                      </div>
-                      <p className="text-gray-600 mb-4">{workout.description}</p>
-                      <div className="flex items-center gap-4 text-sm">
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="Clock" size={14} />
-                          {workout.duration}
-                        </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="TrendingUp" size={14} />
-                          {workout.level}
-                        </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="Flame" size={14} />
-                          {workout.calories} ккал
-                        </Badge>
-                      </div>
-                    </div>
-                    <Icon name="ChevronRight" className="text-gray-400 ml-4" size={24} />
-                  </div>
-                </Card>
-              ))}
-            </TabsContent>
           </Tabs>
         </>
       ) : (
-        <>
-          {(() => {
-            const workout = workouts.find(w => w.id === selectedWorkout);
-            if (!workout) return null;
+        <div className="space-y-6">
+          <Button variant="ghost" onClick={() => setSelectedWorkout(null)} className="mb-4">
+            <Icon name="ArrowLeft" size={18} className="mr-2" />
+            Назад к списку
+          </Button>
 
-            return (
-              <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <Button variant="ghost" onClick={() => setSelectedWorkout(null)}>
-                    <Icon name="ArrowLeft" size={20} className="mr-2" />
-                    Назад
-                  </Button>
+          {selectedWorkoutDetails && (
+            <>
+              <Card className="p-8">
+                <div className="mb-6">
+                  <Badge variant="secondary" className="mb-3">
+                    {getCategoryLabel(selectedWorkoutDetails.category)}
+                  </Badge>
+                  <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                    {selectedWorkoutDetails.title}
+                  </h1>
+                  <p className="text-gray-600 text-lg mb-6">
+                    {selectedWorkoutDetails.description}
+                  </p>
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Icon name="Clock" size={20} />
+                      <span className="font-medium">{selectedWorkoutDetails.duration_minutes} мин</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Icon name="TrendingUp" size={20} />
+                      <span className="font-medium">{getDifficultyLabel(selectedWorkoutDetails.difficulty)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Icon name="Flame" size={20} />
+                      <span className="font-medium">{selectedWorkoutDetails.calories} ккал</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Icon name="Eye" size={20} />
+                      <span className="font-medium">{selectedWorkoutDetails.view_count} просмотров</span>
+                    </div>
+                  </div>
                 </div>
 
-                <Card className="p-6">
-                  <div className="flex items-start gap-6">
-                    <div className="h-24 w-24 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center flex-shrink-0">
-                      <Icon name="Dumbbell" className="text-emerald-600" size={40} />
-                    </div>
-                    <div className="flex-1">
-                      <h2 className="text-3xl font-bold text-gray-900 mb-2">{workout.title}</h2>
-                      <p className="text-gray-600 mb-4">{workout.description}</p>
-                      <div className="flex items-center gap-4">
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="Clock" size={14} />
-                          {workout.duration}
-                        </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="TrendingUp" size={14} />
-                          {workout.level}
-                        </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Icon name="Flame" size={14} />
-                          {workout.calories} ккал
-                        </Badge>
-                        <Badge className="bg-emerald-600">{workout.category}</Badge>
-                      </div>
-                    </div>
+                {selectedWorkoutDetails.video_url ? (
+                  <div className="mb-8 rounded-lg overflow-hidden">
+                    <video src={selectedWorkoutDetails.video_url} controls className="w-full aspect-video" />
                   </div>
-                </Card>
-
-                {workout.videoPlaceholder && (
-                  <Card className="p-0 overflow-hidden">
-                    <div className="aspect-video bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                      <div className="text-center space-y-4">
-                        <div className="h-20 w-20 rounded-full bg-white/80 flex items-center justify-center mx-auto">
-                          <Icon name="Play" size={32} className="text-emerald-600" />
-                        </div>
-                        <p className="text-gray-600 font-medium">Видео тренировки</p>
-                      </div>
-                    </div>
-                  </Card>
-                )}
-
-                <Card className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Упражнения</h3>
-                  <div className="space-y-3">
-                    {workout.exercises.map((exercise, index) => (
-                      <Card key={index} className="p-4 bg-gray-50">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 flex-1">
-                            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                              <span className="font-bold text-emerald-600">{index + 1}</span>
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-gray-900">{exercise.name}</h4>
-                              <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                                <span className="flex items-center gap-1">
-                                  <Icon name="Clock" size={14} />
-                                  {exercise.duration}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Icon name="Coffee" size={14} />
-                                  Отдых: {exercise.rest}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          {workoutProgress.length > 0 && (
-                            <Button 
-                              variant={workoutProgress[index] === 100 ? "secondary" : "default"} 
-                              size="sm"
-                              onClick={() => handleCompleteExercise(index)}
-                              disabled={workoutProgress[index] === 100}
-                            >
-                              {workoutProgress[index] === 100 ? (
-                                <>
-                                  <Icon name="CheckCircle2" size={16} className="mr-1" />
-                                  Выполнено
-                                </>
-                              ) : (
-                                'Выполнить'
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </Card>
-
-                {workoutProgress.length === 0 ? (
-                  <Button className="w-full h-14 text-lg" onClick={handleStartWorkout}>
-                    <Icon name="Play" size={20} className="mr-2" />
-                    Начать тренировку
-                  </Button>
                 ) : (
-                  <div className="space-y-4">
-                    {workoutProgress.every(p => p === 100) && (
-                      <Card className="p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
-                        <div className="flex items-center gap-4">
-                          <div className="h-16 w-16 rounded-full bg-emerald-600 flex items-center justify-center">
-                            <Icon name="Trophy" size={32} className="text-white" />
-                          </div>
-                          <div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-1">Тренировка завершена!</h3>
-                            <p className="text-gray-600">Отличная работа! Вы сожгли {workout.calories} калорий</p>
-                          </div>
-                        </div>
-                      </Card>
-                    )}
-                    <Button className="w-full h-14 text-lg" variant="outline" onClick={() => setSelectedWorkout(null)}>
-                      Вернуться к тренировкам
-                    </Button>
+                  <div className="mb-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg aspect-video flex items-center justify-center">
+                    <div className="text-center">
+                      <Icon name="Play" size={64} className="mx-auto mb-4 text-gray-400" />
+                      <p className="text-gray-500">Видео тренировки</p>
+                    </div>
                   </div>
                 )}
-              </div>
-            );
-          })()}
-        </>
+              </Card>
+
+              <Card className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Упражнения</h2>
+                  {workoutProgress.length === 0 ? (
+                    <Button onClick={handleStartWorkout} className="bg-emerald-600 hover:bg-emerald-700">
+                      <Icon name="Play" size={18} className="mr-2" />
+                      Начать тренировку
+                    </Button>
+                  ) : (
+                    <Badge className="bg-emerald-600 text-white px-4 py-2">
+                      {workoutProgress.filter(p => p === 100).length} / {workoutProgress.length} выполнено
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  {selectedWorkoutDetails.exercises?.map((exercise, index) => (
+                    <Card key={index} className={`p-6 ${workoutProgress[index] === 100 ? 'bg-emerald-50 border-emerald-200' : ''}`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">{exercise.exercise_name}</h3>
+                          <div className="flex items-center gap-6 text-sm text-gray-600">
+                            <span className="flex items-center gap-2">
+                              <Icon name="Repeat" size={16} />
+                              {exercise.sets}
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <Icon name="Timer" size={16} />
+                              Отдых: {exercise.rest_seconds} сек
+                            </span>
+                          </div>
+                        </div>
+                        {workoutProgress.length > 0 && (
+                          <Button
+                            variant={workoutProgress[index] === 100 ? 'outline' : 'default'}
+                            size="sm"
+                            onClick={() => handleCompleteExercise(index)}
+                            disabled={workoutProgress[index] === 100}
+                            className={workoutProgress[index] === 100 ? 'bg-emerald-600 text-white border-emerald-600' : ''}
+                          >
+                            {workoutProgress[index] === 100 ? (
+                              <>
+                                <Icon name="Check" size={16} className="mr-2" />
+                                Выполнено
+                              </>
+                            ) : (
+                              'Отметить'
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </Card>
+            </>
+          )}
+        </div>
       )}
     </div>
   );

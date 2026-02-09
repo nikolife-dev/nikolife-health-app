@@ -1,123 +1,96 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
-import { useAuth } from '@/contexts/AuthContext';
+
+declare global {
+  interface Window {
+    TelegramLoginWidget: unknown;
+  }
+}
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://telegram.org/js/telegram-widget.js?22';
+    script.setAttribute('data-telegram-login', 'nikolife_health_bot');
+    script.setAttribute('data-size', 'large');
+    script.setAttribute('data-radius', '12');
+    script.setAttribute('data-auth-url', 'https://with-nikolife.com/auth/telegram/callback');
+    script.setAttribute('data-request-access', 'write');
+    script.async = true;
 
-    try {
-      await login(email, password);
-      navigate('/');
-    } catch (err) {
-      setError('Неверный email или пароль');
-    } finally {
-      setIsLoading(false);
+    const container = document.getElementById('telegram-login-container');
+    if (container) {
+      container.innerHTML = '';
+      container.appendChild(script);
     }
-  };
+
+    return () => {
+      if (container) {
+        container.innerHTML = '';
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5] flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-[#748c6d] to-[#5a7052] rounded-2xl flex items-center justify-center mb-4">
-            <Icon name="Heart" size={32} className="text-white" />
+      <Card className="w-full max-w-md p-12 space-y-8 shadow-2xl">
+        <div className="text-center space-y-4">
+          <div className="w-20 h-20 mx-auto bg-gradient-to-br from-[#748c6d] to-[#5a7052] rounded-3xl flex items-center justify-center mb-6 shadow-lg">
+            <Icon name="Heart" size={40} className="text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Вход в Nikolife</h1>
-          <p className="text-gray-600">Добро пожаловать! Войдите в свой аккаунт</p>
+          <h1 className="text-4xl font-bold text-gray-900">Добро пожаловать</h1>
+          <p className="text-lg text-gray-600">Войдите через Telegram для доступа к личному кабинету</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="h-12"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Пароль</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="h-12"
-            />
-          </div>
-
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-sm text-red-700">
-              <Icon name="AlertCircle" size={16} />
-              {error}
+        <div className="space-y-6">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-3 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-[#748c6d] bg-opacity-10 flex items-center justify-center">
+                  <Icon name="Shield" size={16} className="text-[#748c6d]" />
+                </div>
+                <span>Безопасно</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-[#748c6d] bg-opacity-10 flex items-center justify-center">
+                  <Icon name="Zap" size={16} className="text-[#748c6d]" />
+                </div>
+                <span>Быстро</span>
+              </div>
             </div>
-          )}
-
-          <Button 
-            type="submit" 
-            className="w-full h-12 text-lg" 
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Icon name="Loader2" size={20} className="mr-2 animate-spin" />
-                Вход...
-              </>
-            ) : (
-              'Войти'
-            )}
-          </Button>
-        </form>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200" />
           </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-white text-gray-500">или</span>
+
+          <div 
+            id="telegram-login-container" 
+            className="flex justify-center items-center min-h-[50px]"
+          />
+
+          <div className="bg-[#748c6d] bg-opacity-5 rounded-lg p-4 space-y-2">
+            <div className="flex items-start gap-3">
+              <Icon name="Info" size={18} className="text-[#748c6d] mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-gray-700">
+                <p className="font-semibold mb-1">Как войти:</p>
+                <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                  <li>Нажмите на кнопку входа через Telegram</li>
+                  <li>Подтвердите вход в приложении Telegram</li>
+                  <li>Вы автоматически попадете в личный кабинет</li>
+                </ol>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-3">
-          <Button variant="outline" className="w-full h-12" type="button">
-            <Icon name="Mail" size={20} className="mr-2" />
-            Войти через Google
-          </Button>
-        </div>
-
-        <div className="text-center text-sm">
-          <span className="text-gray-600">Ещё нет аккаунта? </span>
-          <Link to="/register" className="text-[#748c6d] hover:text-[#5a7052] font-semibold">
-            Зарегистрироваться
-          </Link>
-        </div>
-
-        <div className="text-center">
-          <Link to="/forgot-password" className="text-sm text-gray-500 hover:text-gray-700">
-            Забыли пароль?
-          </Link>
+        <div className="text-center pt-4 border-t border-gray-200">
+          <p className="text-xs text-gray-500">
+            Используя Telegram для входа, вы соглашаетесь с{' '}
+            <a href="#" className="text-[#748c6d] hover:underline">
+              политикой конфиденциальности
+            </a>
+          </p>
         </div>
       </Card>
     </div>

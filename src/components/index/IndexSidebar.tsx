@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Icon from '@/components/ui/icon';
@@ -8,6 +9,8 @@ interface IndexSidebarProps {
 }
 
 export default function IndexSidebar({ activeSection, setActiveSection }: IndexSidebarProps) {
+  const navigate = useNavigate();
+
   return (
     <aside className="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col items-center lg:items-stretch p-4 space-y-2">
       <div className="mb-8 text-center lg:text-left">
@@ -72,10 +75,14 @@ export default function IndexSidebar({ activeSection, setActiveSection }: IndexS
       </nav>
 
       <div className="pt-4 border-t border-gray-200">
-        <Button variant="ghost" className="w-full justify-start">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start"
+          onClick={() => navigate('/profile')}
+        >
           <Avatar className="h-8 w-8 lg:mr-2">
             <AvatarImage src="" />
-            <AvatarFallback>ИИ</AvatarFallback>
+            <AvatarFallback>АН</AvatarFallback>
           </Avatar>
           <span className="hidden lg:inline">Профиль</span>
         </Button>

@@ -4,6 +4,9 @@ interface User {
   id: number;
   name: string;
   email: string;
+  telegram_id?: number;
+  telegram_username?: string;
+  selected_plan?: string;
 }
 
 interface AuthContextType {
@@ -11,8 +14,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, telegramData?: { telegram_id?: number; telegram_username?: string }) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,11 +82,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string, telegramData?: { telegram_id?: number; telegram_username?: string }) => {
     const response = await fetch(AUTH_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password })
+      body: JSON.stringify({ 
+        name, 
+        email, 
+        password,
+        telegram_id: telegramData?.telegram_id,
+        telegram_username: telegramData?.telegram_username
+      })
     });
 
     if (!response.ok) {
@@ -104,6 +114,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    await checkAuth();
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -112,7 +126,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         register,
-        logout
+        logout,
+        refreshUser
       }}
     >
       {children}
