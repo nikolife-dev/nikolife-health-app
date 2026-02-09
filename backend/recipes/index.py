@@ -6,8 +6,9 @@ def handler(event: dict, context) -> dict:
     """
     API для управления рецептами
     """
-    print(f"[RECIPES] Входящий запрос: method={event.get('httpMethod')}, path={event.get('path')}")
-    print(f"[RECIPES] Headers: {event.get('headers')}")
+    print(f"[RECIPES] Входящий запрос: method={event.get('httpMethod')}")
+    print(f"[RECIPES] Event keys: {list(event.keys())}")
+    print(f"[RECIPES] Full event: {event}")
     
     method = event.get('httpMethod', 'GET')
     
