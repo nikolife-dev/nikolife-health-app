@@ -45,15 +45,44 @@ interface User {
   auth_type: 'email' | 'telegram';
 }
 
+interface HealthParameters {
+  goal: string;
+  activity_level: string;
+  age: string;
+  weight: string;
+  height: string;
+  diet_preference: string;
+}
+
+interface UserDetail extends User {
+  goal?: string;
+  activity_level?: string;
+  age?: number;
+  weight?: number;
+  height?: number;
+  diet_preference?: string;
+}
+
 export default function AdminUsersTab() {
   const [users, setUsers] = useState<User[]>([]);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
+    telegram_username: '',
     selected_plan: 'free',
-    is_admin: false
+    is_admin: false,
+    password: 'temp123',
+    health_parameters: {
+      goal: '',
+      activity_level: '',
+      age: '',
+      weight: '',
+      height: '',
+      diet_preference: ''
+    }
   });
 
   useEffect(() => {
@@ -70,15 +99,69 @@ export default function AdminUsersTab() {
     }
   };
 
-  const handleEditClick = (user: User) => {
-    setEditingUser(user);
+  const handleAddClick = () => {
     setEditForm({
-      name: user.name,
-      email: user.email,
-      selected_plan: user.selected_plan || 'free',
-      is_admin: user.is_admin || false
+      name: '',
+      email: '',
+      telegram_username: '',
+      selected_plan: 'free',
+      is_admin: false,
+      password: 'temp123',
+      health_parameters: {
+        goal: '',
+        activity_level: '',
+        age: '',
+        weight: '',
+        height: '',
+        diet_preference: ''
+      }
     });
-    setIsEditDialogOpen(true);
+    setIsAddDialogOpen(true);
+  };
+
+  const handleEditClick = async (user: User) => {
+    try {
+      const response = await fetch(`${USERS_API}?id=${user.id}`);
+      const userDetail: UserDetail = await response.json();
+      
+      setEditingUser(user);
+      setEditForm({
+        name: userDetail.name,
+        email: userDetail.email,
+        telegram_username: userDetail.telegram_username || '',
+        selected_plan: userDetail.selected_plan || 'free',
+        is_admin: userDetail.is_admin || false,
+        password: '',
+        health_parameters: {
+          goal: userDetail.goal || '',
+          activity_level: userDetail.activity_level || '',
+          age: userDetail.age ? String(userDetail.age) : '',
+          weight: userDetail.weight ? String(userDetail.weight) : '',
+          height: userDetail.height ? String(userDetail.height) : '',
+          diet_preference: userDetail.diet_preference || ''
+        }
+      });
+      setIsEditDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to load user details:', error);
+    }
+  };
+
+  const handleAddUser = async () => {
+    try {
+      const response = await fetch(USERS_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      });
+
+      if (response.ok) {
+        setIsAddDialogOpen(false);
+        loadUsers();
+      }
+    } catch (error) {
+      console.error('Failed to add user:', error);
+    }
   };
 
   const handleUpdateUser = async () => {
@@ -165,9 +248,18 @@ export default function AdminUsersTab() {
               <CardTitle className="text-[#748c6d]">Пользователи</CardTitle>
               <CardDescription>Управление пользователями системы</CardDescription>
             </div>
-            <Badge variant="outline" className="text-lg px-4 py-2">
-              Всего: {users.length}
-            </Badge>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="text-lg px-4 py-2">
+                Всего: {users.length}
+              </Badge>
+              <Button
+                onClick={handleAddClick}
+                className="bg-gradient-to-r from-[#748c6d] to-[#5a7052] hover:from-[#5a7052] hover:to-[#4a5f42] min-h-[44px]"
+              >
+                <Icon name="Plus" size={16} className="mr-2" />
+                Добавить
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -253,8 +345,205 @@ export default function AdminUsersTab() {
         </CardContent>
       </Card>
 
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Добавить пользователя</DialogTitle>
+            <DialogDescription>
+              Создайте нового пользователя системы
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-name">Имя</Label>
+              <Input
+                id="add-name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="Введите имя"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="add-email">Email</Label>
+              <Input
+                id="add-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                placeholder="Введите email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-password">Пароль (временный)</Label>
+              <Input
+                id="add-password"
+                type="text"
+                value={editForm.password}
+                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                placeholder="Введите пароль"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-telegram">Telegram Username</Label>
+              <Input
+                id="add-telegram"
+                value={editForm.telegram_username}
+                onChange={(e) => setEditForm({ ...editForm, telegram_username: e.target.value })}
+                placeholder="@username (необязательно)"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="add-plan">Тарифный план</Label>
+              <Select
+                value={editForm.selected_plan}
+                onValueChange={(value) => setEditForm({ ...editForm, selected_plan: value })}
+              >
+                <SelectTrigger id="add-plan">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Бесплатный</SelectItem>
+                  <SelectItem value="basic">Базовый</SelectItem>
+                  <SelectItem value="premium">Премиум</SelectItem>
+                  <SelectItem value="family">Семейный</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="add-admin"
+                checked={editForm.is_admin}
+                onCheckedChange={(checked) => setEditForm({ ...editForm, is_admin: checked as boolean })}
+              />
+              <Label htmlFor="add-admin" className="cursor-pointer">
+                Администратор
+              </Label>
+            </div>
+
+            <div className="border-t pt-4 mt-4">
+              <h4 className="font-medium mb-3">Параметры здоровья (необязательно)</h4>
+              
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="add-goal">Цель</Label>
+                  <Select
+                    value={editForm.health_parameters.goal}
+                    onValueChange={(value) => setEditForm({ ...editForm, health_parameters: { ...editForm.health_parameters, goal: value } })}
+                  >
+                    <SelectTrigger id="add-goal">
+                      <SelectValue placeholder="Выберите цель" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="lose_weight">Снижение веса</SelectItem>
+                      <SelectItem value="gain_muscle">Набор мышечной массы</SelectItem>
+                      <SelectItem value="maintain">Поддержание формы</SelectItem>
+                      <SelectItem value="improve_health">Улучшение здоровья</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="add-activity">Уровень активности</Label>
+                  <Select
+                    value={editForm.health_parameters.activity_level}
+                    onValueChange={(value) => setEditForm({ ...editForm, health_parameters: { ...editForm.health_parameters, activity_level: value } })}
+                  >
+                    <SelectTrigger id="add-activity">
+                      <SelectValue placeholder="Выберите уровень" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sedentary">Малоактивный</SelectItem>
+                      <SelectItem value="light">Легкая активность</SelectItem>
+                      <SelectItem value="moderate">Умеренная</SelectItem>
+                      <SelectItem value="active">Активный</SelectItem>
+                      <SelectItem value="very_active">Очень активный</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="add-age">Возраст</Label>
+                    <Input
+                      id="add-age"
+                      type="number"
+                      value={editForm.health_parameters.age}
+                      onChange={(e) => setEditForm({ ...editForm, health_parameters: { ...editForm.health_parameters, age: e.target.value } })}
+                      placeholder="25"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="add-weight">Вес (кг)</Label>
+                    <Input
+                      id="add-weight"
+                      type="number"
+                      value={editForm.health_parameters.weight}
+                      onChange={(e) => setEditForm({ ...editForm, health_parameters: { ...editForm.health_parameters, weight: e.target.value } })}
+                      placeholder="70"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="add-height">Рост (см)</Label>
+                    <Input
+                      id="add-height"
+                      type="number"
+                      value={editForm.health_parameters.height}
+                      onChange={(e) => setEditForm({ ...editForm, health_parameters: { ...editForm.health_parameters, height: e.target.value } })}
+                      placeholder="175"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="add-diet">Питание</Label>
+                  <Select
+                    value={editForm.health_parameters.diet_preference}
+                    onValueChange={(value) => setEditForm({ ...editForm, health_parameters: { ...editForm.health_parameters, diet_preference: value } })}
+                  >
+                    <SelectTrigger id="add-diet">
+                      <SelectValue placeholder="Выберите тип" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no_preference">Без ограничений</SelectItem>
+                      <SelectItem value="vegetarian">Вегетарианство</SelectItem>
+                      <SelectItem value="vegan">Веганство</SelectItem>
+                      <SelectItem value="pescatarian">Пескетарианство</SelectItem>
+                      <SelectItem value="keto">Кето-диета</SelectItem>
+                      <SelectItem value="paleo">Палео-диета</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddDialogOpen(false)}
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={handleAddUser}
+              disabled={!editForm.name || !editForm.email}
+              className="bg-gradient-to-r from-[#748c6d] to-[#5a7052] hover:from-[#5a7052] hover:to-[#4a5f42]"
+            >
+              <Icon name="Plus" size={16} className="mr-2" />
+              Создать
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Редактировать пользователя</DialogTitle>
             <DialogDescription>
@@ -285,12 +574,22 @@ export default function AdminUsersTab() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="edit-telegram">Telegram Username</Label>
+              <Input
+                id="edit-telegram"
+                value={editForm.telegram_username}
+                onChange={(e) => setEditForm({ ...editForm, telegram_username: e.target.value })}
+                placeholder="@username (необязательно)"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="edit-plan">Тарифный план</Label>
               <Select
                 value={editForm.selected_plan}
                 onValueChange={(value) => setEditForm({ ...editForm, selected_plan: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger id="edit-plan">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -313,6 +612,102 @@ export default function AdminUsersTab() {
               <Label htmlFor="edit-admin" className="cursor-pointer">
                 Права администратора
               </Label>
+            </div>
+
+            <div className="border-t pt-4 mt-4">
+              <h4 className="font-medium mb-3">Параметры здоровья</h4>
+              
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-goal">Цель</Label>
+                  <Select
+                    value={editForm.health_parameters.goal}
+                    onValueChange={(value) => setEditForm({ ...editForm, health_parameters: { ...editForm.health_parameters, goal: value } })}
+                  >
+                    <SelectTrigger id="edit-goal">
+                      <SelectValue placeholder="Выберите цель" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="lose_weight">Снижение веса</SelectItem>
+                      <SelectItem value="gain_muscle">Набор мышечной массы</SelectItem>
+                      <SelectItem value="maintain">Поддержание формы</SelectItem>
+                      <SelectItem value="improve_health">Улучшение здоровья</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-activity">Уровень активности</Label>
+                  <Select
+                    value={editForm.health_parameters.activity_level}
+                    onValueChange={(value) => setEditForm({ ...editForm, health_parameters: { ...editForm.health_parameters, activity_level: value } })}
+                  >
+                    <SelectTrigger id="edit-activity">
+                      <SelectValue placeholder="Выберите уровень" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sedentary">Малоактивный</SelectItem>
+                      <SelectItem value="light">Легкая активность</SelectItem>
+                      <SelectItem value="moderate">Умеренная</SelectItem>
+                      <SelectItem value="active">Активный</SelectItem>
+                      <SelectItem value="very_active">Очень активный</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-age">Возраст</Label>
+                    <Input
+                      id="edit-age"
+                      type="number"
+                      value={editForm.health_parameters.age}
+                      onChange={(e) => setEditForm({ ...editForm, health_parameters: { ...editForm.health_parameters, age: e.target.value } })}
+                      placeholder="25"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-weight">Вес (кг)</Label>
+                    <Input
+                      id="edit-weight"
+                      type="number"
+                      value={editForm.health_parameters.weight}
+                      onChange={(e) => setEditForm({ ...editForm, health_parameters: { ...editForm.health_parameters, weight: e.target.value } })}
+                      placeholder="70"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-height">Рост (см)</Label>
+                    <Input
+                      id="edit-height"
+                      type="number"
+                      value={editForm.health_parameters.height}
+                      onChange={(e) => setEditForm({ ...editForm, health_parameters: { ...editForm.health_parameters, height: e.target.value } })}
+                      placeholder="175"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-diet">Питание</Label>
+                  <Select
+                    value={editForm.health_parameters.diet_preference}
+                    onValueChange={(value) => setEditForm({ ...editForm, health_parameters: { ...editForm.health_parameters, diet_preference: value } })}
+                  >
+                    <SelectTrigger id="edit-diet">
+                      <SelectValue placeholder="Выберите тип" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no_preference">Без ограничений</SelectItem>
+                      <SelectItem value="vegetarian">Вегетарианство</SelectItem>
+                      <SelectItem value="vegan">Веганство</SelectItem>
+                      <SelectItem value="pescatarian">Пескетарианство</SelectItem>
+                      <SelectItem value="keto">Кето-диета</SelectItem>
+                      <SelectItem value="paleo">Палео-диета</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           </div>
 

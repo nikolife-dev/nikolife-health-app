@@ -1,6 +1,8 @@
 import json
 import os
 import psycopg2
+import hashlib
+import secrets
 from psycopg2.extras import RealDictCursor
 
 def handler(event: dict, context) -> dict:
@@ -12,7 +14,7 @@ def handler(event: dict, context) -> dict:
             'statusCode': 200,
             'headers': {
                 'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type, X-Authorization'
             },
             'body': '',
@@ -33,29 +35,141 @@ def handler(event: dict, context) -> dict:
 
     try:
         if method == 'GET':
-            cur.execute("""
-                SELECT 
-                    id, 
-                    name, 
-                    email, 
-                    created_at, 
-                    last_login,
-                    telegram_username,
-                    selected_plan,
-                    is_admin,
-                    CASE 
-                        WHEN telegram_username IS NOT NULL THEN 'telegram'
-                        ELSE 'email'
-                    END as auth_type
-                FROM t_p76837068_nikolife_health_app.users 
-                ORDER BY created_at DESC
-            """)
-            users = cur.fetchall()
+            user_id = event.get('queryStringParameters', {}).get('id')
             
+            if user_id:
+                cur.execute("""
+                    SELECT 
+                        u.id, 
+                        u.name, 
+                        u.email, 
+                        u.created_at, 
+                        u.last_login,
+                        u.telegram_username,
+                        u.selected_plan,
+                        u.is_admin,
+                        u.onboarding_completed,
+                        CASE 
+                            WHEN u.telegram_username IS NOT NULL THEN 'telegram'
+                            ELSE 'email'
+                        END as auth_type,
+                        hp.goal,
+                        hp.activity_level,
+                        hp.age,
+                        hp.weight,
+                        hp.height,
+                        hp.diet_preference
+                    FROM t_p76837068_nikolife_health_app.users u
+                    LEFT JOIN t_p76837068_nikolife_health_app.health_parameters hp ON u.id = hp.user_id
+                    WHERE u.id = %s
+                """, (user_id,))
+                user = cur.fetchone()
+                
+                if not user:
+                    return {
+                        'statusCode': 404,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'User not found'}),
+                        'isBase64Encoded': False
+                    }
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps(dict(user), default=str),
+                    'isBase64Encoded': False
+                }
+            else:
+                cur.execute("""
+                    SELECT 
+                        id, 
+                        name, 
+                        email, 
+                        created_at, 
+                        last_login,
+                        telegram_username,
+                        selected_plan,
+                        is_admin,
+                        CASE 
+                            WHEN telegram_username IS NOT NULL THEN 'telegram'
+                            ELSE 'email'
+                        END as auth_type
+                    FROM t_p76837068_nikolife_health_app.users 
+                    ORDER BY created_at DESC
+                """)
+                users = cur.fetchall()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps(users, default=str),
+                    'isBase64Encoded': False
+                }
+
+        elif method == 'POST':
+            data = json.loads(event.get('body', '{}'))
+            name = data.get('name')
+            email = data.get('email')
+            password = data.get('password', 'temp123')
+            selected_plan = data.get('selected_plan', 'free')
+            is_admin = data.get('is_admin', False)
+            telegram_username = data.get('telegram_username')
+            
+            health_params = data.get('health_parameters', {})
+            goal = health_params.get('goal')
+            activity_level = health_params.get('activity_level')
+            age = health_params.get('age')
+            weight = health_params.get('weight')
+            height = health_params.get('height')
+            diet_preference = health_params.get('diet_preference')
+
+            if not name or not email:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Name and email required'}),
+                    'isBase64Encoded': False
+                }
+
+            cur.execute("""
+                SELECT id FROM t_p76837068_nikolife_health_app.users WHERE email = %s
+            """, (email,))
+            existing = cur.fetchone()
+            
+            if existing:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Email already exists'}),
+                    'isBase64Encoded': False
+                }
+
+            password_hash = hashlib.sha256(password.encode()).hexdigest()
+            auth_token = secrets.token_urlsafe(32)
+
+            cur.execute("""
+                INSERT INTO t_p76837068_nikolife_health_app.users 
+                (name, email, password_hash, auth_token, selected_plan, is_admin, telegram_username, onboarding_completed)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, name, email, selected_plan, is_admin, telegram_username
+            """, (name, email, password_hash, auth_token, selected_plan, is_admin, telegram_username, True))
+            
+            new_user = cur.fetchone()
+            user_id = new_user['id']
+            
+            if any([goal, activity_level, age, weight, height, diet_preference]):
+                cur.execute("""
+                    INSERT INTO t_p76837068_nikolife_health_app.health_parameters
+                    (user_id, goal, activity_level, age, weight, height, diet_preference)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (user_id, goal, activity_level, age, weight, height, diet_preference))
+            
+            conn.commit()
+
             return {
-                'statusCode': 200,
+                'statusCode': 201,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps(users, default=str),
+                'body': json.dumps({'success': True, 'user': dict(new_user)}, default=str),
                 'isBase64Encoded': False
             }
 
@@ -74,6 +188,15 @@ def handler(event: dict, context) -> dict:
             email = data.get('email')
             selected_plan = data.get('selected_plan')
             is_admin = data.get('is_admin', False)
+            telegram_username = data.get('telegram_username')
+            
+            health_params = data.get('health_parameters', {})
+            goal = health_params.get('goal')
+            activity_level = health_params.get('activity_level')
+            age = health_params.get('age')
+            weight = health_params.get('weight')
+            height = health_params.get('height')
+            diet_preference = health_params.get('diet_preference')
 
             if not name or not email:
                 return {
@@ -85,12 +208,29 @@ def handler(event: dict, context) -> dict:
 
             cur.execute("""
                 UPDATE t_p76837068_nikolife_health_app.users 
-                SET name = %s, email = %s, selected_plan = %s, is_admin = %s
+                SET name = %s, email = %s, selected_plan = %s, is_admin = %s, telegram_username = %s
                 WHERE id = %s
-                RETURNING id, name, email, selected_plan, is_admin
-            """, (name, email, selected_plan, is_admin, user_id))
+                RETURNING id, name, email, selected_plan, is_admin, telegram_username
+            """, (name, email, selected_plan, is_admin, telegram_username, user_id))
             
             updated_user = cur.fetchone()
+            
+            if any([goal, activity_level, age, weight, height, diet_preference]):
+                cur.execute("""
+                    INSERT INTO t_p76837068_nikolife_health_app.health_parameters
+                    (user_id, goal, activity_level, age, weight, height, diet_preference)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (user_id) 
+                    DO UPDATE SET 
+                        goal = EXCLUDED.goal,
+                        activity_level = EXCLUDED.activity_level,
+                        age = EXCLUDED.age,
+                        weight = EXCLUDED.weight,
+                        height = EXCLUDED.height,
+                        diet_preference = EXCLUDED.diet_preference,
+                        updated_at = NOW()
+                """, (user_id, goal, activity_level, age, weight, height, diet_preference))
+            
             conn.commit()
 
             return {
