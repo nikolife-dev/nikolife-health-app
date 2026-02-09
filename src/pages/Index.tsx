@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import Icon from '@/components/ui/icon';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import IndexSidebar from '@/components/index/IndexSidebar';
 import DashboardSection from '@/components/index/DashboardSection';
@@ -14,6 +21,7 @@ import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 export default function Index() {
   const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { logs, clearLogs, logInfo } = useLiveLogs();
   
   useEffect(() => {
@@ -226,14 +234,40 @@ export default function Index() {
     },
   ];
 
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section);
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-      <div className="flex h-screen">
-        <IndexSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
+      <div className="flex flex-col lg:flex-row h-screen">
+        {/* Mobile Header */}
+        <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-b border-gray-200">
+          <div className="flex items-center justify-between p-4">
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="min-w-[44px] min-h-[44px]">
+                  <Icon name="Menu" size={24} />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[280px] bg-white p-0">
+                <IndexSidebar activeSection={activeSection} setActiveSection={handleSectionChange} />
+              </SheetContent>
+            </Sheet>
+            <h1 className="text-xl font-bold text-emerald-600">Nikolife</h1>
+            <div className="w-[44px]" />
+          </div>
+        </div>
 
-        <main className="flex-1 overflow-hidden">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block">
+          <IndexSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
+        </div>
+
+        <main className="flex-1 overflow-hidden mt-[64px] lg:mt-0">
           <ScrollArea className="h-full">
-            <div className="p-8">
+            <div className="p-4 sm:p-6 lg:p-8">
               {activeSection === 'dashboard' && (
                 <DashboardSection 
                   habits={habits}

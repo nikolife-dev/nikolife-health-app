@@ -156,14 +156,14 @@ export default function Recipes() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5]">
-      <div className="max-w-7xl mx-auto p-8 space-y-8">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/?section=nutrition')} className="gap-2">
+          <Button variant="ghost" onClick={() => navigate('/?section=nutrition')} className="gap-2 min-h-[44px]">
             <Icon name="ArrowLeft" size={20} />
-            Назад
+            <span className="hidden sm:inline">Назад</span>
           </Button>
-          <h1 className="text-3xl font-bold text-gray-900">Все рецепты</h1>
-          <div className="w-24" />
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Все рецепты</h1>
+          <div className="w-12 sm:w-24" />
         </div>
 
         {isFreeUser && (
@@ -186,24 +186,24 @@ export default function Recipes() {
           </Card>
         )}
 
-        <Card className="p-6">
-          <div className="flex gap-4 flex-wrap">
+        <Card className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
             <Input
               placeholder="Поиск рецептов..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && loadRecipes()}
-              className="max-w-xs"
+              className="flex-1 max-w-xs"
             />
-            <Button onClick={loadRecipes}>
+            <Button onClick={loadRecipes} className="min-h-[44px]">
               <Icon name="Search" size={20} className="mr-2" />
               Найти
             </Button>
           </div>
 
-          <div className="flex gap-2 mt-4">
+          <div className="flex flex-wrap gap-2 mt-4">
             <Badge
-              className={`cursor-pointer ${!category ? 'bg-[#748c6d]' : 'bg-gray-300'}`}
+              className={`cursor-pointer min-h-[36px] px-3 ${!category ? 'bg-[#748c6d]' : 'bg-gray-300'}`}
               onClick={() => setCategory('')}
             >
               Все
@@ -211,7 +211,7 @@ export default function Recipes() {
             {categories.map((cat) => (
               <Badge
                 key={cat}
-                className={`cursor-pointer ${category === cat ? 'bg-[#748c6d]' : 'bg-gray-300'}`}
+                className={`cursor-pointer min-h-[36px] px-3 ${category === cat ? 'bg-[#748c6d]' : 'bg-gray-300'}`}
                 onClick={() => setCategory(cat)}
               >
                 {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -225,7 +225,7 @@ export default function Recipes() {
             <Icon name="Loader2" size={48} className="animate-spin text-[#748c6d]" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {recipes.map((recipe) => (
               <Card 
                 key={recipe.id} 
