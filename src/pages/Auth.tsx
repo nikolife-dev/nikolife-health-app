@@ -104,13 +104,21 @@ export default function Auth() {
           description: 'Регистрация прошла успешно',
         });
         
-        // Проверяем тариф
-        if (data.user?.selected_plan) {
-          logInfo('Переход на главную (тариф выбран)');
+        // Правильная последовательность: онбординг → pricing → главная
+        const hasPlan = !!data.user?.selected_plan;
+        const onboardingCompleted = data.user?.onboarding_completed === true;
+        
+        logInfo(`Статус: hasPlan=${hasPlan}, onboardingCompleted=${onboardingCompleted}`);
+        
+        if (hasPlan) {
+          logInfo('Переход на главную (план выбран)');
           navigate('/', { replace: true });
-        } else {
-          logInfo('Переход на страницу выбора тарифа');
+        } else if (onboardingCompleted) {
+          logInfo('Переход на /pricing (онбординг пройден, план не выбран)');
           navigate('/pricing', { replace: true });
+        } else {
+          logInfo('Переход на /onboarding (новый пользователь)');
+          navigate('/onboarding', { replace: true });
         }
 
       } else if (mode === 'login') {
@@ -137,8 +145,23 @@ export default function Auth() {
           title: 'Успешно!',
           description: 'Вы вошли в систему',
         });
-        logInfo('Переход на главную страницу');
-        navigate('/', { replace: true });
+        
+        // Правильная последовательность: онбординг → pricing → главная
+        const hasPlan = !!data.user?.selected_plan;
+        const onboardingCompleted = data.user?.onboarding_completed === true;
+        
+        logInfo(`Статус: hasPlan=${hasPlan}, onboardingCompleted=${onboardingCompleted}`);
+        
+        if (hasPlan) {
+          logInfo('Переход на главную (план выбран)');
+          navigate('/', { replace: true });
+        } else if (onboardingCompleted) {
+          logInfo('Переход на /pricing (онбординг пройден, план не выбран)');
+          navigate('/pricing', { replace: true });
+        } else {
+          logInfo('Переход на /onboarding (онбординг не пройден)');
+          navigate('/onboarding', { replace: true });
+        }
 
       } else if (mode === 'reset') {
         // Восстановление пароля
