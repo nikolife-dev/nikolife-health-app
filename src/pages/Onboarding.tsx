@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -19,6 +20,7 @@ interface OnboardingData {
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>({
     goal: '',
@@ -55,7 +57,9 @@ export default function Onboarding() {
           console.log('[ONBOARDING] Ответ backend:', result);
 
           if (response.ok) {
-            console.log('[ONBOARDING] Успешно сохранено, переход на /pricing');
+            console.log('[ONBOARDING] Успешно сохранено, обновляем контекст...');
+            await refreshUser();
+            console.log('[ONBOARDING] Контекст обновлен, переход на /pricing');
             navigate('/pricing');
           } else {
             console.error('[ONBOARDING] Ошибка сохранения, но всё равно переход на /pricing');
@@ -98,8 +102,39 @@ export default function Onboarding() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium text-gray-600">Шаг {step} из {totalSteps}</h2>
-            <Button variant="ghost" size="sm" onClick={() => {
-              console.log('[ONBOARDING] Пропуск онбординга → /pricing');
+            <Button variant="ghost" size="sm" onClick={async () => {
+              console.log('[ONBOARDING] Пропуск онбординга, сохраняем дефолтные значения');
+              // Сохраняем дефолтные значения при пропуске
+              const defaultData = {
+                goal: 'maintain',
+                activityLevel: 'sedentary',
+                age: '0',
+                weight: '0',
+                height: '0',
+                dietPreference: 'no_preference'
+              };
+              
+              try {
+                const token = localStorage.getItem('auth_token');
+                if (token) {
+                  const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+                    method: 'PUT',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ onboarding_data: defaultData })
+                  });
+                  
+                  if (response.ok) {
+                    console.log('[ONBOARDING] Дефолтные значения сохранены, обновляем контекст');
+                    await refreshUser();
+                  }
+                }
+              } catch (error) {
+                console.error('[ONBOARDING] Ошибка при пропуске:', error);
+              }
+              
               navigate('/pricing');
             }}>
               Пропустить

@@ -36,6 +36,14 @@ export default function ProtectedRoute({ children, requiresPlan = false }: Prote
     requiresPlan
   });
   
+  // ВАЖНО: Если план уже выбран, пропускаем проверки онбординга
+  // Это позволяет пользователям с планом попадать сразу на главную
+  if (hasPlan) {
+    console.log('[PROTECTED ROUTE] План выбран, доступ разрешен');
+    return <>{children}</>;
+  }
+  
+  // Если план НЕ выбран, проверяем онбординг
   // Если не прошел онбординг и это не страница онбординга
   if (!onboardingCompleted && location.pathname !== '/onboarding') {
     console.log('[PROTECTED ROUTE] Редирект на /onboarding (не пройден)');
@@ -49,7 +57,7 @@ export default function ProtectedRoute({ children, requiresPlan = false }: Prote
   }
 
   // Если требуется тариф и он не выбран
-  if (requiresPlan && !user?.selected_plan) {
+  if (requiresPlan && !hasPlan) {
     console.log('[PROTECTED ROUTE] Редирект на /pricing (requiresPlan)');
     return <Navigate to="/pricing" state={{ from: location }} replace />;
   }
