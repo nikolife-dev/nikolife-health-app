@@ -1,6 +1,9 @@
 import json
 import os
 import psycopg2
+import boto3
+import base64
+import uuid
 
 def handler(event: dict, context) -> dict:
     """
@@ -238,6 +241,46 @@ def handler(event: dict, context) -> dict:
             body = json.loads(event.get('body', '{}'))
             print(f"[RECIPES] Body получен, размер: {len(event.get('body', ''))} байт")
             
+            image_url = body.get('image_url')
+            
+            # Загрузка изображения в S3, если передан base64
+            if body.get('image_base64'):
+                try:
+                    s3 = boto3.client('s3',
+                        endpoint_url='https://bucket.poehali.dev',
+                        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+                    )
+                    
+                    base64_data = body['image_base64']
+                    if ',' in base64_data:
+                        base64_data = base64_data.split(',')[1]
+                    
+                    image_data = base64.b64decode(base64_data)
+                    file_ext = 'jpg'
+                    if body['image_base64'].startswith('data:image/png'):
+                        file_ext = 'png'
+                    elif body['image_base64'].startswith('data:image/webp'):
+                        file_ext = 'webp'
+                    
+                    filename = f"recipes/{uuid.uuid4()}.{file_ext}"
+                    s3.put_object(
+                        Bucket='files',
+                        Key=filename,
+                        Body=image_data,
+                        ContentType=f'image/{file_ext}'
+                    )
+                    
+                    image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
+                    print(f"[RECIPES] Изображение загружено: {image_url}")
+                except Exception as e:
+                    print(f"[RECIPES] ⚠️ Ошибка загрузки изображения: {e}")
+            
+            # Если изменен статус is_active на false - удаляем из всех меню
+            if 'is_active' in body and not body['is_active']:
+                print(f"[RECIPES] Рецепт #{recipe_id} деактивирован, удаляю из меню")
+                cur.execute(f"DELETE FROM {schema}.weekly_menu WHERE recipe_id = %s", (recipe_id,))
+            
             cur.execute(f"""
                 UPDATE {schema}.recipes SET
                     title = COALESCE(%s, title), description = COALESCE(%s, description),
@@ -246,15 +289,17 @@ def handler(event: dict, context) -> dict:
                     calories = COALESCE(%s, calories), protein = COALESCE(%s, protein),
                     carbs = COALESCE(%s, carbs), fats = COALESCE(%s, fats),
                     image_url = COALESCE(%s, image_url), category = COALESCE(%s, category),
-                    tags = COALESCE(%s, tags), updated_at = NOW()
+                    tags = COALESCE(%s, tags), is_active = COALESCE(%s, is_active), updated_at = NOW()
                 WHERE id = %s
             """, (
                 body.get('title'), body.get('description'),
                 json.dumps(body.get('ingredients')) if body.get('ingredients') else None,
                 body.get('instructions'), body.get('cooking_time'), body.get('servings'),
                 body.get('calories'), body.get('protein'), body.get('carbs'), body.get('fats'),
-                body.get('image_url'), body.get('category'),
-                json.dumps(body.get('tags')) if body.get('tags') else None, recipe_id
+                image_url, body.get('category'),
+                json.dumps(body.get('tags')) if body.get('tags') else None, 
+                body.get('is_active') if 'is_active' in body else None,
+                recipe_id
             ))
             
             conn.commit()
