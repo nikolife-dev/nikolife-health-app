@@ -50,19 +50,18 @@ def handler(event: dict, context) -> dict:
             cur.close()
             conn.close()
         
-        path = event.get('path', '/')
-        path_parts = [p for p in path.split('/') if p]
+        # Получаем ID рецепта из query параметров (т.к. прокси не поддерживает path params)
+        params = event.get('queryStringParameters') or {}
         recipe_id = None
-        action = None
+        if params.get('id'):
+            try:
+                recipe_id = int(params['id'])
+            except:
+                pass
         
-        if len(path_parts) >= 1 and path_parts[0].isdigit():
-            recipe_id = int(path_parts[0])
-            if len(path_parts) >= 2:
-                action = path_parts[1]
-        elif len(path_parts) >= 1:
-            action = path_parts[0]
+        action = params.get('action')
         
-        print(f"[RECIPES] Разбор пути: path={path}, recipe_id={recipe_id}, action={action}")
+        print(f"[RECIPES] Параметры: recipe_id={recipe_id}, action={action}")
         
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
         cur = conn.cursor()

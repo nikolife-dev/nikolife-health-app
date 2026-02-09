@@ -168,7 +168,7 @@ export default function EditRecipeDialog({
         console.log('[EditRecipe] Изображение конвертировано', { base64Length: base64.length });
       }
 
-      const url = `${RECIPES_API}/${recipe.id}`;
+      const url = `${RECIPES_API}?id=${recipe.id}`;
       console.log('[EditRecipe] Отправка PUT запроса', { 
         url, 
         recipeId: recipe.id,

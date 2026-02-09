@@ -104,7 +104,7 @@ export default function AdminRecipesTab() {
       const token = localStorage.getItem('auth_token');
       console.log('[DeleteRecipe] Токен получен', { hasToken: !!token });
       
-      const url = `${RECIPES_API}/${id}`;
+      const url = `${RECIPES_API}?id=${id}`;
       console.log('[DeleteRecipe] Отправка DELETE запроса', { url, id });
       
       const response = await fetch(url, {
