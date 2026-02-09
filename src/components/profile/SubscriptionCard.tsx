@@ -9,14 +9,17 @@ interface SubscriptionCardProps {
     id: string;
     name: string;
     icon: string;
-    price: number;
-    nextBilling: string;
+    price: number | string;
+    nextBilling?: string;
     features: string[];
   };
   onChangePlan: () => void;
 }
 
 export default function SubscriptionCard({ currentPlan, onChangePlan }: SubscriptionCardProps) {
+  const isFree = currentPlan.id === 'free';
+  const displayPrice = typeof currentPlan.price === 'number' ? `${currentPlan.price} ₽` : currentPlan.price;
+  
   return (
     <Card className="p-8">
       <div className="space-y-6">
@@ -26,7 +29,7 @@ export default function SubscriptionCard({ currentPlan, onChangePlan }: Subscrip
             <p className="text-gray-600">Управляйте своей подпиской</p>
           </div>
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#748c6d] to-[#5a7052] flex items-center justify-center">
-            <Icon name={currentPlan.icon as "Sparkles"} size={32} className="text-white" />
+            <Icon name={currentPlan.icon as "Sparkles" | "Heart" | "Users"} size={32} className="text-white" />
           </div>
         </div>
 
@@ -37,13 +40,15 @@ export default function SubscriptionCard({ currentPlan, onChangePlan }: Subscrip
           </div>
           <div>
             <div className="text-sm text-gray-600 mb-1">Стоимость</div>
-            <div className="text-3xl font-bold text-gray-900">{currentPlan.price} ₽</div>
-            <div className="text-sm text-gray-600">в месяц</div>
+            <div className="text-3xl font-bold text-gray-900">{displayPrice}</div>
+            {!isFree && <div className="text-sm text-gray-600">в месяц</div>}
           </div>
-          <div>
-            <div className="text-sm text-gray-600 mb-1">Следующее списание</div>
-            <div className="text-lg font-semibold text-gray-900">{currentPlan.nextBilling}</div>
-          </div>
+          {!isFree && currentPlan.nextBilling && (
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Следующее списание</div>
+              <div className="text-lg font-semibold text-gray-900">{currentPlan.nextBilling}</div>
+            </div>
+          )}
           <div className="flex items-end">
             <Badge variant="outline" className="border-[#748c6d] text-[#748c6d]">
               <Icon name="CheckCircle2" size={14} className="mr-1" />

@@ -71,21 +71,59 @@ export default function Profile() {
     dietPreference: ''
   });
 
-  const currentPlan = {
-    id: 'premium',
-    name: 'Премиум',
-    icon: 'Sparkles',
-    price: 990,
-    nextBilling: '15 марта 2026',
-    features: [
-      'Персональный план питания',
-      'Индивидуальные тренировки',
-      'Неограниченные рецепты',
-      'AI-помощник Николай',
-      'Трекер сна и восстановления',
-      'Детальная аналитика'
-    ]
+  const getPlanDetails = (planId: string) => {
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const nextBillingDate = nextMonth.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const plans: Record<string, { id: string; name: string; icon: string; price: number | string; nextBilling?: string; features: string[] }> = {
+      'free': {
+        id: 'free',
+        name: 'Базовый',
+        icon: 'Heart',
+        price: 'Бесплатно',
+        features: [
+          'Базовые тренировки',
+          'Простые рецепты',
+          'Трекер привычек',
+          'Общие советы'
+        ]
+      },
+      'premium': {
+        id: 'premium',
+        name: 'Премиум',
+        icon: 'Sparkles',
+        price: 990,
+        nextBilling: nextBillingDate,
+        features: [
+          'Персональный план питания',
+          'Индивидуальные тренировки',
+          'Неограниченные рецепты',
+          'AI-помощник Николай',
+          'Трекер сна и восстановления',
+          'Детальная аналитика'
+        ]
+      },
+      'family': {
+        id: 'family',
+        name: 'Семейный',
+        icon: 'Users',
+        price: 1490,
+        nextBilling: nextBillingDate,
+        features: [
+          'Все возможности Премиум',
+          'До 5 человек',
+          'Семейные тренировки',
+          'Общий план питания',
+          'Семейная статистика',
+          'Приоритетная поддержка'
+        ]
+      }
+    };
+    return plans[planId] || plans['free'];
   };
+
+  const currentPlan = getPlanDetails(userProfile.selected_plan || 'free');
 
   const userStats = {
     workoutsCompleted: 24,
@@ -396,6 +434,7 @@ export default function Profile() {
               onChangePlan={() => navigate('/pricing')}
             />
             <PricingComparison 
+              currentPlanId={userProfile.selected_plan || 'free'}
               onViewAllPlans={() => navigate('/pricing')}
             />
           </div>
