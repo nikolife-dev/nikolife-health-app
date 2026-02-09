@@ -65,6 +65,22 @@ def handler(event: dict, context) -> dict:
         if method == 'GET':
             initials = ''.join([word[0] for word in current_name.split()[:2]]).upper()
             
+            # Получаем параметры здоровья из отдельной таблицы
+            cur.execute(f"SELECT goal, activity_level, age, weight, height, diet_preference FROM {schema}.health_parameters WHERE user_id = %s", (user_id,))
+            health_params = cur.fetchone()
+            
+            onboarding_data = None
+            if health_params:
+                goal, activity_level, age, weight, height, diet_preference = health_params
+                onboarding_data = {
+                    'goal': goal,
+                    'activityLevel': activity_level,
+                    'age': str(age) if age else '',
+                    'weight': str(weight) if weight else '',
+                    'height': str(height) if height else '',
+                    'dietPreference': diet_preference
+                }
+            
             cur.close()
             conn.close()
             
@@ -81,7 +97,8 @@ def handler(event: dict, context) -> dict:
                         'telegram_id': telegram_id,
                         'telegram_username': telegram_username,
                         'selected_plan': selected_plan,
-                        'onboarding_completed': onboarding_completed
+                        'onboarding_completed': onboarding_completed,
+                        'onboarding_data': onboarding_data
                     }
                 }),
                 'isBase64Encoded': False
@@ -98,20 +115,33 @@ def handler(event: dict, context) -> dict:
             # Обработка данных онбординга
             onboarding_data = body.get('onboarding_data')
             if onboarding_data:
+                # Сохраняем в таблицу health_parameters
                 cur.execute(f"""
-                    UPDATE {schema}.users 
-                    SET goal = %s, activity_level = %s, age = %s, weight = %s, height = %s, 
-                        diet_preference = %s, onboarding_completed = TRUE
-                    WHERE id = %s
+                    INSERT INTO {schema}.health_parameters 
+                    (user_id, goal, activity_level, age, weight, height, diet_preference, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+                    ON CONFLICT (user_id) 
+                    DO UPDATE SET 
+                        goal = EXCLUDED.goal,
+                        activity_level = EXCLUDED.activity_level,
+                        age = EXCLUDED.age,
+                        weight = EXCLUDED.weight,
+                        height = EXCLUDED.height,
+                        diet_preference = EXCLUDED.diet_preference,
+                        updated_at = NOW()
                 """, (
+                    user_id,
                     onboarding_data.get('goal'),
                     onboarding_data.get('activityLevel'),
                     int(onboarding_data.get('age')) if onboarding_data.get('age') else None,
                     float(onboarding_data.get('weight')) if onboarding_data.get('weight') else None,
                     int(onboarding_data.get('height')) if onboarding_data.get('height') else None,
-                    onboarding_data.get('dietPreference'),
-                    user_id
+                    onboarding_data.get('dietPreference')
                 ))
+                
+                # Обновляем флаг onboarding_completed в users
+                cur.execute(f"UPDATE {schema}.users SET onboarding_completed = TRUE WHERE id = %s", (user_id,))
+                
                 conn.commit()
                 cur.close()
                 conn.close()
