@@ -530,24 +530,29 @@ export default function Habits() {
               <div className="flex justify-center py-12">
                 <Icon name="Loader2" size={48} className="animate-spin text-[#748c6d]" />
               </div>
-            ) : filteredHabits.length === 0 ? (
-              <Card className="p-8 text-center">
-                <Icon
-                  name="CalendarCheck"
-                  size={48}
-                  className="mx-auto text-gray-400 mb-4"
-                />
-                <h3 className="text-lg font-semibold text-gray-700">
-                  Нет привычек
-                </h3>
-                <p className="text-gray-500 mt-2">
-                  Создайте первую привычку для отслеживания
-                </p>
-              </Card>
-            ) : (
-              filteredHabits.map((habit) => {
-                const today = new Date().getDay();
-                const isScheduledToday = habit.days_of_week.includes(today);
+            ) : (() => {
+              const today = new Date().getDay();
+              const todayHabits = filteredHabits.filter(h => h.days_of_week.includes(today));
+              
+              if (todayHabits.length === 0) {
+                return (
+                  <Card className="p-8 text-center">
+                    <Icon
+                      name="CalendarCheck"
+                      size={48}
+                      className="mx-auto text-gray-400 mb-4"
+                    />
+                    <h3 className="text-lg font-semibold text-gray-700">
+                      На сегодня привычек нет
+                    </h3>
+                    <p className="text-gray-500 mt-2">
+                      Отдыхайте! Или создайте новую привычку
+                    </p>
+                  </Card>
+                );
+              }
+              
+              return todayHabits.map((habit) => {
                 const progress = calculateProgress(habit);
 
                 return (
@@ -564,69 +569,93 @@ export default function Habits() {
                           <span>✅ {habit.total_completions} выполнений</span>
                         </div>
                       </div>
-                      {isScheduledToday && (
-                        <Button
-                          variant={habit.completed_today ? 'default' : 'outline'}
-                          size="lg"
-                          onClick={() => toggleCompletion(habit.id)}
-                          className="min-h-[44px]"
-                        >
-                          <Icon
-                            name={habit.completed_today ? 'Check' : 'Circle'}
-                            size={20}
-                          />
-                        </Button>
-                      )}
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Прогресс: {progress}%</span>
-                        <span>
-                          Осталось дней:{' '}
-                          {Math.max(
-                            0,
-                            habit.goal_days -
-                              Math.floor(
-                                (new Date().getTime() -
-                                  new Date(habit.created_at).getTime()) /
-                                  (1000 * 60 * 60 * 24)
-                              )
-                          )}
+                    <button
+                      onClick={() => toggleCompletion(habit.id)}
+                      className={`w-full p-6 rounded-2xl border-2 transition-all active:scale-95 ${
+                        habit.completed_today
+                          ? 'bg-[#748c6d] border-[#748c6d] shadow-lg'
+                          : 'bg-white border-gray-300 hover:border-[#748c6d] hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-3 mb-3">
+                        <Icon
+                          name={habit.completed_today ? 'CheckCircle2' : 'Circle'}
+                          size={32}
+                          className={habit.completed_today ? 'text-white' : 'text-gray-400'}
+                        />
+                        <span className={`text-lg font-semibold ${
+                          habit.completed_today ? 'text-white' : 'text-gray-700'
+                        }`}>
+                          {habit.completed_today ? 'Выполнено!' : 'Отметить выполнение'}
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div
-                          className="bg-[#748c6d] h-3 rounded-full transition-all"
-                          style={{ width: `${progress}%` }}
-                        />
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className={habit.completed_today ? 'text-white/90' : 'text-gray-600'}>
+                            Прогресс: {progress}%
+                          </span>
+                          <span className={habit.completed_today ? 'text-white/90' : 'text-gray-600'}>
+                            Осталось дней:{' '}
+                            {Math.max(
+                              0,
+                              habit.goal_days -
+                                Math.floor(
+                                  (new Date().getTime() -
+                                    new Date(habit.created_at).getTime()) /
+                                    (1000 * 60 * 60 * 24)
+                                )
+                            )}
+                          </span>
+                        </div>
+                        <div className={`w-full rounded-full h-3 ${
+                          habit.completed_today ? 'bg-white/30' : 'bg-gray-200'
+                        }`}>
+                          <div
+                            className={`h-3 rounded-full transition-all duration-500 ${
+                              habit.completed_today ? 'bg-white' : 'bg-[#748c6d]'
+                            }`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
                       </div>
-                    </div>
+                    </button>
 
                     <div className="flex gap-1 mt-4">
-                      {WEEKDAYS.map((day) => (
-                        <div
-                          key={day.id}
-                          className={`flex-1 text-center py-2 rounded text-xs font-medium ${
-                            habit.days_of_week.includes(day.id)
-                              ? 'bg-[#748c6d] text-white'
-                              : 'bg-gray-200 text-gray-500'
-                          }`}
-                        >
-                          {day.name}
-                        </div>
-                      ))}
+                      {WEEKDAYS.map((day) => {
+                        const isToday = day.id === today;
+                        const isScheduled = habit.days_of_week.includes(day.id);
+                        
+                        return (
+                          <div
+                            key={day.id}
+                            className={`flex-1 text-center py-2 rounded text-xs font-medium transition-all ${
+                              isToday && isScheduled
+                                ? 'bg-[#748c6d] text-white ring-2 ring-[#748c6d] ring-offset-2 scale-110'
+                                : isToday
+                                ? 'bg-gray-400 text-white ring-2 ring-gray-400 ring-offset-2 scale-110'
+                                : isScheduled
+                                ? 'bg-[#748c6d]/70 text-white'
+                                : 'bg-gray-200 text-gray-500'
+                            }`}
+                          >
+                            {day.name}
+                          </div>
+                        );
+                      })}
                     </div>
 
-                    <div className="mt-3 text-sm text-gray-600">
-                      {habit.times_per_day > 1 && (
-                        <span>{habit.times_per_day}× в день</span>
-                      )}
-                    </div>
+                    {habit.times_per_day > 1 && (
+                      <div className="mt-3 text-sm text-gray-600 text-center">
+                        {habit.times_per_day}× в день
+                      </div>
+                    )}
                   </Card>
                 );
-              })
-            )}
+              });
+            })()}
           </TabsContent>
 
           <TabsContent value="week" className="space-y-4">
