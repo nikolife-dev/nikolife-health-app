@@ -38,6 +38,10 @@ interface Habit {
   completed_today: boolean;
   current_streak: number;
   total_completions: number;
+  completions_today: number;
+  day_progress: number;
+  week_progress: number;
+  month_progress: number;
 }
 
 interface HabitTemplate {
@@ -78,6 +82,8 @@ export default function Habits() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [progressView, setProgressView] = useState<'day' | 'week' | 'month'>('day');
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
@@ -240,6 +246,119 @@ export default function Habits() {
     logInfo('Диалог создания привычки открыт');
   };
 
+  const updateHabit = async () => {
+    if (!editingHabit) return;
+    
+    logInfo('Попытка обновления привычки');
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        logError('Нет токена');
+        return;
+      }
+
+      const response = await fetch(
+        `https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de?habit_id=${editingHabit.id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Auth-Token': token,
+          },
+          body: JSON.stringify({
+            title: editingHabit.title,
+            category: editingHabit.category,
+            goal: editingHabit.goal,
+            goal_days: editingHabit.goal_days,
+            days_of_week: editingHabit.days_of_week,
+            times_per_day: editingHabit.times_per_day,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.success) {
+        logSuccess('Привычка обновлена');
+        toast({ title: 'Успех', description: 'Привычка обновлена' });
+        setIsEditDialogOpen(false);
+        setEditingHabit(null);
+        loadHabits();
+      } else {
+        logError(data.error || 'Не удалось обновить');
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось обновить привычку',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      logError(`Исключение: ${error}`);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось обновить привычку',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const deleteHabit = async (habitId: number) => {
+    logInfo(`Удаление привычки #${habitId}`);
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        logError('Нет токена');
+        return;
+      }
+
+      const response = await fetch(
+        `https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de?habit_id=${habitId}`,
+        {
+          method: 'DELETE',
+          headers: { 'X-Auth-Token': token },
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.success) {
+        logSuccess('Привычка удалена');
+        toast({ title: 'Успех', description: 'Привычка удалена' });
+        loadHabits();
+      } else {
+        logError(data.error || 'Не удалось удалить');
+      }
+    } catch (error) {
+      logError(`Ошибка удаления: ${error}`);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось удалить привычку',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const openEditDialog = (habit: Habit) => {
+    setEditingHabit(habit);
+    setIsEditDialogOpen(true);
+  };
+
+  const toggleEditDayOfWeek = (day: number) => {
+    if (!editingHabit) return;
+    
+    if (editingHabit.days_of_week.includes(day)) {
+      setEditingHabit({
+        ...editingHabit,
+        days_of_week: editingHabit.days_of_week.filter((d) => d !== day),
+      });
+    } else {
+      setEditingHabit({
+        ...editingHabit,
+        days_of_week: [...editingHabit.days_of_week, day].sort(),
+      });
+    }
+  };
+
   const toggleCompletion = async (habitId: number) => {
     logInfo(`Переключение выполнения привычки #${habitId}`);
     try {
@@ -263,7 +382,7 @@ export default function Habits() {
       logInfo(`Результат: ${JSON.stringify(data)}`);
       
       if (data.success) {
-        logSuccess(`Статус обновлен: completed=${data.completed}`);
+        logSuccess(`Выполнений сегодня: ${data.completions_today}`);
         loadHabits();
       } else {
         logError('Не удалось обновить статус');
@@ -436,13 +555,13 @@ export default function Habits() {
                     <Label>Количество дней для достижения</Label>
                     <Input
                       type="number"
-                      min={1}
+                      min={30}
                       max={360}
                       value={newHabit.goal_days}
                       onChange={(e) =>
                         setNewHabit({
                           ...newHabit,
-                          goal_days: parseInt(e.target.value) || 30,
+                          goal_days: Math.max(30, parseInt(e.target.value) || 30),
                         })
                       }
                     />
@@ -487,6 +606,117 @@ export default function Habits() {
                     Создать привычку
                   </Button>
                 </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Редактировать привычку</DialogTitle>
+                </DialogHeader>
+                {editingHabit && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Название</Label>
+                      <Input
+                        value={editingHabit.title}
+                        onChange={(e) =>
+                          setEditingHabit({ ...editingHabit, title: e.target.value })
+                        }
+                        placeholder="Название привычки"
+                        maxLength={30}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Категория</Label>
+                      <Select
+                        value={editingHabit.category}
+                        onValueChange={(val) =>
+                          setEditingHabit({ ...editingHabit, category: val })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите категорию" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CATEGORIES.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Цель</Label>
+                      <Input
+                        value={editingHabit.goal}
+                        onChange={(e) =>
+                          setEditingHabit({ ...editingHabit, goal: e.target.value })
+                        }
+                        placeholder="Делать зарядку каждый день"
+                        maxLength={40}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Количество дней для достижения</Label>
+                      <Input
+                        type="number"
+                        min={30}
+                        max={360}
+                        value={editingHabit.goal_days}
+                        onChange={(e) =>
+                          setEditingHabit({
+                            ...editingHabit,
+                            goal_days: Math.max(30, parseInt(e.target.value) || 30),
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Дни недели</Label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {WEEKDAYS.map((day) => (
+                          <Badge
+                            key={day.id}
+                            className={`cursor-pointer min-h-[36px] px-4 ${
+                              editingHabit.days_of_week.includes(day.id)
+                                ? 'bg-[#748c6d]'
+                                : 'bg-gray-300'
+                            }`}
+                            onClick={() => toggleEditDayOfWeek(day.id)}
+                          >
+                            {day.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Сколько раз в день</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={editingHabit.times_per_day}
+                        onChange={(e) =>
+                          setEditingHabit({
+                            ...editingHabit,
+                            times_per_day: parseInt(e.target.value) || 1,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <Button onClick={updateHabit} className="w-full min-h-[44px]">
+                      Сохранить изменения
+                    </Button>
+                  </div>
+                )}
               </DialogContent>
             </Dialog>
           </div>
@@ -571,57 +801,86 @@ export default function Habits() {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => toggleCompletion(habit.id)}
-                      className={`w-full p-6 rounded-2xl border-2 transition-all active:scale-95 ${
-                        habit.completed_today
-                          ? 'bg-[#748c6d] border-[#748c6d] shadow-lg'
-                          : 'bg-white border-gray-300 hover:border-[#748c6d] hover:shadow-md'
-                      }`}
-                    >
-                      <div className="flex items-center justify-center gap-3 mb-3">
-                        <Icon
-                          name={habit.completed_today ? 'CheckCircle2' : 'Circle'}
-                          size={32}
-                          className={habit.completed_today ? 'text-white' : 'text-gray-400'}
-                        />
-                        <span className={`text-lg font-semibold ${
-                          habit.completed_today ? 'text-white' : 'text-gray-700'
-                        }`}>
-                          {habit.completed_today ? 'Выполнено!' : 'Отметить выполнение'}
-                        </span>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className={habit.completed_today ? 'text-white/90' : 'text-gray-600'}>
-                            Прогресс: {progress}%
-                          </span>
-                          <span className={habit.completed_today ? 'text-white/90' : 'text-gray-600'}>
-                            Осталось дней:{' '}
-                            {Math.max(
-                              0,
-                              habit.goal_days -
-                                Math.floor(
-                                  (new Date().getTime() -
-                                    new Date(habit.created_at).getTime()) /
-                                    (1000 * 60 * 60 * 24)
-                                )
-                            )}
-                          </span>
-                        </div>
-                        <div className={`w-full rounded-full h-3 ${
-                          habit.completed_today ? 'bg-white/30' : 'bg-gray-200'
-                        }`}>
-                          <div
-                            className={`h-3 rounded-full transition-all duration-500 ${
-                              habit.completed_today ? 'bg-white' : 'bg-[#748c6d]'
-                            }`}
-                            style={{ width: `${progress}%` }}
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => toggleCompletion(habit.id)}
+                        className={`w-full p-6 rounded-2xl border-2 transition-all active:scale-95 ${
+                          habit.completions_today >= habit.times_per_day
+                            ? 'bg-[#748c6d] border-[#748c6d] shadow-lg'
+                            : 'bg-white border-gray-300 hover:border-[#748c6d] hover:shadow-md'
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-3 mb-3">
+                          <Icon
+                            name={habit.completions_today >= habit.times_per_day ? 'CheckCircle2' : 'Circle'}
+                            size={32}
+                            className={habit.completions_today >= habit.times_per_day ? 'text-white' : 'text-gray-400'}
                           />
+                          <span className={`text-lg font-semibold ${
+                            habit.completions_today >= habit.times_per_day ? 'text-white' : 'text-gray-700'
+                          }`}>
+                            {habit.completions_today >= habit.times_per_day ? 'Цель достигнута!' : `Отметить (${habit.completions_today}/${habit.times_per_day})`}
+                          </span>
                         </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className={habit.completions_today >= habit.times_per_day ? 'text-white/90' : 'text-gray-600'}>
+                              Прогресс за {progressView === 'day' ? 'день' : progressView === 'week' ? 'неделю' : 'месяц'}: {Math.round(progressView === 'day' ? habit.day_progress : progressView === 'week' ? habit.week_progress : habit.month_progress)}%
+                            </span>
+                            <span className={habit.completions_today >= habit.times_per_day ? 'text-white/90' : 'text-gray-600'}>
+                              Осталось дней:{' '}
+                              {Math.max(
+                                0,
+                                habit.goal_days -
+                                  Math.floor(
+                                    (new Date().getTime() -
+                                      new Date(habit.created_at).getTime()) /
+                                      (1000 * 60 * 60 * 24)
+                                  )
+                              )}
+                            </span>
+                          </div>
+                          <div className={`w-full rounded-full h-3 ${
+                            habit.completions_today >= habit.times_per_day ? 'bg-white/30' : 'bg-gray-200'
+                          }`}>
+                            <div
+                              className={`h-3 rounded-full transition-all duration-500 ${
+                                habit.completions_today >= habit.times_per_day ? 'bg-white' : 'bg-[#748c6d]'
+                              }`}
+                              style={{ width: `${progressView === 'day' ? habit.day_progress : progressView === 'week' ? habit.week_progress : habit.month_progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      </button>
+                      
+                      <div className="flex gap-2 justify-center">
+                        <Button
+                          size="sm"
+                          variant={progressView === 'day' ? 'default' : 'outline'}
+                          onClick={() => setProgressView('day')}
+                          className="min-h-[36px]"
+                        >
+                          День
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={progressView === 'week' ? 'default' : 'outline'}
+                          onClick={() => setProgressView('week')}
+                          className="min-h-[36px]"
+                        >
+                          Неделя
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={progressView === 'month' ? 'default' : 'outline'}
+                          onClick={() => setProgressView('month')}
+                          className="min-h-[36px]"
+                        >
+                          Месяц
+                        </Button>
                       </div>
-                    </button>
+                    </div>
 
                     <div className="flex gap-1 mt-4">
                       {WEEKDAYS.map((day) => {
@@ -645,6 +904,30 @@ export default function Habits() {
                           </div>
                         );
                       })}
+                    </div>
+
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditDialog(habit)}
+                        className="flex-1 min-h-[40px]"
+                      >
+                        <Icon name="Edit" size={16} className="mr-2" />
+                        Редактировать
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (confirm('Удалить привычку?')) {
+                            deleteHabit(habit.id);
+                          }
+                        }}
+                        className="min-h-[40px]"
+                      >
+                        <Icon name="Trash2" size={16} />
+                      </Button>
                     </div>
 
                     {habit.times_per_day > 1 && (

@@ -15,7 +15,7 @@ def handler(event: dict, context) -> dict:
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token'
+                'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token, X-User-Id'
             },
             'body': '',
             'isBase64Encoded': False
@@ -80,6 +80,40 @@ def handler(event: dict, context) -> dict:
                 completion_dates = [str(r[0]) for r in cur.fetchall()]
                 current_streak = calculate_streak(completion_dates)
                 
+                cur.execute("""
+                    SELECT COUNT(*) 
+                    FROM t_p76837068_nikolife_health_app.habit_completions 
+                    WHERE habit_id = %s AND DATE(completed_at) = CURRENT_DATE
+                """, (row[0],))
+                completions_today = cur.fetchone()[0]
+                
+                cur.execute("""
+                    SELECT DATE(completed_at), COUNT(*) 
+                    FROM t_p76837068_nikolife_health_app.habit_completions 
+                    WHERE habit_id = %s AND completed_at >= CURRENT_DATE - INTERVAL '7 days'
+                    GROUP BY DATE(completed_at)
+                """, (row[0],))
+                week_completions = cur.fetchall()
+                
+                cur.execute("""
+                    SELECT DATE(completed_at), COUNT(*) 
+                    FROM t_p76837068_nikolife_health_app.habit_completions 
+                    WHERE habit_id = %s AND completed_at >= CURRENT_DATE - INTERVAL '30 days'
+                    GROUP BY DATE(completed_at)
+                """, (row[0],))
+                month_completions = cur.fetchall()
+                
+                times_per_day = row[6]
+                selected_days_count = len(days_of_week)
+                
+                week_progress = calculate_week_progress(
+                    week_completions, days_of_week, times_per_day
+                )
+                
+                month_progress = calculate_month_progress(
+                    month_completions, days_of_week, times_per_day
+                )
+                
                 habits.append({
                     'id': row[0],
                     'title': row[1],
@@ -87,11 +121,15 @@ def handler(event: dict, context) -> dict:
                     'goal': row[3],
                     'goal_days': row[4],
                     'days_of_week': days_of_week,
-                    'times_per_day': row[6],
+                    'times_per_day': times_per_day,
                     'created_at': row[7].isoformat() if row[7] else None,
                     'completed_today': row[8] > 0,
                     'current_streak': current_streak,
-                    'total_completions': row[9]
+                    'total_completions': row[9],
+                    'completions_today': completions_today,
+                    'day_progress': min(100, (completions_today / times_per_day) * 100) if times_per_day > 0 else 0,
+                    'week_progress': week_progress,
+                    'month_progress': month_progress
                 })
             
             return {
@@ -118,27 +156,26 @@ def handler(event: dict, context) -> dict:
                 }
             
             cur.execute("""
+                INSERT INTO t_p76837068_nikolife_health_app.habit_completions (habit_id) 
+                VALUES (%s)
+            """, (habit_id,))
+            
+            cur.execute("""
                 SELECT COUNT(*) FROM t_p76837068_nikolife_health_app.habit_completions 
                 WHERE habit_id = %s AND DATE(completed_at) = CURRENT_DATE
             """, (habit_id,))
             
-            count = cur.fetchone()[0]
-            
-            if count > 0:
-                completed = False
-            else:
-                cur.execute("""
-                    INSERT INTO t_p76837068_nikolife_health_app.habit_completions (habit_id) 
-                    VALUES (%s)
-                """, (habit_id,))
-                completed = True
+            completions_today = cur.fetchone()[0]
             
             conn.commit()
             
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'success': True, 'completed': completed}),
+                'body': json.dumps({
+                    'success': True, 
+                    'completions_today': completions_today
+                }),
                 'isBase64Encoded': False
             }
         
@@ -147,7 +184,7 @@ def handler(event: dict, context) -> dict:
             title = body.get('title')
             category = body.get('category')
             goal = body.get('goal')
-            goal_days = body.get('goal_days', 30)
+            goal_days = max(body.get('goal_days', 30), 30)
             days_of_week = body.get('days_of_week', [])
             times_per_day = body.get('times_per_day', 1)
             
@@ -178,6 +215,87 @@ def handler(event: dict, context) -> dict:
                 'isBase64Encoded': False
             }
         
+        elif method == 'PUT':
+            habit_id = habit_id_param
+            if not habit_id:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'habit_id required'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur.execute("""
+                SELECT id FROM t_p76837068_nikolife_health_app.habits 
+                WHERE id = %s AND user_id = %s
+            """, (habit_id, user_id))
+            
+            if not cur.fetchone():
+                return {
+                    'statusCode': 404,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Habit not found'}),
+                    'isBase64Encoded': False
+                }
+            
+            body = json.loads(event.get('body', '{}'))
+            title = body.get('title')
+            category = body.get('category')
+            goal = body.get('goal')
+            goal_days = max(body.get('goal_days', 30), 30)
+            days_of_week = body.get('days_of_week', [])
+            times_per_day = body.get('times_per_day', 1)
+            
+            if not title or not category or not goal or not days_of_week:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Missing required fields'}),
+                    'isBase64Encoded': False
+                }
+            
+            days_of_week_json = json.dumps(days_of_week)
+            
+            cur.execute("""
+                UPDATE t_p76837068_nikolife_health_app.habits 
+                SET title = %s, category = %s, goal = %s, goal_days = %s, 
+                    days_of_week = %s, times_per_day = %s
+                WHERE id = %s AND user_id = %s
+            """, (title, category, goal, goal_days, days_of_week_json, times_per_day, habit_id, user_id))
+            
+            conn.commit()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'success': True}),
+                'isBase64Encoded': False
+            }
+        
+        elif method == 'DELETE':
+            habit_id = habit_id_param
+            if not habit_id:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'habit_id required'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur.execute("""
+                DELETE FROM t_p76837068_nikolife_health_app.habits 
+                WHERE id = %s AND user_id = %s
+            """, (habit_id, user_id))
+            
+            conn.commit()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'success': True}),
+                'isBase64Encoded': False
+            }
+        
         else:
             return {
                 'statusCode': 405,
@@ -198,6 +316,55 @@ def handler(event: dict, context) -> dict:
     finally:
         cur.close()
         conn.close()
+
+
+def calculate_week_progress(week_completions, days_of_week, times_per_day):
+    '''Рассчитывает процент выполнения за неделю'''
+    selected_days = len(days_of_week)
+    total_required = selected_days * times_per_day
+    
+    if total_required == 0:
+        return 0
+    
+    total_completed = 0
+    for date_obj, count in week_completions:
+        weekday = date_obj.weekday()
+        weekday_map = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 0}
+        if weekday_map[weekday] in days_of_week:
+            total_completed += min(count, times_per_day)
+    
+    return min(100, (total_completed / total_required) * 100)
+
+
+def calculate_month_progress(month_completions, days_of_week, times_per_day):
+    '''Рассчитывает процент выполнения за месяц'''
+    from datetime import datetime, timedelta
+    
+    today = datetime.now().date()
+    month_start = today - timedelta(days=30)
+    
+    days_in_period = 0
+    current = month_start
+    while current <= today:
+        weekday = current.weekday()
+        weekday_map = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 0}
+        if weekday_map[weekday] in days_of_week:
+            days_in_period += 1
+        current += timedelta(days=1)
+    
+    total_required = days_in_period * times_per_day
+    
+    if total_required == 0:
+        return 0
+    
+    total_completed = 0
+    for date_obj, count in month_completions:
+        weekday = date_obj.weekday()
+        weekday_map = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 0}
+        if weekday_map[weekday] in days_of_week:
+            total_completed += min(count, times_per_day)
+    
+    return min(100, (total_completed / total_required) * 100)
 
 
 def calculate_streak(completion_dates):
