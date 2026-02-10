@@ -215,12 +215,16 @@ def handler(event: dict, context) -> dict:
             # Группируем рецепты по категориям с данными о калориях
             recipes_by_category = {}
             for recipe_id, category, calories in all_recipes:
-                if category not in recipes_by_category:
-                    recipes_by_category[category] = []
-                recipes_by_category[category].append({
-                    'id': recipe_id,
-                    'calories': calories or 300  # если нет данных, ставим среднее
-                })
+                # category может быть массивом, обрабатываем каждую категорию
+                categories = category if isinstance(category, list) else [category] if category else []
+                for cat in categories:
+                    cat_lower = cat.lower() if cat else ''
+                    if cat_lower not in recipes_by_category:
+                        recipes_by_category[cat_lower] = []
+                    recipes_by_category[cat_lower].append({
+                        'id': recipe_id,
+                        'calories': calories or 300  # если нет данных, ставим среднее
+                    })
             
             # Удаляем старое меню на эту неделю
             cur.execute(f"DELETE FROM {schema}.weekly_menus WHERE user_id = %s AND week_start_date = %s", 
