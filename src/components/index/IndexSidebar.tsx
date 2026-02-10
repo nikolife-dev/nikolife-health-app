@@ -64,30 +64,12 @@ export default function IndexSidebar({ activeSection, setActiveSection }: IndexS
         </Button>
 
         <Button
-          variant={activeSection === 'community' ? 'default' : 'ghost'}
-          className="w-full justify-start min-h-[44px]"
-          onClick={() => setActiveSection('community')}
-        >
-          <Icon name="Users" className="mr-3" size={20} />
-          <span>Сообщество</span>
-        </Button>
-
-        <Button
           variant="ghost"
           className="w-full justify-start min-h-[44px]"
           onClick={() => navigate('/habits')}
         >
           <Icon name="CheckCircle2" className="mr-3" size={20} />
           <span>Привычки</span>
-        </Button>
-
-        <Button
-          variant={activeSection === 'progress' ? 'default' : 'ghost'}
-          className="w-full justify-start min-h-[44px]"
-          onClick={() => setActiveSection('progress')}
-        >
-          <Icon name="TrendingUp" className="mr-3" size={20} />
-          <span>Прогресс</span>
         </Button>
       </nav>
 

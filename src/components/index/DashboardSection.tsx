@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +65,7 @@ export default function DashboardSection({
   isLoadingHabits = false
 }: DashboardSectionProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   return (
     <div className="space-y-6">
@@ -82,7 +84,6 @@ export default function DashboardSection({
           </div>
           <p className="text-sm text-gray-600 mb-1">Сожжено калорий</p>
           <p className="text-3xl font-bold text-gray-900">1,240</p>
-          <p className="text-sm text-emerald-600 mt-2">↑ 12% от вчера</p>
         </Card>
 
         <Card className="p-6">
@@ -94,7 +95,6 @@ export default function DashboardSection({
           </div>
           <p className="text-sm text-gray-600 mb-1">Тренировок</p>
           <p className="text-3xl font-bold text-gray-900">5</p>
-          <p className="text-sm text-blue-600 mt-2">Цель: 6/неделя</p>
         </Card>
 
         <Card className="p-6">
@@ -106,7 +106,6 @@ export default function DashboardSection({
           </div>
           <p className="text-sm text-gray-600 mb-1">До цели</p>
           <p className="text-3xl font-bold text-gray-900">-3.2 кг</p>
-          <p className="text-sm text-purple-600 mt-2">Осталось 1.8 кг</p>
         </Card>
 
         <Card className="p-6">
@@ -118,7 +117,6 @@ export default function DashboardSection({
           </div>
           <p className="text-sm text-gray-600 mb-1">Сон</p>
           <p className="text-3xl font-bold text-gray-900">7.5 ч</p>
-          <p className="text-sm text-orange-600 mt-2">Хорошо</p>
         </Card>
       </div>
 
@@ -126,7 +124,7 @@ export default function DashboardSection({
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Привычки</h3>
-            <Button variant="ghost" size="sm" onClick={() => onSectionChange('habits')}>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/habits')}>
               Мой прогресс
               <Icon name="ArrowRight" size={16} className="ml-1" />
             </Button>
