@@ -1,10 +1,10 @@
-import { useNavigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import Icon from "@/components/ui/icon";
-import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from 'react-router-dom';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import Icon from '@/components/ui/icon';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Habit {
   id: number;
@@ -55,38 +55,76 @@ interface DashboardSectionProps {
   isLoadingHabits?: boolean;
 }
 
-export default function DashboardSection({
-  habits,
-  articles,
-  workouts,
+export default function DashboardSection({ 
+  habits, 
+  articles, 
+  workouts, 
   meals,
   onSectionChange,
   onToggleHabit,
-  isLoadingHabits = false,
+  isLoadingHabits = false
 }: DashboardSectionProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
-
+  
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-          {user?.name}, Добро пожаловать в Nikolife!
-        </h2>
-        <p className="text-sm sm:text-base text-gray-600">
-          Ваш персональный помощник для здорового образа жизни
-        </p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{user?.name}, Добро пожаловать в Nikolife!</h2>
+        <p className="text-sm sm:text-base text-gray-600">Ваш персональный помощник для здорового образа жизни</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-emerald-100 rounded-lg">
+              <Icon name="Flame" size={24} className="text-emerald-600" />
+            </div>
+            <Badge>Сегодня</Badge>
+          </div>
+          <p className="text-sm text-gray-600 mb-1">Сожжено калорий</p>
+          <p className="text-3xl font-bold text-gray-900">1,240</p>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Icon name="Activity" size={24} className="text-blue-600" />
+            </div>
+            <Badge>7 дней</Badge>
+          </div>
+          <p className="text-sm text-gray-600 mb-1">Тренировок</p>
+          <p className="text-3xl font-bold text-gray-900">5</p>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-purple-100 rounded-lg">
+              <Icon name="Target" size={24} className="text-purple-600" />
+            </div>
+            <Badge>Прогресс</Badge>
+          </div>
+          <p className="text-sm text-gray-600 mb-1">До цели</p>
+          <p className="text-3xl font-bold text-gray-900">-3.2 кг</p>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-orange-100 rounded-lg">
+              <Icon name="Moon" size={24} className="text-orange-600" />
+            </div>
+            <Badge>Вчера</Badge>
+          </div>
+          <p className="text-sm text-gray-600 mb-1">Сон</p>
+          <p className="text-3xl font-bold text-gray-900">7.5 ч</p>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Привычки</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/habits")}
-            >
+            <Button variant="ghost" size="sm" onClick={() => navigate('/habits')}>
               Мой прогресс
               <Icon name="ArrowRight" size={16} className="ml-1" />
             </Button>
@@ -94,22 +132,12 @@ export default function DashboardSection({
 
           {isLoadingHabits ? (
             <div className="flex justify-center py-8">
-              <Icon
-                name="Loader2"
-                size={32}
-                className="animate-spin text-gray-400"
-              />
+              <Icon name="Loader2" size={32} className="animate-spin text-gray-400" />
             </div>
           ) : habits.length === 0 ? (
             <div className="text-center py-8">
-              <Icon
-                name="CheckCircle2"
-                size={48}
-                className="mx-auto text-green-500 mb-3"
-              />
-              <p className="text-gray-700 font-medium">
-                Все привычки на сегодня выполнены! 🎉
-              </p>
+              <Icon name="CheckCircle2" size={48} className="mx-auto text-green-500 mb-3" />
+              <p className="text-gray-700 font-medium">Все привычки на сегодня выполнены! 🎉</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -117,23 +145,15 @@ export default function DashboardSection({
                 <div key={habit.id} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1">
-                      <span className="font-medium text-gray-900">
-                        {habit.title}
-                      </span>
+                      <span className="font-medium text-gray-900">{habit.title}</span>
                       <Badge variant="outline" className="text-xs">
                         {habit.completions_today}/{habit.times_per_day}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1">
-                        <Icon
-                          name="Flame"
-                          size={16}
-                          className="text-orange-500"
-                        />
-                        <span className="text-sm font-semibold text-gray-700">
-                          {habit.current_streak}
-                        </span>
+                        <Icon name="Flame" size={16} className="text-orange-500" />
+                        <span className="text-sm font-semibold text-gray-700">{habit.current_streak}</span>
                       </div>
                       <Button
                         size="sm"
@@ -155,39 +175,26 @@ export default function DashboardSection({
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Рекомендации</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onSectionChange("library")}
-            >
+            <Button variant="ghost" size="sm" onClick={() => onSectionChange('library')}>
               Все статьи
             </Button>
           </div>
 
           <div className="space-y-3">
             {articles.map((article, index) => (
-              <Card
-                key={index}
-                className="p-4 hover:shadow-md transition-shadow cursor-pointer"
-              >
+              <Card key={index} className="p-4 hover:shadow-md transition-shadow cursor-pointer">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <Badge variant="secondary" className="mb-2 text-xs">
                       {article.category}
                     </Badge>
-                    <h4 className="font-semibold text-gray-900 mb-1">
-                      {article.title}
-                    </h4>
+                    <h4 className="font-semibold text-gray-900 mb-1">{article.title}</h4>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Icon name="Clock" size={14} />
                       {article.readTime}
                     </div>
                   </div>
-                  <Icon
-                    name="ChevronRight"
-                    size={20}
-                    className="text-gray-400 flex-shrink-0 ml-2"
-                  />
+                  <Icon name="ChevronRight" size={20} className="text-gray-400 flex-shrink-0 ml-2" />
                 </div>
               </Card>
             ))}
@@ -198,44 +205,27 @@ export default function DashboardSection({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900">
-              Популярные тренировки
-            </h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onSectionChange("workouts")}
-            >
+            <h3 className="text-xl font-bold text-gray-900">Популярные тренировки</h3>
+            <Button variant="ghost" size="sm" onClick={() => onSectionChange('workouts')}>
               Все тренировки
             </Button>
           </div>
 
           <div className="space-y-3">
             {workouts.map((workout) => (
-              <Card
-                key={workout.id}
-                className="p-4 hover:shadow-md transition-shadow cursor-pointer"
-              >
+              <Card key={workout.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Icon
-                      name="Dumbbell"
-                      size={24}
-                      className="text-emerald-600"
-                    />
+                    <Icon name="Dumbbell" size={24} className="text-emerald-600" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900 mb-1">
-                      {workout.title}
-                    </h4>
+                    <h4 className="font-semibold text-gray-900 mb-1">{workout.title}</h4>
                     <div className="flex items-center gap-3 text-sm text-gray-600">
                       <div className="flex items-center gap-1">
                         <Icon name="Clock" size={14} />
                         {workout.duration}
                       </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {workout.level}
-                      </Badge>
+                      <Badge variant="secondary" className="text-xs">{workout.level}</Badge>
                     </div>
                   </div>
                 </div>
@@ -246,44 +236,25 @@ export default function DashboardSection({
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900">
-              План питания на сегодня
-            </h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onSectionChange("nutrition")}
-            >
+            <h3 className="text-xl font-bold text-gray-900">План питания на сегодня</h3>
+            <Button variant="ghost" size="sm" onClick={() => onSectionChange('nutrition')}>
               Все рецепты
             </Button>
           </div>
 
           <div className="space-y-3">
             {meals.map((meal) => (
-              <Card
-                key={meal.id}
-                className="p-4 hover:shadow-md transition-shadow cursor-pointer"
-              >
+              <Card key={meal.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Icon
-                      name="Utensils"
-                      size={24}
-                      className="text-orange-600"
-                    />
+                    <Icon name="Utensils" size={24} className="text-orange-600" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {meal.time}
-                      </Badge>
+                      <Badge variant="secondary" className="text-xs">{meal.time}</Badge>
                     </div>
-                    <h4 className="font-semibold text-gray-900 mb-1">
-                      {meal.name}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {meal.calories} ккал
-                    </p>
+                    <h4 className="font-semibold text-gray-900 mb-1">{meal.name}</h4>
+                    <p className="text-sm text-gray-600">{meal.calories} ккал</p>
                   </div>
                 </div>
               </Card>

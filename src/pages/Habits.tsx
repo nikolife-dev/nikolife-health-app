@@ -438,61 +438,27 @@ export default function Habits() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5]">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between">
           <Button
             variant="ghost"
             onClick={() => navigate('/')}
-            className="gap-2 min-h-[44px] flex-shrink-0"
+            className="gap-2 min-h-[44px]"
           >
             <Icon name="ArrowLeft" size={20} />
             <span className="hidden sm:inline">Назад</span>
           </Button>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 flex-1 text-center">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
             Привычки
           </h1>
-          
-          <div className="md:hidden flex-shrink-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="min-h-[44px] min-w-[44px]">
-                  <Icon name="Menu" size={20} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setIsTemplateDialogOpen(true)}>
-                  <Icon name="BookOpen" size={16} className="mr-2" />
+          <div className="flex gap-2">
+            <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="min-h-[44px]">
+                  <Icon name="BookOpen" size={20} className="mr-2" />
                   Шаблоны
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsMyHabitsDialogOpen(true)}>
-                  <Icon name="List" size={16} className="mr-2" />
-                  Мои привычки
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsCreateDialogOpen(true)}>
-                  <Icon name="Plus" size={16} className="mr-2" />
-                  Создать
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          <div className="hidden md:flex gap-2">
-            <Button variant="outline" className="min-h-[44px]" onClick={() => setIsTemplateDialogOpen(true)}>
-              <Icon name="BookOpen" size={20} className="mr-2" />
-              Шаблоны
-            </Button>
-            <Button variant="outline" className="min-h-[44px]" onClick={() => setIsMyHabitsDialogOpen(true)}>
-              <Icon name="List" size={16} className="mr-2" />
-              Мои привычки
-            </Button>
-            <Button className="min-h-[44px]" onClick={() => setIsCreateDialogOpen(true)}>
-              <Icon name="Plus" size={20} className="mr-2" />
-              Создать
-            </Button>
-          </div>
-        </div>
-
-        <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Выберите привычку из списка</DialogTitle>
                 </DialogHeader>
@@ -526,11 +492,18 @@ export default function Habits() {
                     );
                   })}
                 </div>
-          </DialogContent>
-        </Dialog>
+              </DialogContent>
+            </Dialog>
 
-        <Dialog open={isMyHabitsDialogOpen} onOpenChange={setIsMyHabitsDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex gap-2">
+              <Dialog open={isMyHabitsDialogOpen} onOpenChange={setIsMyHabitsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="min-h-[44px]">
+                    <Icon name="List" size={20} className="mr-2" />
+                    Мои привычки
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Мои привычки</DialogTitle>
                   </DialogHeader>
@@ -717,10 +690,11 @@ export default function Habits() {
                     Создать привычку
                   </Button>
                 </div>
-          </DialogContent>
-        </Dialog>
+              </DialogContent>
+            </Dialog>
+            </div>
 
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
               <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Редактировать привычку</DialogTitle>
@@ -829,7 +803,9 @@ export default function Habits() {
                   </div>
                 )}
               </DialogContent>
-        </Dialog>
+            </Dialog>
+          </div>
+        </div>
 
         <Card className="p-4">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
