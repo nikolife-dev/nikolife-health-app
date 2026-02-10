@@ -101,7 +101,7 @@ export default function Habits() {
       if (!token) return;
 
       const response = await fetch(
-        'https://functions.poehali.dev/YOUR_HABITS_FUNCTION_URL',
+        'https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de',
         { headers: { 'X-Auth-Token': token } }
       );
 
@@ -119,7 +119,7 @@ export default function Habits() {
   const loadTemplates = async () => {
     try {
       const response = await fetch(
-        'https://functions.poehali.dev/YOUR_TEMPLATES_FUNCTION_URL'
+        'https://functions.poehali.dev/d15446be-71b4-42e4-8976-d49d651ef653'
       );
 
       const data = await response.json();
@@ -146,7 +146,7 @@ export default function Habits() {
       if (!token) return;
 
       const response = await fetch(
-        'https://functions.poehali.dev/YOUR_HABITS_FUNCTION_URL',
+        'https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de',
         {
           method: 'POST',
           headers: {
@@ -199,7 +199,7 @@ export default function Habits() {
       if (!token) return;
 
       const response = await fetch(
-        `https://functions.poehali.dev/YOUR_HABITS_FUNCTION_URL/${habitId}/complete`,
+        `https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de/${habitId}/complete`,
         {
           method: 'POST',
           headers: { 'X-Auth-Token': token },
