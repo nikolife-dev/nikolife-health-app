@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 
 interface Habit {
   id: number;
@@ -71,6 +72,7 @@ export default function Habits() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { logs, clearLogs, logInfo, logSuccess, logError } = useLiveLogs();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [templates, setTemplates] = useState<HabitTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,26 +92,40 @@ export default function Habits() {
   });
 
   useEffect(() => {
+    logInfo('Загрузка страницы привычек');
     loadHabits();
     loadTemplates();
   }, []);
 
   const loadHabits = async () => {
     setIsLoading(true);
+    logInfo('Начало загрузки привычек');
     try {
       const token = localStorage.getItem('auth_token');
-      if (!token) return;
+      if (!token) {
+        logError('Токен авторизации не найден');
+        return;
+      }
+      logInfo(`Токен найден: ${token.substring(0, 10)}...`);
 
+      logInfo('Отправка запроса на загрузку привычек');
       const response = await fetch(
         'https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de',
         { headers: { 'X-Auth-Token': token } }
       );
 
+      logInfo(`Статус ответа: ${response.status}`);
       const data = await response.json();
+      logInfo(`Получены данные: ${JSON.stringify(data).substring(0, 100)}`);
+      
       if (data.habits) {
+        logSuccess(`Загружено ${data.habits.length} привычек`);
         setHabits(data.habits);
+      } else {
+        logError('Нет привычек в ответе');
       }
     } catch (error) {
+      logError(`Ошибка загрузки привычек: ${error}`);
       console.error('Failed to load habits:', error);
     } finally {
       setIsLoading(false);
@@ -117,22 +133,34 @@ export default function Habits() {
   };
 
   const loadTemplates = async () => {
+    logInfo('Начало загрузки шаблонов');
     try {
       const response = await fetch(
         'https://functions.poehali.dev/d15446be-71b4-42e4-8976-d49d651ef653'
       );
 
+      logInfo(`Статус загрузки шаблонов: ${response.status}`);
       const data = await response.json();
+      
       if (data.templates) {
+        logSuccess(`Загружено ${data.templates.length} шаблонов`);
         setTemplates(data.templates);
+      } else {
+        logError('Нет шаблонов в ответе');
       }
     } catch (error) {
+      logError(`Ошибка загрузки шаблонов: ${error}`);
       console.error('Failed to load templates:', error);
     }
   };
 
   const createHabit = async () => {
+    logInfo('Попытка создания привычки');
+    logInfo(`Данные привычки: ${JSON.stringify(newHabit)}`);
+    
     if (!newHabit.title || !newHabit.category || !newHabit.goal || newHabit.days_of_week.length === 0) {
+      logError('Не все обязательные поля заполнены');
+      logError(`title: ${newHabit.title}, category: ${newHabit.category}, goal: ${newHabit.goal}, days: ${newHabit.days_of_week.length}`);
       toast({
         title: 'Ошибка',
         description: 'Заполните все обязательные поля',
@@ -143,8 +171,13 @@ export default function Habits() {
 
     try {
       const token = localStorage.getItem('auth_token');
-      if (!token) return;
+      if (!token) {
+        logError('Нет токена авторизации');
+        return;
+      }
+      logInfo(`Токен для создания: ${token.substring(0, 10)}...`);
 
+      logInfo('Отправка POST запроса на создание привычки');
       const response = await fetch(
         'https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de',
         {
@@ -157,8 +190,12 @@ export default function Habits() {
         }
       );
 
+      logInfo(`Статус ответа создания: ${response.status}`);
       const data = await response.json();
+      logInfo(`Ответ сервера: ${JSON.stringify(data)}`);
+      
       if (data.success) {
+        logSuccess(`Привычка успешно создана! ID: ${data.id}`);
         toast({
           title: 'Успешно!',
           description: 'Привычка создана',
@@ -173,8 +210,16 @@ export default function Habits() {
           times_per_day: 1,
         });
         loadHabits();
+      } else {
+        logError(`Ошибка создания: ${data.error || 'Неизвестная ошибка'}`);
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось создать привычку',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
+      logError(`Исключение при создании привычки: ${error}`);
       toast({
         title: 'Ошибка',
         description: 'Не удалось создать привычку',
@@ -184,6 +229,7 @@ export default function Habits() {
   };
 
   const createFromTemplate = async (template: HabitTemplate) => {
+    logInfo(`Выбран шаблон: ${template.title} (${template.category})`);
     setNewHabit({
       ...newHabit,
       title: template.title,
@@ -191,13 +237,19 @@ export default function Habits() {
     });
     setIsTemplateDialogOpen(false);
     setIsCreateDialogOpen(true);
+    logInfo('Диалог создания привычки открыт');
   };
 
   const toggleCompletion = async (habitId: number) => {
+    logInfo(`Переключение выполнения привычки #${habitId}`);
     try {
       const token = localStorage.getItem('auth_token');
-      if (!token) return;
+      if (!token) {
+        logError('Нет токена для отметки выполнения');
+        return;
+      }
 
+      logInfo('Отправка запроса на отметку выполнения');
       const response = await fetch(
         `https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de/${habitId}/complete`,
         {
@@ -206,11 +258,18 @@ export default function Habits() {
         }
       );
 
+      logInfo(`Статус отметки выполнения: ${response.status}`);
       const data = await response.json();
+      logInfo(`Результат: ${JSON.stringify(data)}`);
+      
       if (data.success) {
+        logSuccess(`Статус обновлен: completed=${data.completed}`);
         loadHabits();
+      } else {
+        logError('Не удалось обновить статус');
       }
     } catch (error) {
+      logError(`Ошибка обновления статуса: ${error}`);
       toast({
         title: 'Ошибка',
         description: 'Не удалось обновить статус',
@@ -240,14 +299,18 @@ export default function Habits() {
 
   const toggleDayOfWeek = (day: number) => {
     if (newHabit.days_of_week.includes(day)) {
+      const newDays = newHabit.days_of_week.filter((d) => d !== day);
+      logInfo(`День ${day} удален. Выбранные дни: ${JSON.stringify(newDays)}`);
       setNewHabit({
         ...newHabit,
-        days_of_week: newHabit.days_of_week.filter((d) => d !== day),
+        days_of_week: newDays,
       });
     } else {
+      const newDays = [...newHabit.days_of_week, day].sort();
+      logInfo(`День ${day} добавлен. Выбранные дни: ${JSON.stringify(newDays)}`);
       setNewHabit({
         ...newHabit,
-        days_of_week: [...newHabit.days_of_week, day].sort(),
+        days_of_week: newDays,
       });
     }
   };
@@ -633,6 +696,8 @@ export default function Habits() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <LiveLogs logs={logs} onClear={clearLogs} />
       </div>
     </div>
   );
