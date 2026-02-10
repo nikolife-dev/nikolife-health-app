@@ -836,8 +836,8 @@ export default function Habits() {
         <Tabs value={progressView} onValueChange={(v) => setProgressView(v as 'day' | 'week' | 'month')}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="day">День</TabsTrigger>
-            <TabsTrigger value="week">Неделя</TabsTrigger>
-            <TabsTrigger value="month">Месяц</TabsTrigger>
+            <TabsTrigger value="week">Неделя (7 дн.)</TabsTrigger>
+            <TabsTrigger value="month">Месяц (30 дн.)</TabsTrigger>
           </TabsList>
 
           <TabsContent value="day" className="space-y-4">
@@ -911,7 +911,7 @@ export default function Habits() {
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span className={habit.completions_today >= habit.times_per_day ? 'text-white/90' : 'text-gray-600'}>
-                              Прогресс за {progressView === 'day' ? 'день' : progressView === 'week' ? 'неделю' : 'месяц'}: {Math.round(progressView === 'day' ? habit.day_progress : progressView === 'week' ? habit.week_progress : habit.month_progress)}%
+                              Прогресс за день: {Math.round(habit.day_progress)}%
                             </span>
                             <span className={habit.completions_today >= habit.times_per_day ? 'text-white/90' : 'text-gray-600'}>
                               Осталось дней:{' '}
@@ -933,38 +933,11 @@ export default function Habits() {
                               className={`h-3 rounded-full transition-all duration-500 ${
                                 habit.completions_today >= habit.times_per_day ? 'bg-white' : 'bg-[#748c6d]'
                               }`}
-                              style={{ width: `${progressView === 'day' ? habit.day_progress : progressView === 'week' ? habit.week_progress : habit.month_progress}%` }}
+                              style={{ width: `${habit.day_progress}%` }}
                             />
                           </div>
                         </div>
                       </button>
-                      
-                      <div className="flex gap-2 justify-center">
-                        <Button
-                          size="sm"
-                          variant={progressView === 'day' ? 'default' : 'outline'}
-                          onClick={() => setProgressView('day')}
-                          className="min-h-[36px]"
-                        >
-                          День
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={progressView === 'week' ? 'default' : 'outline'}
-                          onClick={() => setProgressView('week')}
-                          className="min-h-[36px]"
-                        >
-                          Неделя
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={progressView === 'month' ? 'default' : 'outline'}
-                          onClick={() => setProgressView('month')}
-                          className="min-h-[36px]"
-                        >
-                          Месяц
-                        </Button>
-                      </div>
                     </div>
 
                     <div className="flex gap-1 mt-4">
@@ -1027,70 +1000,161 @@ export default function Habits() {
           </TabsContent>
 
           <TabsContent value="week" className="space-y-4">
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                Прогресс за неделю
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredHabits.map((habit) => {
-                  const progress = calculateProgress(habit);
-                  return (
-                    <Card key={habit.id} className="p-4">
-                      <h4 className="font-semibold mb-2">{habit.title}</h4>
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Icon name="Loader2" size={48} className="animate-spin text-[#748c6d]" />
+              </div>
+            ) : (
+              filteredHabits.map((habit) => (
+                <Card key={habit.id} className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-xl font-bold">{habit.title}</h3>
+                        <Badge variant="outline">{habit.category}</Badge>
+                      </div>
+                      <p className="text-sm text-gray-600">{habit.goal}</p>
+                      <div className="flex gap-4 mt-2 text-sm text-gray-500">
+                        <span>🔥 {habit.current_streak} дней</span>
+                        <span>✅ {habit.total_completions} выполнений</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-[#748c6d] to-[#8da582] text-white">
+                      <div className="flex items-center justify-center gap-3 mb-3">
+                        <Icon name="TrendingUp" size={32} className="text-white" />
+                        <span className="text-lg font-semibold">
+                          Прогресс за неделю
+                        </span>
+                      </div>
+                      
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span>Серия: {habit.current_streak} дней</span>
-                          <span>{progress}%</span>
+                          <span className="text-white/90">
+                            Выполнено: {Math.round(habit.week_progress)}%
+                          </span>
+                          <span className="text-white/90">
+                            {habit.completions_today}/{habit.times_per_day} сегодня
+                          </span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full rounded-full h-3 bg-white/30">
                           <div
-                            className="bg-[#748c6d] h-2 rounded-full"
-                            style={{ width: `${progress}%` }}
+                            className="h-3 rounded-full bg-white transition-all duration-500"
+                            style={{ width: `${habit.week_progress}%` }}
                           />
                         </div>
                       </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            </Card>
+                    </div>
+
+                    <div className="flex gap-1">
+                      {WEEKDAYS.map((day) => {
+                        const isScheduled = habit.days_of_week.includes(day.id);
+                        const today = new Date().getDay();
+                        const isToday = day.id === today;
+                        
+                        return (
+                          <div
+                            key={day.id}
+                            className={`flex-1 text-center py-2 rounded text-xs font-medium transition-all ${
+                              isToday && isScheduled
+                                ? 'bg-[#748c6d] text-white ring-2 ring-[#748c6d] ring-offset-2 scale-110'
+                                : isToday
+                                ? 'bg-gray-400 text-white ring-2 ring-gray-400 ring-offset-2 scale-110'
+                                : isScheduled
+                                ? 'bg-[#748c6d]/70 text-white'
+                                : 'bg-gray-200 text-gray-500'
+                            }`}
+                          >
+                            {day.name}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="month" className="space-y-4">
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                Прогресс за месяц
-              </h3>
-              <div className="space-y-4">
-                {filteredHabits.map((habit) => {
-                  const progress = calculateProgress(habit);
-                  return (
-                    <div key={habit.id} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h4 className="font-semibold">{habit.title}</h4>
-                          <p className="text-sm text-gray-600">
-                            {habit.total_completions} выполнений
-                          </p>
-                        </div>
-                        <Badge
-                          variant={progress >= 80 ? 'default' : 'outline'}
-                          className={progress >= 80 ? 'bg-[#748c6d]' : ''}
-                        >
-                          {progress}%
-                        </Badge>
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Icon name="Loader2" size={48} className="animate-spin text-[#748c6d]" />
+              </div>
+            ) : (
+              filteredHabits.map((habit) => (
+                <Card key={habit.id} className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-xl font-bold">{habit.title}</h3>
+                        <Badge variant="outline">{habit.category}</Badge>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-[#748c6d] h-2 rounded-full"
-                          style={{ width: `${progress}%` }}
-                        />
+                      <p className="text-sm text-gray-600">{habit.goal}</p>
+                      <div className="flex gap-4 mt-2 text-sm text-gray-500">
+                        <span>🔥 {habit.current_streak} дней</span>
+                        <span>✅ {habit.total_completions} выполнений</span>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </Card>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-[#6b7c64] to-[#8da582] text-white">
+                      <div className="flex items-center justify-center gap-3 mb-3">
+                        <Icon name="Calendar" size={32} className="text-white" />
+                        <span className="text-lg font-semibold">
+                          Прогресс за месяц
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-white/90">
+                            Выполнено: {Math.round(habit.month_progress)}%
+                          </span>
+                          <span className="text-white/90">
+                            Цель: {habit.goal_days} дней
+                          </span>
+                        </div>
+                        <div className="w-full rounded-full h-3 bg-white/30">
+                          <div
+                            className="h-3 rounded-full bg-white transition-all duration-500"
+                            style={{ width: `${habit.month_progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1">
+                      {WEEKDAYS.map((day) => {
+                        const isScheduled = habit.days_of_week.includes(day.id);
+                        const today = new Date().getDay();
+                        const isToday = day.id === today;
+                        
+                        return (
+                          <div
+                            key={day.id}
+                            className={`flex-1 text-center py-2 rounded text-xs font-medium transition-all ${
+                              isToday && isScheduled
+                                ? 'bg-[#748c6d] text-white ring-2 ring-[#748c6d] ring-offset-2 scale-110'
+                                : isToday
+                                ? 'bg-gray-400 text-white ring-2 ring-gray-400 ring-offset-2 scale-110'
+                                : isScheduled
+                                ? 'bg-[#748c6d]/70 text-white'
+                                : 'bg-gray-200 text-gray-500'
+                            }`}
+                          >
+                            {day.name}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
           </TabsContent>
         </Tabs>
 
