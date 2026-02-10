@@ -48,7 +48,9 @@ def handler(event: dict, context) -> dict:
             }
         
         user_id = user_row[0]
-        path = event.get('path', '')
+        query_params = event.get('queryStringParameters', {})
+        habit_id_param = query_params.get('habit_id', '') if query_params else ''
+        is_complete = query_params.get('action', '') == 'complete' if query_params else False
         
         if method == 'GET':
             cur.execute("""
@@ -99,8 +101,8 @@ def handler(event: dict, context) -> dict:
                 'isBase64Encoded': False
             }
         
-        elif method == 'POST' and '/complete' in path:
-            habit_id = path.split('/')[-2]
+        elif method == 'POST' and is_complete:
+            habit_id = habit_id_param
             
             cur.execute("""
                 SELECT id FROM t_p76837068_nikolife_health_app.habits 

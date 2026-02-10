@@ -251,7 +251,7 @@ export default function Habits() {
 
       logInfo('Отправка запроса на отметку выполнения');
       const response = await fetch(
-        `https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de/${habitId}/complete`,
+        `https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de?habit_id=${habitId}&action=complete`,
         {
           method: 'POST',
           headers: { 'X-Auth-Token': token },
