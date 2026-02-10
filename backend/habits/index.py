@@ -55,7 +55,7 @@ def handler(event: dict, context) -> dict:
                 SELECT h.id, h.title, h.category, h.goal, h.goal_days, h.days_of_week, 
                        h.times_per_day, h.created_at,
                        (SELECT COUNT(*) FROM t_p76837068_nikolife_health_app.habit_completions 
-                        WHERE habit_id = h.id AND completed_at::date = CURRENT_DATE) as completed_today,
+                        WHERE habit_id = h.id AND DATE(completed_at) = CURRENT_DATE) as completed_today,
                        (SELECT COUNT(*) FROM t_p76837068_nikolife_health_app.habit_completions 
                         WHERE habit_id = h.id) as total_completions
                 FROM t_p76837068_nikolife_health_app.habits h
@@ -69,7 +69,7 @@ def handler(event: dict, context) -> dict:
                 days_of_week = json.loads(days_of_week_str) if days_of_week_str.startswith('[') else []
                 
                 cur.execute("""
-                    SELECT completed_at::date 
+                    SELECT DATE(completed_at) 
                     FROM t_p76837068_nikolife_health_app.habit_completions 
                     WHERE habit_id = %s 
                     ORDER BY completed_at DESC
@@ -117,7 +117,7 @@ def handler(event: dict, context) -> dict:
             
             cur.execute("""
                 SELECT COUNT(*) FROM t_p76837068_nikolife_health_app.habit_completions 
-                WHERE habit_id = %s AND completed_at::date = CURRENT_DATE
+                WHERE habit_id = %s AND DATE(completed_at) = CURRENT_DATE
             """, (habit_id,))
             
             count = cur.fetchone()[0]
