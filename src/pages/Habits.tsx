@@ -87,6 +87,7 @@ export default function Habits() {
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [isMyHabitsDialogOpen, setIsMyHabitsDialogOpen] = useState(false);
   
   const [newHabit, setNewHabit] = useState({
     title: '',
@@ -494,13 +495,96 @@ export default function Habits() {
               </DialogContent>
             </Dialog>
 
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="min-h-[44px]">
-                  <Icon name="Plus" size={20} className="mr-2" />
-                  Создать
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2">
+              <Dialog open={isMyHabitsDialogOpen} onOpenChange={setIsMyHabitsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="min-h-[44px]">
+                    <Icon name="List" size={20} className="mr-2" />
+                    Мои привычки
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Мои привычки</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-3">
+                    {habits.length === 0 ? (
+                      <Card className="p-8 text-center">
+                        <p className="text-gray-500">У вас пока нет привычек</p>
+                      </Card>
+                    ) : (
+                      habits.map((habit) => (
+                        <Card key={habit.id} className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-bold">{habit.title}</h3>
+                                <Badge variant="outline" className="text-xs">
+                                  {habit.category}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">{habit.goal}</p>
+                              <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                                <span>🔥 {habit.current_streak} дней</span>
+                                <span>✅ {habit.total_completions} выполнений</span>
+                                <span>📅 {habit.goal_days} дней цель</span>
+                                <span>🔁 {habit.times_per_day}×/день</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {WEEKDAYS.map((day) => (
+                                  <span
+                                    key={day.id}
+                                    className={`px-2 py-1 rounded text-xs ${
+                                      habit.days_of_week.includes(day.id)
+                                        ? 'bg-[#748c6d] text-white'
+                                        : 'bg-gray-200 text-gray-400'
+                                    }`}
+                                  >
+                                    {day.name}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  openEditDialog(habit);
+                                  setIsMyHabitsDialogOpen(false);
+                                }}
+                                className="min-h-[36px]"
+                              >
+                                <Icon name="Edit" size={16} />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  if (confirm(`Удалить привычку "${habit.title}"?`)) {
+                                    deleteHabit(habit.id);
+                                  }
+                                }}
+                                className="min-h-[36px]"
+                              >
+                                <Icon name="Trash2" size={16} />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="min-h-[44px]">
+                    <Icon name="Plus" size={20} className="mr-2" />
+                    Создать
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Создать привычку</DialogTitle>
@@ -608,6 +692,7 @@ export default function Habits() {
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
 
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
               <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
