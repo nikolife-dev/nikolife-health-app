@@ -18,6 +18,24 @@ import MentalHealthSection from '@/components/index/MentalHealthSection';
 import ProgressSection from '@/components/index/ProgressSection';
 import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 
+interface Habit {
+  id: number;
+  title: string;
+  category: string;
+  goal: string;
+  goal_days: number;
+  days_of_week: number[];
+  times_per_day: number;
+  created_at: string;
+  completed_today: boolean;
+  current_streak: number;
+  total_completions: number;
+  completions_today: number;
+  day_progress: number;
+  week_progress: number;
+  month_progress: number;
+}
+
 export default function Index() {
   const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -38,13 +56,65 @@ export default function Index() {
   const [selectedRecipe, setSelectedRecipe] = useState<number | null>(null);
   const [mealPlan, setMealPlan] = useState<{[key: string]: number}>({});
   const [favoritePodcasts, setFavoritePodcasts] = useState<number[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [isLoadingHabits, setIsLoadingHabits] = useState(false);
 
-  const habits = [
-    { name: 'Утренняя зарядка', progress: 85, streak: 12 },
-    { name: 'Медитация', progress: 70, streak: 8 },
-    { name: 'Стакан воды', progress: 100, streak: 21 },
-    { name: 'Здоровый сон', progress: 60, streak: 5 },
-  ];
+  useEffect(() => {
+    loadTodayHabits();
+  }, []);
+
+  const loadTodayHabits = async () => {
+    setIsLoadingHabits(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setIsLoadingHabits(false);
+        return;
+      }
+
+      const response = await fetch(
+        'https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de',
+        {
+          headers: { 'X-Auth-Token': token },
+        }
+      );
+
+      const data = await response.json();
+      if (data.habits) {
+        const today = new Date().getDay();
+        const todayHabits = data.habits
+          .filter((h: Habit) => h.days_of_week.includes(today))
+          .filter((h: Habit) => h.completions_today < h.times_per_day)
+          .slice(0, 4);
+        setHabits(todayHabits);
+      }
+    } catch (error) {
+      console.error('Failed to load habits:', error);
+    }
+    setIsLoadingHabits(false);
+  };
+
+  const toggleHabitCompletion = async (habitId: number) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch(
+        `https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de?habit_id=${habitId}&action=complete`,
+        {
+          method: 'POST',
+          headers: { 'X-Auth-Token': token },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        loadTodayHabits();
+      }
+    } catch (error) {
+      console.error('Failed to toggle habit:', error);
+    }
+  };
 
   const workouts = [
     { 
@@ -275,6 +345,8 @@ export default function Index() {
                   workouts={workouts}
                   meals={meals}
                   onSectionChange={setActiveSection}
+                  onToggleHabit={toggleHabitCompletion}
+                  isLoadingHabits={isLoadingHabits}
                 />
               )}
 

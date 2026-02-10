@@ -6,9 +6,21 @@ import Icon from '@/components/ui/icon';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Habit {
-  name: string;
-  progress: number;
-  streak: number;
+  id: number;
+  title: string;
+  category: string;
+  goal: string;
+  goal_days: number;
+  days_of_week: number[];
+  times_per_day: number;
+  created_at: string;
+  completed_today: boolean;
+  current_streak: number;
+  total_completions: number;
+  completions_today: number;
+  day_progress: number;
+  week_progress: number;
+  month_progress: number;
 }
 
 interface Article {
@@ -38,6 +50,8 @@ interface DashboardSectionProps {
   workouts: Workout[];
   meals: Meal[];
   onSectionChange: (section: string) => void;
+  onToggleHabit?: (habitId: number) => void;
+  isLoadingHabits?: boolean;
 }
 
 export default function DashboardSection({ 
@@ -45,7 +59,9 @@ export default function DashboardSection({
   articles, 
   workouts, 
   meals,
-  onSectionChange 
+  onSectionChange,
+  onToggleHabit,
+  isLoadingHabits = false
 }: DashboardSectionProps) {
   const { user } = useAuth();
   
@@ -109,30 +125,56 @@ export default function DashboardSection({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900">Привычки</h3>
-            <Button variant="ghost" size="sm">
-              <Icon name="Plus" size={16} className="mr-1" />
-              Добавить
+            <h3 className="text-xl font-bold text-gray-900">Привычки на сегодня</h3>
+            <Button variant="ghost" size="sm" onClick={() => onSectionChange('habits')}>
+              Мой прогресс
+              <Icon name="ArrowRight" size={16} className="ml-1" />
             </Button>
           </div>
 
-          <div className="space-y-4">
-            {habits.map((habit, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Icon name="CheckCircle2" size={20} className="text-emerald-500" />
-                    <span className="font-medium text-gray-900">{habit.name}</span>
+          {isLoadingHabits ? (
+            <div className="flex justify-center py-8">
+              <Icon name="Loader2" size={32} className="animate-spin text-gray-400" />
+            </div>
+          ) : habits.length === 0 ? (
+            <div className="text-center py-8">
+              <Icon name="CheckCircle2" size={48} className="mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500 mb-4">Все привычки на сегодня выполнены!</p>
+              <Button size="sm" onClick={() => onSectionChange('habits')}>
+                Перейти к привычкам
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {habits.map((habit) => (
+                <div key={habit.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1">
+                      <span className="font-medium text-gray-900">{habit.title}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {habit.completions_today}/{habit.times_per_day}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <Icon name="Flame" size={16} className="text-orange-500" />
+                        <span className="text-sm font-semibold text-gray-700">{habit.current_streak}</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onToggleHabit?.(habit.id)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Icon name="Check" size={16} />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Icon name="Flame" size={16} className="text-orange-500" />
-                    <span className="text-sm font-semibold text-gray-700">{habit.streak} дней</span>
-                  </div>
+                  <Progress value={habit.day_progress} className="h-2" />
                 </div>
-                <Progress value={habit.progress} className="h-2" />
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
 
         <Card className="p-6">
