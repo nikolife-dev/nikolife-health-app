@@ -1,0 +1,639 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import Icon from '@/components/ui/icon';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+
+interface Habit {
+  id: number;
+  title: string;
+  category: string;
+  goal: string;
+  goal_days: number;
+  days_of_week: number[];
+  times_per_day: number;
+  created_at: string;
+  completed_today: boolean;
+  current_streak: number;
+  total_completions: number;
+}
+
+interface HabitTemplate {
+  id: number;
+  title: string;
+  category: string;
+  description: string;
+}
+
+const CATEGORIES = [
+  'Здоровье',
+  'Фитнес',
+  'Питание',
+  'Сон',
+  'Продуктивность',
+  'Обучение',
+  'Саморазвитие',
+  'Социальное',
+];
+
+const WEEKDAYS = [
+  { id: 1, name: 'Пн', full: 'Понедельник' },
+  { id: 2, name: 'Вт', full: 'Вторник' },
+  { id: 3, name: 'Ср', full: 'Среда' },
+  { id: 4, name: 'Чт', full: 'Четверг' },
+  { id: 5, name: 'Пт', full: 'Пятница' },
+  { id: 6, name: 'Сб', full: 'Суббота' },
+  { id: 0, name: 'Вс', full: 'Воскресенье' },
+];
+
+export default function Habits() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [templates, setTemplates] = useState<HabitTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [progressView, setProgressView] = useState<'day' | 'week' | 'month'>('day');
+  
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  
+  const [newHabit, setNewHabit] = useState({
+    title: '',
+    category: '',
+    goal: '',
+    goal_days: 30,
+    days_of_week: [] as number[],
+    times_per_day: 1,
+  });
+
+  useEffect(() => {
+    loadHabits();
+    loadTemplates();
+  }, []);
+
+  const loadHabits = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch(
+        'https://functions.poehali.dev/YOUR_HABITS_FUNCTION_URL',
+        { headers: { 'X-Auth-Token': token } }
+      );
+
+      const data = await response.json();
+      if (data.habits) {
+        setHabits(data.habits);
+      }
+    } catch (error) {
+      console.error('Failed to load habits:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadTemplates = async () => {
+    try {
+      const response = await fetch(
+        'https://functions.poehali.dev/YOUR_TEMPLATES_FUNCTION_URL'
+      );
+
+      const data = await response.json();
+      if (data.templates) {
+        setTemplates(data.templates);
+      }
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+    }
+  };
+
+  const createHabit = async () => {
+    if (!newHabit.title || !newHabit.category || !newHabit.goal || newHabit.days_of_week.length === 0) {
+      toast({
+        title: 'Ошибка',
+        description: 'Заполните все обязательные поля',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch(
+        'https://functions.poehali.dev/YOUR_HABITS_FUNCTION_URL',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Auth-Token': token,
+          },
+          body: JSON.stringify(newHabit),
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: 'Успешно!',
+          description: 'Привычка создана',
+        });
+        setIsCreateDialogOpen(false);
+        setNewHabit({
+          title: '',
+          category: '',
+          goal: '',
+          goal_days: 30,
+          days_of_week: [],
+          times_per_day: 1,
+        });
+        loadHabits();
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось создать привычку',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const createFromTemplate = async (template: HabitTemplate) => {
+    setNewHabit({
+      ...newHabit,
+      title: template.title,
+      category: template.category,
+    });
+    setIsTemplateDialogOpen(false);
+    setIsCreateDialogOpen(true);
+  };
+
+  const toggleCompletion = async (habitId: number) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch(
+        `https://functions.poehali.dev/YOUR_HABITS_FUNCTION_URL/${habitId}/complete`,
+        {
+          method: 'POST',
+          headers: { 'X-Auth-Token': token },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        loadHabits();
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось обновить статус',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const filteredHabits = selectedCategory
+    ? habits.filter((h) => h.category === selectedCategory)
+    : habits;
+
+  const calculateProgress = (habit: Habit) => {
+    const daysPassed = Math.min(
+      Math.floor(
+        (new Date().getTime() - new Date(habit.created_at).getTime()) /
+          (1000 * 60 * 60 * 24)
+      ),
+      habit.goal_days
+    );
+    const expectedCompletions = daysPassed * habit.times_per_day;
+    const progress = expectedCompletions > 0
+      ? Math.round((habit.total_completions / expectedCompletions) * 100)
+      : 0;
+    return Math.min(progress, 100);
+  };
+
+  const toggleDayOfWeek = (day: number) => {
+    if (newHabit.days_of_week.includes(day)) {
+      setNewHabit({
+        ...newHabit,
+        days_of_week: newHabit.days_of_week.filter((d) => d !== day),
+      });
+    } else {
+      setNewHabit({
+        ...newHabit,
+        days_of_week: [...newHabit.days_of_week, day].sort(),
+      });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5]">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/')}
+            className="gap-2 min-h-[44px]"
+          >
+            <Icon name="ArrowLeft" size={20} />
+            <span className="hidden sm:inline">Назад</span>
+          </Button>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+            Привычки
+          </h1>
+          <div className="flex gap-2">
+            <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="min-h-[44px]">
+                  <Icon name="BookOpen" size={20} className="mr-2" />
+                  Шаблоны
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Выберите привычку из списка</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  {CATEGORIES.map((cat) => {
+                    const catTemplates = templates.filter((t) => t.category === cat);
+                    if (catTemplates.length === 0) return null;
+                    return (
+                      <div key={cat}>
+                        <h3 className="font-semibold text-lg mb-2">{cat}</h3>
+                        <div className="space-y-2">
+                          {catTemplates.map((template) => (
+                            <Card
+                              key={template.id}
+                              className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+                              onClick={() => createFromTemplate(template)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium">{template.title}</h4>
+                                  <p className="text-sm text-gray-600">
+                                    {template.description}
+                                  </p>
+                                </div>
+                                <Icon name="Plus" size={20} />
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="min-h-[44px]">
+                  <Icon name="Plus" size={20} className="mr-2" />
+                  Создать
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Создать привычку</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Название привычки</Label>
+                    <Input
+                      value={newHabit.title}
+                      onChange={(e) =>
+                        setNewHabit({ ...newHabit, title: e.target.value })
+                      }
+                      placeholder="Утренняя зарядка"
+                      maxLength={40}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Категория</Label>
+                    <Select
+                      value={newHabit.category}
+                      onValueChange={(val) =>
+                        setNewHabit({ ...newHabit, category: val })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Выберите категорию" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Цель</Label>
+                    <Input
+                      value={newHabit.goal}
+                      onChange={(e) =>
+                        setNewHabit({ ...newHabit, goal: e.target.value })
+                      }
+                      placeholder="Делать зарядку каждый день"
+                      maxLength={40}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Количество дней для достижения</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={360}
+                      value={newHabit.goal_days}
+                      onChange={(e) =>
+                        setNewHabit({
+                          ...newHabit,
+                          goal_days: parseInt(e.target.value) || 30,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Дни недели</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {WEEKDAYS.map((day) => (
+                        <Badge
+                          key={day.id}
+                          className={`cursor-pointer min-h-[36px] px-4 ${
+                            newHabit.days_of_week.includes(day.id)
+                              ? 'bg-[#748c6d]'
+                              : 'bg-gray-300'
+                          }`}
+                          onClick={() => toggleDayOfWeek(day.id)}
+                        >
+                          {day.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Сколько раз в день</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={newHabit.times_per_day}
+                      onChange={(e) =>
+                        setNewHabit({
+                          ...newHabit,
+                          times_per_day: parseInt(e.target.value) || 1,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <Button onClick={createHabit} className="w-full min-h-[44px]">
+                    Создать привычку
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex flex-wrap gap-2">
+              <Badge
+                className={`cursor-pointer min-h-[36px] px-3 ${
+                  !selectedCategory ? 'bg-[#748c6d]' : 'bg-gray-300'
+                }`}
+                onClick={() => setSelectedCategory('')}
+              >
+                Все
+              </Badge>
+              {CATEGORIES.map((cat) => (
+                <Badge
+                  key={cat}
+                  className={`cursor-pointer min-h-[36px] px-3 ${
+                    selectedCategory === cat ? 'bg-[#748c6d]' : 'bg-gray-300'
+                  }`}
+                  onClick={() => setSelectedCategory(cat)}
+                >
+                  {cat}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        <Tabs value={progressView} onValueChange={(v) => setProgressView(v as 'day' | 'week' | 'month')}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="day">День</TabsTrigger>
+            <TabsTrigger value="week">Неделя</TabsTrigger>
+            <TabsTrigger value="month">Месяц</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="day" className="space-y-4">
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Icon name="Loader2" size={48} className="animate-spin text-[#748c6d]" />
+              </div>
+            ) : filteredHabits.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Icon
+                  name="CalendarCheck"
+                  size={48}
+                  className="mx-auto text-gray-400 mb-4"
+                />
+                <h3 className="text-lg font-semibold text-gray-700">
+                  Нет привычек
+                </h3>
+                <p className="text-gray-500 mt-2">
+                  Создайте первую привычку для отслеживания
+                </p>
+              </Card>
+            ) : (
+              filteredHabits.map((habit) => {
+                const today = new Date().getDay();
+                const isScheduledToday = habit.days_of_week.includes(today);
+                const progress = calculateProgress(habit);
+
+                return (
+                  <Card key={habit.id} className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-xl font-bold">{habit.title}</h3>
+                          <Badge variant="outline">{habit.category}</Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">{habit.goal}</p>
+                        <div className="flex gap-4 mt-2 text-sm text-gray-500">
+                          <span>🔥 {habit.current_streak} дней</span>
+                          <span>✅ {habit.total_completions} выполнений</span>
+                        </div>
+                      </div>
+                      {isScheduledToday && (
+                        <Button
+                          variant={habit.completed_today ? 'default' : 'outline'}
+                          size="lg"
+                          onClick={() => toggleCompletion(habit.id)}
+                          className="min-h-[44px]"
+                        >
+                          <Icon
+                            name={habit.completed_today ? 'Check' : 'Circle'}
+                            size={20}
+                          />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Прогресс: {progress}%</span>
+                        <span>
+                          Осталось дней:{' '}
+                          {Math.max(
+                            0,
+                            habit.goal_days -
+                              Math.floor(
+                                (new Date().getTime() -
+                                  new Date(habit.created_at).getTime()) /
+                                  (1000 * 60 * 60 * 24)
+                              )
+                          )}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                          className="bg-[#748c6d] h-3 rounded-full transition-all"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1 mt-4">
+                      {WEEKDAYS.map((day) => (
+                        <div
+                          key={day.id}
+                          className={`flex-1 text-center py-2 rounded text-xs font-medium ${
+                            habit.days_of_week.includes(day.id)
+                              ? 'bg-[#748c6d] text-white'
+                              : 'bg-gray-200 text-gray-500'
+                          }`}
+                        >
+                          {day.name}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 text-sm text-gray-600">
+                      {habit.times_per_day > 1 && (
+                        <span>{habit.times_per_day}× в день</span>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })
+            )}
+          </TabsContent>
+
+          <TabsContent value="week" className="space-y-4">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">
+                Прогресс за неделю
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredHabits.map((habit) => {
+                  const progress = calculateProgress(habit);
+                  return (
+                    <Card key={habit.id} className="p-4">
+                      <h4 className="font-semibold mb-2">{habit.title}</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Серия: {habit.current_streak} дней</span>
+                          <span>{progress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-[#748c6d] h-2 rounded-full"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="month" className="space-y-4">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">
+                Прогресс за месяц
+              </h3>
+              <div className="space-y-4">
+                {filteredHabits.map((habit) => {
+                  const progress = calculateProgress(habit);
+                  return (
+                    <div key={habit.id} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="font-semibold">{habit.title}</h4>
+                          <p className="text-sm text-gray-600">
+                            {habit.total_completions} выполнений
+                          </p>
+                        </div>
+                        <Badge
+                          variant={progress >= 80 ? 'default' : 'outline'}
+                          className={progress >= 80 ? 'bg-[#748c6d]' : ''}
+                        >
+                          {progress}%
+                        </Badge>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-[#748c6d] h-2 rounded-full"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}

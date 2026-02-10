@@ -16,6 +16,7 @@ import Pricing from "./pages/Pricing";
 import Checkout from "./pages/Checkout";
 import Profile from "./pages/Profile";
 import Recipes from "./pages/Recipes";
+import Habits from "./pages/Habits";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
@@ -61,6 +62,11 @@ const App = () => (
             <Route path="/recipes" element={
               <ProtectedRoute requiresPlan={true}>
                 <Recipes />
+              </ProtectedRoute>
+            } />
+            <Route path="/habits" element={
+              <ProtectedRoute requiresPlan={true}>
+                <Habits />
               </ProtectedRoute>
             } />
             <Route path="/admin" element={

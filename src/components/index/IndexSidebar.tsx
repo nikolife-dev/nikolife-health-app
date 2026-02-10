@@ -80,6 +80,15 @@ export default function IndexSidebar({ activeSection, setActiveSection }: IndexS
           <Icon name="TrendingUp" className="mr-3" size={20} />
           <span>Прогресс</span>
         </Button>
+
+        <Button
+          variant="ghost"
+          className="w-full justify-start min-h-[44px]"
+          onClick={() => navigate('/habits')}
+        >
+          <Icon name="CalendarCheck" className="mr-3" size={20} />
+          <span>Привычки</span>
+        </Button>
       </nav>
 
       <div className="pt-4 border-t border-gray-200">
