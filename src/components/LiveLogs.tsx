@@ -60,10 +60,13 @@ export function LiveLogs({ logs, onClear, position = 'bottom-right', maxHeight =
   );
 }
 
+const LOGS_ENABLED = false;
+
 export function useLiveLogs() {
   const [logs, setLogs] = useState<string[]>([]);
 
   const addLog = (message: string) => {
+    if (!LOGS_ENABLED) return;
     const timestamp = new Date().toLocaleTimeString('ru-RU', { 
       hour: '2-digit', 
       minute: '2-digit', 
@@ -74,10 +77,25 @@ export function useLiveLogs() {
 
   const clearLogs = () => setLogs([]);
 
-  const logInfo = (message: string) => addLog(`ℹ️ ${message}`);
-  const logSuccess = (message: string) => addLog(`✅ ${message}`);
-  const logError = (message: string) => addLog(`❌ ${message}`);
-  const logWarning = (message: string) => addLog(`⚠️ ${message}`);
+  const logInfo = (message: string) => {
+    if (!LOGS_ENABLED) return;
+    addLog(`ℹ️ ${message}`);
+  };
+  
+  const logSuccess = (message: string) => {
+    if (!LOGS_ENABLED) return;
+    addLog(`✅ ${message}`);
+  };
+  
+  const logError = (message: string) => {
+    if (!LOGS_ENABLED) return;
+    addLog(`❌ ${message}`);
+  };
+  
+  const logWarning = (message: string) => {
+    if (!LOGS_ENABLED) return;
+    addLog(`⚠️ ${message}`);
+  };
 
   return {
     logs,
