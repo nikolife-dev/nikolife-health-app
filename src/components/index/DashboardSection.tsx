@@ -125,7 +125,7 @@ export default function DashboardSection({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900">Привычки на сегодня</h3>
+            <h3 className="text-xl font-bold text-gray-900">Привычки</h3>
             <Button variant="ghost" size="sm" onClick={() => onSectionChange('habits')}>
               Мой прогресс
               <Icon name="ArrowRight" size={16} className="ml-1" />
@@ -138,11 +138,8 @@ export default function DashboardSection({
             </div>
           ) : habits.length === 0 ? (
             <div className="text-center py-8">
-              <Icon name="CheckCircle2" size={48} className="mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500 mb-4">Все привычки на сегодня выполнены!</p>
-              <Button size="sm" onClick={() => onSectionChange('habits')}>
-                Перейти к привычкам
-              </Button>
+              <Icon name="CheckCircle2" size={48} className="mx-auto text-green-500 mb-3" />
+              <p className="text-gray-700 font-medium">Все привычки на сегодня выполнены! 🎉</p>
             </div>
           ) : (
             <div className="space-y-4">
