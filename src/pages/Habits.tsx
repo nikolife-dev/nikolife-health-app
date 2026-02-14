@@ -12,7 +12,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +23,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 
 interface Habit {
@@ -438,374 +443,380 @@ export default function Habits() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5]">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <Button
             variant="ghost"
             onClick={() => navigate('/')}
-            className="gap-2 min-h-[44px]"
+            className="gap-2 min-h-[44px] flex-shrink-0"
           >
             <Icon name="ArrowLeft" size={20} />
             <span className="hidden sm:inline">Назад</span>
           </Button>
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 flex-1 text-center">
             Привычки
           </h1>
-          <div className="flex gap-2">
-            <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="min-h-[44px]">
-                  <Icon name="BookOpen" size={20} className="mr-2" />
-                  Шаблоны
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Выберите привычку из списка</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3">
-                  {CATEGORIES.map((cat) => {
-                    const catTemplates = templates.filter((t) => t.category === cat);
-                    if (catTemplates.length === 0) return null;
-                    return (
-                      <div key={cat}>
-                        <h3 className="font-semibold text-lg mb-2">{cat}</h3>
-                        <div className="space-y-2">
-                          {catTemplates.map((template) => (
-                            <Card
-                              key={template.id}
-                              className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-                              onClick={() => createFromTemplate(template)}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h4 className="font-medium">{template.title}</h4>
-                                  <p className="text-sm text-gray-600">
-                                    {template.description}
-                                  </p>
-                                </div>
-                                <Icon name="Plus" size={20} />
-                              </div>
-                            </Card>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </DialogContent>
-            </Dialog>
 
-            <div className="flex gap-2">
-              <Dialog open={isMyHabitsDialogOpen} onOpenChange={setIsMyHabitsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="min-h-[44px]">
-                    <Icon name="List" size={20} className="mr-2" />
-                    Мои привычки
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Мои привычки</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3">
-                    {habits.length === 0 ? (
-                      <Card className="p-8 text-center">
-                        <p className="text-gray-500">У вас пока нет привычек</p>
-                      </Card>
-                    ) : (
-                      habits.map((habit) => (
-                        <Card key={habit.id} className="p-4">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-bold">{habit.title}</h3>
-                                <Badge variant="outline" className="text-xs">
-                                  {habit.category}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-gray-600 mb-2">{habit.goal}</p>
-                              <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-                                <span>🔥 {habit.current_streak} дней</span>
-                                <span>✅ {habit.total_completions} выполнений</span>
-                                <span>📅 {habit.goal_days} дней цель</span>
-                                <span>🔁 {habit.times_per_day}×/день</span>
-                              </div>
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {WEEKDAYS.map((day) => (
-                                  <span
-                                    key={day.id}
-                                    className={`px-2 py-1 rounded text-xs ${
-                                      habit.days_of_week.includes(day.id)
-                                        ? 'bg-[#748c6d] text-white'
-                                        : 'bg-gray-200 text-gray-400'
-                                    }`}
-                                  >
-                                    {day.name}
-                                  </span>
-                                ))}
-                              </div>
+          <div className="md:hidden flex-shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="min-h-[44px] min-w-[44px]">
+                  <Icon name="Menu" size={20} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setIsTemplateDialogOpen(true)}>
+                  <Icon name="BookOpen" size={16} className="mr-2" />
+                  Шаблоны
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsMyHabitsDialogOpen(true)}>
+                  <Icon name="List" size={16} className="mr-2" />
+                  Мои привычки
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsCreateDialogOpen(true)}>
+                  <Icon name="Plus" size={16} className="mr-2" />
+                  Создать
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div className="hidden md:flex gap-2 flex-shrink-0">
+            <Button variant="outline" className="min-h-[44px]" onClick={() => setIsTemplateDialogOpen(true)}>
+              <Icon name="BookOpen" size={20} className="mr-2" />
+              Шаблоны
+            </Button>
+            <Button variant="outline" className="min-h-[44px]" onClick={() => setIsMyHabitsDialogOpen(true)}>
+              <Icon name="List" size={16} className="mr-2" />
+              Мои привычки
+            </Button>
+            <Button className="min-h-[44px]" onClick={() => setIsCreateDialogOpen(true)}>
+              <Icon name="Plus" size={20} className="mr-2" />
+              Создать
+            </Button>
+          </div>
+        </div>
+
+        <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Выберите привычку из списка</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              {CATEGORIES.map((cat) => {
+                const catTemplates = templates.filter((t) => t.category === cat);
+                if (catTemplates.length === 0) return null;
+                return (
+                  <div key={cat}>
+                    <h3 className="font-semibold text-lg mb-2">{cat}</h3>
+                    <div className="space-y-2">
+                      {catTemplates.map((template) => (
+                        <Card
+                          key={template.id}
+                          className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={() => createFromTemplate(template)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-medium">{template.title}</h4>
+                              <p className="text-sm text-gray-600">
+                                {template.description}
+                              </p>
                             </div>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  openEditDialog(habit);
-                                  setIsMyHabitsDialogOpen(false);
-                                }}
-                                className="min-h-[36px]"
-                              >
-                                <Icon name="Edit" size={16} />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  if (confirm(`Удалить привычку "${habit.title}"?`)) {
-                                    deleteHabit(habit.id);
-                                  }
-                                }}
-                                className="min-h-[36px]"
-                              >
-                                <Icon name="Trash2" size={16} />
-                              </Button>
-                            </div>
+                            <Icon name="Plus" size={20} />
                           </div>
                         </Card>
-                      ))
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="min-h-[44px]">
-                    <Icon name="Plus" size={20} className="mr-2" />
-                    Создать
-                  </Button>
-                </DialogTrigger>
-              <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Создать привычку</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Название привычки</Label>
-                    <Input
-                      value={newHabit.title}
-                      onChange={(e) =>
-                        setNewHabit({ ...newHabit, title: e.target.value })
-                      }
-                      placeholder="Утренняя зарядка"
-                      maxLength={40}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Категория</Label>
-                    <Select
-                      value={newHabit.category}
-                      onValueChange={(val) =>
-                        setNewHabit({ ...newHabit, category: val })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите категорию" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIES.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Цель</Label>
-                    <Input
-                      value={newHabit.goal}
-                      onChange={(e) =>
-                        setNewHabit({ ...newHabit, goal: e.target.value })
-                      }
-                      placeholder="Делать зарядку каждый день"
-                      maxLength={40}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Количество дней для достижения</Label>
-                    <Input
-                      type="number"
-                      min={30}
-                      max={360}
-                      value={newHabit.goal_days}
-                      onChange={(e) =>
-                        setNewHabit({
-                          ...newHabit,
-                          goal_days: Math.max(30, parseInt(e.target.value) || 30),
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Дни недели</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {WEEKDAYS.map((day) => (
-                        <Badge
-                          key={day.id}
-                          className={`cursor-pointer min-h-[36px] px-4 ${
-                            newHabit.days_of_week.includes(day.id)
-                              ? 'bg-[#748c6d]'
-                              : 'bg-gray-300'
-                          }`}
-                          onClick={() => toggleDayOfWeek(day.id)}
-                        >
-                          {day.name}
-                        </Badge>
                       ))}
                     </div>
                   </div>
-
-                  <div>
-                    <Label>Сколько раз в день</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={newHabit.times_per_day}
-                      onChange={(e) =>
-                        setNewHabit({
-                          ...newHabit,
-                          times_per_day: parseInt(e.target.value) || 1,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <Button onClick={createHabit} className="w-full min-h-[44px]">
-                    Создать привычку
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                );
+              })}
             </div>
+          </DialogContent>
+        </Dialog>
 
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Редактировать привычку</DialogTitle>
-                </DialogHeader>
-                {editingHabit && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Название</Label>
-                      <Input
-                        value={editingHabit.title}
-                        onChange={(e) =>
-                          setEditingHabit({ ...editingHabit, title: e.target.value })
-                        }
-                        placeholder="Название привычки"
-                        maxLength={30}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Категория</Label>
-                      <Select
-                        value={editingHabit.category}
-                        onValueChange={(val) =>
-                          setEditingHabit({ ...editingHabit, category: val })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите категорию" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CATEGORIES.map((cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              {cat}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>Цель</Label>
-                      <Input
-                        value={editingHabit.goal}
-                        onChange={(e) =>
-                          setEditingHabit({ ...editingHabit, goal: e.target.value })
-                        }
-                        placeholder="Делать зарядку каждый день"
-                        maxLength={40}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Количество дней для достижения</Label>
-                      <Input
-                        type="number"
-                        min={30}
-                        max={360}
-                        value={editingHabit.goal_days}
-                        onChange={(e) =>
-                          setEditingHabit({
-                            ...editingHabit,
-                            goal_days: Math.max(30, parseInt(e.target.value) || 30),
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Дни недели</Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {WEEKDAYS.map((day) => (
-                          <Badge
-                            key={day.id}
-                            className={`cursor-pointer min-h-[36px] px-4 ${
-                              editingHabit.days_of_week.includes(day.id)
-                                ? 'bg-[#748c6d]'
-                                : 'bg-gray-300'
-                            }`}
-                            onClick={() => toggleEditDayOfWeek(day.id)}
-                          >
-                            {day.name}
+        <Dialog open={isMyHabitsDialogOpen} onOpenChange={setIsMyHabitsDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Мои привычки</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              {habits.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <p className="text-gray-500">У вас пока нет привычек</p>
+                </Card>
+              ) : (
+                habits.map((habit) => (
+                  <Card key={habit.id} className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-bold">{habit.title}</h3>
+                          <Badge variant="outline" className="text-xs">
+                            {habit.category}
                           </Badge>
-                        ))}
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{habit.goal}</p>
+                        <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                          <span>🔥 {habit.current_streak} дней</span>
+                          <span>✅ {habit.total_completions} выполнений</span>
+                          <span>📅 {habit.goal_days} дней цель</span>
+                          <span>🔁 {habit.times_per_day}x/день</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {WEEKDAYS.map((day) => (
+                            <span
+                              key={day.id}
+                              className={`px-2 py-1 rounded text-xs ${
+                                habit.days_of_week.includes(day.id)
+                                  ? 'bg-[#748c6d] text-white'
+                                  : 'bg-gray-200 text-gray-400'
+                              }`}
+                            >
+                              {day.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            openEditDialog(habit);
+                            setIsMyHabitsDialogOpen(false);
+                          }}
+                          className="min-h-[36px]"
+                        >
+                          <Icon name="Edit" size={16} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (confirm(`Удалить привычку "${habit.title}"?`)) {
+                              deleteHabit(habit.id);
+                            }
+                          }}
+                          className="min-h-[36px]"
+                        >
+                          <Icon name="Trash2" size={16} />
+                        </Button>
                       </div>
                     </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
-                    <div>
-                      <Label>Сколько раз в день</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={10}
-                        value={editingHabit.times_per_day}
-                        onChange={(e) =>
-                          setEditingHabit({
-                            ...editingHabit,
-                            times_per_day: parseInt(e.target.value) || 1,
-                          })
-                        }
-                      />
-                    </div>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Создать привычку</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Название привычки</Label>
+                <Input
+                  value={newHabit.title}
+                  onChange={(e) =>
+                    setNewHabit({ ...newHabit, title: e.target.value })
+                  }
+                  placeholder="Утренняя зарядка"
+                  maxLength={40}
+                />
+              </div>
+              <div>
+                <Label>Категория</Label>
+                <Select
+                  value={newHabit.category}
+                  onValueChange={(val) =>
+                    setNewHabit({ ...newHabit, category: val })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите категорию" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Цель</Label>
+                <Input
+                  value={newHabit.goal}
+                  onChange={(e) =>
+                    setNewHabit({ ...newHabit, goal: e.target.value })
+                  }
+                  placeholder="Делать зарядку каждый день"
+                  maxLength={40}
+                />
+              </div>
+              <div>
+                <Label>Количество дней для достижения</Label>
+                <Input
+                  type="number"
+                  min={30}
+                  max={360}
+                  value={newHabit.goal_days}
+                  onChange={(e) =>
+                    setNewHabit({
+                      ...newHabit,
+                      goal_days: Math.max(30, parseInt(e.target.value) || 30),
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Дни недели</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {WEEKDAYS.map((day) => (
+                    <Badge
+                      key={day.id}
+                      className={`cursor-pointer min-h-[36px] px-4 ${
+                        newHabit.days_of_week.includes(day.id)
+                          ? 'bg-[#748c6d]'
+                          : 'bg-gray-300'
+                      }`}
+                      onClick={() => toggleDayOfWeek(day.id)}
+                    >
+                      {day.name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label>Сколько раз в день</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={newHabit.times_per_day}
+                  onChange={(e) =>
+                    setNewHabit({
+                      ...newHabit,
+                      times_per_day: parseInt(e.target.value) || 1,
+                    })
+                  }
+                />
+              </div>
+              <Button onClick={createHabit} className="w-full min-h-[44px]">
+                Создать привычку
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
-                    <Button onClick={updateHabit} className="w-full min-h-[44px]">
-                      Сохранить изменения
-                    </Button>
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Редактировать привычку</DialogTitle>
+            </DialogHeader>
+            {editingHabit && (
+              <div className="space-y-4">
+                <div>
+                  <Label>Название</Label>
+                  <Input
+                    value={editingHabit.title}
+                    onChange={(e) =>
+                      setEditingHabit({ ...editingHabit, title: e.target.value })
+                    }
+                    placeholder="Название привычки"
+                    maxLength={30}
+                  />
+                </div>
+                <div>
+                  <Label>Категория</Label>
+                  <Select
+                    value={editingHabit.category}
+                    onValueChange={(val) =>
+                      setEditingHabit({ ...editingHabit, category: val })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Выберите категорию" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Цель</Label>
+                  <Input
+                    value={editingHabit.goal}
+                    onChange={(e) =>
+                      setEditingHabit({ ...editingHabit, goal: e.target.value })
+                    }
+                    placeholder="Делать зарядку каждый день"
+                    maxLength={40}
+                  />
+                </div>
+                <div>
+                  <Label>Количество дней для достижения</Label>
+                  <Input
+                    type="number"
+                    min={30}
+                    max={360}
+                    value={editingHabit.goal_days}
+                    onChange={(e) =>
+                      setEditingHabit({
+                        ...editingHabit,
+                        goal_days: Math.max(30, parseInt(e.target.value) || 30),
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>Дни недели</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {WEEKDAYS.map((day) => (
+                      <Badge
+                        key={day.id}
+                        className={`cursor-pointer min-h-[36px] px-4 ${
+                          editingHabit.days_of_week.includes(day.id)
+                            ? 'bg-[#748c6d]'
+                            : 'bg-gray-300'
+                        }`}
+                        onClick={() => toggleEditDayOfWeek(day.id)}
+                      >
+                        {day.name}
+                      </Badge>
+                    ))}
                   </div>
-                )}
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
+                </div>
+                <div>
+                  <Label>Сколько раз в день</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={editingHabit.times_per_day}
+                    onChange={(e) =>
+                      setEditingHabit({
+                        ...editingHabit,
+                        times_per_day: parseInt(e.target.value) || 1,
+                      })
+                    }
+                  />
+                </div>
+                <Button onClick={updateHabit} className="w-full min-h-[44px]">
+                  Сохранить изменения
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         <Card className="p-4">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -871,15 +882,15 @@ export default function Habits() {
                 const progress = calculateProgress(habit);
 
                 return (
-                  <Card key={habit.id} className="p-6">
-                    <div className="flex items-start justify-between mb-4">
+                  <Card key={habit.id} className="p-4 sm:p-6">
+                    <div className="flex items-start justify-between mb-3 sm:mb-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-xl font-bold">{habit.title}</h3>
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h3 className="text-lg sm:text-xl font-bold">{habit.title}</h3>
                           <Badge variant="outline">{habit.category}</Badge>
                         </div>
                         <p className="text-sm text-gray-600">{habit.goal}</p>
-                        <div className="flex gap-4 mt-2 text-sm text-gray-500">
+                        <div className="flex gap-3 sm:gap-4 mt-2 text-xs sm:text-sm text-gray-500">
                           <span>🔥 {habit.current_streak} дней</span>
                           <span>✅ {habit.total_completions} выполнений</span>
                         </div>
@@ -889,7 +900,7 @@ export default function Habits() {
                     <div className="space-y-3">
                       <button
                         onClick={() => toggleCompletion(habit.id)}
-                        className={`w-full p-6 rounded-2xl border-2 transition-all active:scale-95 ${
+                        className={`w-full p-4 sm:p-6 rounded-2xl border-2 transition-all active:scale-95 ${
                           habit.completions_today >= habit.times_per_day
                             ? 'bg-[#748c6d] border-[#748c6d] shadow-lg'
                             : 'bg-white border-gray-300 hover:border-[#748c6d] hover:shadow-md'
@@ -1006,15 +1017,15 @@ export default function Habits() {
               </div>
             ) : (
               filteredHabits.map((habit) => (
-                <Card key={habit.id} className="p-6">
-                  <div className="flex items-start justify-between mb-4">
+                <Card key={habit.id} className="p-4 sm:p-6">
+                  <div className="flex items-start justify-between mb-3 sm:mb-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-xl font-bold">{habit.title}</h3>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="text-lg sm:text-xl font-bold">{habit.title}</h3>
                         <Badge variant="outline">{habit.category}</Badge>
                       </div>
                       <p className="text-sm text-gray-600">{habit.goal}</p>
-                      <div className="flex gap-4 mt-2 text-sm text-gray-500">
+                      <div className="flex gap-3 sm:gap-4 mt-2 text-xs sm:text-sm text-gray-500">
                         <span>🔥 {habit.current_streak} дней</span>
                         <span>✅ {habit.total_completions} выполнений</span>
                       </div>
@@ -1022,7 +1033,7 @@ export default function Habits() {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="p-6 rounded-2xl bg-gradient-to-br from-[#748c6d] to-[#8da582] text-white">
+                    <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-[#748c6d] to-[#8da582] text-white">
                       <div className="flex items-center justify-center gap-3 mb-3">
                         <Icon name="TrendingUp" size={32} className="text-white" />
                         <span className="text-lg font-semibold">
@@ -1085,15 +1096,15 @@ export default function Habits() {
               </div>
             ) : (
               filteredHabits.map((habit) => (
-                <Card key={habit.id} className="p-6">
-                  <div className="flex items-start justify-between mb-4">
+                <Card key={habit.id} className="p-4 sm:p-6">
+                  <div className="flex items-start justify-between mb-3 sm:mb-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-xl font-bold">{habit.title}</h3>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="text-lg sm:text-xl font-bold">{habit.title}</h3>
                         <Badge variant="outline">{habit.category}</Badge>
                       </div>
                       <p className="text-sm text-gray-600">{habit.goal}</p>
-                      <div className="flex gap-4 mt-2 text-sm text-gray-500">
+                      <div className="flex gap-3 sm:gap-4 mt-2 text-xs sm:text-sm text-gray-500">
                         <span>🔥 {habit.current_streak} дней</span>
                         <span>✅ {habit.total_completions} выполнений</span>
                       </div>
@@ -1101,7 +1112,7 @@ export default function Habits() {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="p-6 rounded-2xl bg-gradient-to-br from-[#6b7c64] to-[#8da582] text-white">
+                    <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-[#6b7c64] to-[#8da582] text-white">
                       <div className="flex items-center justify-center gap-3 mb-3">
                         <Icon name="Calendar" size={32} className="text-white" />
                         <span className="text-lg font-semibold">
