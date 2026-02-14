@@ -148,6 +148,7 @@ def handle_start(chat_id: int) -> None:
 
 def save_incoming_message(telegram_id: int, text: str) -> None:
     """Сохраняет входящее сообщение из Telegram в chat_messages."""
+    print(f"[CHAT] Saving incoming message from telegram_id={telegram_id}, text={text[:50]}")
     schema = get_schema()
     conn = psycopg2.connect(os.environ["DATABASE_URL"])
     try:
@@ -157,6 +158,7 @@ def save_incoming_message(telegram_id: int, text: str) -> None:
             (telegram_id,)
         )
         row = cursor.fetchone()
+        print(f"[CHAT] User lookup result: {row}")
         if row:
             user_id = row[0]
             cursor.execute(
@@ -164,14 +166,18 @@ def save_incoming_message(telegram_id: int, text: str) -> None:
                 (user_id, text)
             )
             conn.commit()
+            print(f"[CHAT] Message saved for user_id={user_id}")
+        else:
+            print(f"[CHAT] No user found with telegram_id={telegram_id}")
     except Exception as e:
-        print(f"Error saving incoming message: {e}")
+        print(f"[CHAT] Error saving incoming message: {e}")
     finally:
         conn.close()
 
 
 def process_webhook(body: dict) -> dict:
     """Обработка webhook от Telegram."""
+    print(f"[WEBHOOK] Received webhook: {json.dumps(body)[:200]}")
     message = body.get("message")
 
     if not message:
@@ -180,6 +186,7 @@ def process_webhook(body: dict) -> dict:
     text = message.get("text", "")
     user = message.get("from", {})
     chat_id = message.get("chat", {}).get("id")
+    print(f"[WEBHOOK] chat_id={chat_id}, text={text[:50] if text else '(empty)'}")
 
     if not chat_id:
         return {"statusCode": 200, "body": json.dumps({"ok": True})}
@@ -321,6 +328,48 @@ def handle_test(body: dict) -> dict:
 
 
 # =============================================================================
+# WEBHOOK MANAGEMENT
+# =============================================================================
+
+def handle_set_webhook(body: dict) -> dict:
+    """POST ?action=set-webhook — регистрирует URL вебхука в Telegram."""
+    webhook_url = body.get("url", "").strip()
+    if not webhook_url:
+        return cors_response(400, {"error": "url is required"})
+    try:
+        bot = get_bot()
+        secret = os.environ.get("TELEGRAM_WEBHOOK_SECRET", "")
+        bot.remove_webhook()
+        if secret:
+            bot.set_webhook(url=webhook_url, secret_token=secret)
+        else:
+            bot.set_webhook(url=webhook_url)
+        info = bot.get_webhook_info()
+        return cors_response(200, {
+            "success": True,
+            "url": info.url,
+            "pending_update_count": info.pending_update_count,
+        })
+    except Exception as e:
+        return cors_response(500, {"error": str(e)})
+
+
+def handle_webhook_info() -> dict:
+    """GET ?action=webhook-info — возвращает текущую информацию о вебхуке."""
+    try:
+        bot = get_bot()
+        info = bot.get_webhook_info()
+        return cors_response(200, {
+            "url": info.url,
+            "pending_update_count": info.pending_update_count,
+            "last_error_date": info.last_error_date,
+            "last_error_message": info.last_error_message,
+        })
+    except Exception as e:
+        return cors_response(500, {"error": str(e)})
+
+
+# =============================================================================
 # MAIN HANDLER
 # =============================================================================
 
@@ -350,6 +399,10 @@ def handler(event: dict, context) -> dict:
             return handle_send_photo(body)
         elif action == "test" and method == "POST":
             return handle_test(body)
+        elif action == "set-webhook" and method == "POST":
+            return handle_set_webhook(body)
+        elif action == "webhook-info" and method == "GET":
+            return handle_webhook_info()
         else:
             return cors_response(400, {"error": f"Unknown action: {action}"})
 

@@ -95,39 +95,45 @@ export default function AdminChatsTab() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const fetchChatList = useCallback(async () => {
-    setLoading(true);
+  const fetchChatList = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetch(API_URL);
       const data = await res.json();
       setUsers(data);
     } catch {
-      toast.error('Ошибка загрузки чатов');
+      if (!silent) toast.error('Ошибка загрузки чатов');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
-  const fetchMessages = useCallback(async (userId: number) => {
-    setMessagesLoading(true);
+  const fetchMessages = useCallback(async (userId: number, silent = false) => {
+    if (!silent) setMessagesLoading(true);
     try {
       const res = await fetch(`${API_URL}?user_id=${userId}`);
       const data = await res.json();
-      setMessages(data.messages || []);
+      const newMessages = data.messages || [];
+      setMessages(prev => {
+        if (silent && prev.length === newMessages.length) return prev;
+        return newMessages;
+      });
       if (data.user) {
         setUserDetail(data.user);
-        const enabledCh = (data.user.availableChannels || []).find((c: AvailableChannel) => c.enabled);
-        if (enabledCh) {
-          setSelectedChannel(enabledCh.id);
-        } else {
-          const anyCh = (data.user.availableChannels || [])[0];
-          setSelectedChannel(anyCh?.id || '');
+        if (!silent) {
+          const enabledCh = (data.user.availableChannels || []).find((c: AvailableChannel) => c.enabled);
+          if (enabledCh) {
+            setSelectedChannel(enabledCh.id);
+          } else {
+            const anyCh = (data.user.availableChannels || [])[0];
+            setSelectedChannel(anyCh?.id || '');
+          }
         }
       }
     } catch {
-      toast.error('Ошибка загрузки сообщений');
+      if (!silent) toast.error('Ошибка загрузки сообщений');
     } finally {
-      setMessagesLoading(false);
+      if (!silent) setMessagesLoading(false);
     }
   }, []);
 
@@ -144,6 +150,19 @@ export default function AdminChatsTab() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const selectedUserIdRef = useRef(selectedUserId);
+  selectedUserIdRef.current = selectedUserId;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchChatList(true);
+      if (selectedUserIdRef.current) {
+        fetchMessages(selectedUserIdRef.current, true);
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [fetchChatList, fetchMessages]);
 
   const filteredUsers = users.filter(u =>
     u.name.toLowerCase().includes(searchQuery.toLowerCase())
