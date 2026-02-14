@@ -49,6 +49,7 @@ def handler(event: dict, context) -> dict:
                         u.selected_plan,
                         u.is_admin,
                         u.onboarding_completed,
+                        u.receive_notifications,
                         CASE 
                             WHEN u.telegram_username IS NOT NULL THEN 'telegram'
                             ELSE 'email'
@@ -90,6 +91,7 @@ def handler(event: dict, context) -> dict:
                         telegram_username,
                         selected_plan,
                         is_admin,
+                        receive_notifications,
                         CASE 
                             WHEN telegram_username IS NOT NULL THEN 'telegram'
                             ELSE 'email'
@@ -210,6 +212,7 @@ def handler(event: dict, context) -> dict:
                 email = data.get('email', '').strip()
                 selected_plan = data.get('selected_plan')
                 is_admin = data.get('is_admin', False)
+                receive_notifications = data.get('receive_notifications', True)
                 telegram_username = data.get('telegram_username', '').strip() or None
                 
                 health_params = data.get('health_parameters', {})
@@ -234,10 +237,10 @@ def handler(event: dict, context) -> dict:
 
                 cur.execute("""
                     UPDATE t_p76837068_nikolife_health_app.users 
-                    SET name = %s, email = %s, selected_plan = %s, is_admin = %s, telegram_username = %s
+                    SET name = %s, email = %s, selected_plan = %s, is_admin = %s, telegram_username = %s, receive_notifications = %s
                     WHERE id = %s
-                    RETURNING id, name, email, selected_plan, is_admin, telegram_username
-                """, (name, email, selected_plan, is_admin, telegram_username, user_id))
+                    RETURNING id, name, email, selected_plan, is_admin, telegram_username, receive_notifications
+                """, (name, email, selected_plan, is_admin, telegram_username, bool(receive_notifications), user_id))
                 
                 updated_user = cur.fetchone()
                 

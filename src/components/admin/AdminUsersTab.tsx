@@ -23,6 +23,7 @@ export default function AdminUsersTab() {
     telegram_username: '',
     selected_plan: 'free',
     is_admin: false,
+    receive_notifications: true,
     password: 'temp123',
     health_parameters: {
       goal: '',
@@ -60,6 +61,7 @@ export default function AdminUsersTab() {
       telegram_username: '',
       selected_plan: 'free',
       is_admin: false,
+      receive_notifications: true,
       password: 'temp123',
       health_parameters: {
         goal: '',
@@ -89,6 +91,7 @@ export default function AdminUsersTab() {
         telegram_username: userDetail.telegram_username || '',
         selected_plan: userDetail.selected_plan || 'free',
         is_admin: userDetail.is_admin || false,
+        receive_notifications: userDetail.receive_notifications !== false,
         password: '',
         health_parameters: {
           goal: userDetail.goal || '',

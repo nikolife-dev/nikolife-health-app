@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import Icon from '@/components/ui/icon';
 import { UserFormData } from './types';
 
@@ -132,6 +133,18 @@ export default function UserFormDialog({
             <Label htmlFor={`${mode}-admin`} className="cursor-pointer">
               {mode === 'add' ? 'Администратор' : 'Права администратора'}
             </Label>
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-lg border border-[#748c6d]/20 bg-[#748c6d]/5">
+            <div className="space-y-0.5">
+              <Label htmlFor={`${mode}-notifications`} className="text-sm font-medium cursor-pointer">Получать рассылки</Label>
+              <p className="text-xs text-[#4a5446]/60">Уведомления и новости в Telegram</p>
+            </div>
+            <Switch
+              id={`${mode}-notifications`}
+              checked={formData.receive_notifications}
+              onCheckedChange={(checked) => updateForm({ receive_notifications: checked })}
+            />
           </div>
 
           <div className="border-t pt-4 mt-4">

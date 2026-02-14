@@ -67,6 +67,7 @@ export default function UsersTable({ users, onEdit, onDelete }: UsersTableProps)
             <TableHead>Авторизация</TableHead>
             <TableHead>План</TableHead>
             <TableHead>Telegram</TableHead>
+            <TableHead>Рассылка</TableHead>
             <TableHead>Регистрация</TableHead>
             <TableHead>Последний вход</TableHead>
             <TableHead className="text-right">Действия</TableHead>
@@ -75,7 +76,7 @@ export default function UsersTable({ users, onEdit, onDelete }: UsersTableProps)
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={8} className="text-center text-[#4a5446]/60">
+              <TableCell colSpan={9} className="text-center text-[#4a5446]/60">
                 Нет пользователей
               </TableCell>
             </TableRow>
@@ -104,6 +105,19 @@ export default function UsersTable({ users, onEdit, onDelete }: UsersTableProps)
                 </TableCell>
                 <TableCell className="text-[#4a5446]/80">
                   {user.telegram_username ? `@${user.telegram_username}` : '—'}
+                </TableCell>
+                <TableCell>
+                  {user.receive_notifications !== false ? (
+                    <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50 gap-1">
+                      <Icon name="BellRing" size={12} />
+                      Вкл
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-gray-300 text-gray-500 bg-gray-50 gap-1">
+                      <Icon name="BellOff" size={12} />
+                      Выкл
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell className="text-[#4a5446]/80 text-sm">
                   {formatDate(user.created_at)}

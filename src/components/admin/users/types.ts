@@ -10,6 +10,7 @@ export interface User {
   selected_plan: string;
   is_admin: boolean;
   auth_type: 'email' | 'telegram';
+  receive_notifications: boolean;
 }
 
 export interface HealthParameters {
@@ -28,6 +29,7 @@ export interface UserDetail extends User {
   weight?: number;
   height?: number;
   diet_preference?: string;
+  receive_notifications?: boolean;
 }
 
 export interface UserFormData {
@@ -36,6 +38,7 @@ export interface UserFormData {
   telegram_username: string;
   selected_plan: string;
   is_admin: boolean;
+  receive_notifications: boolean;
   password: string;
   health_parameters: HealthParameters;
 }

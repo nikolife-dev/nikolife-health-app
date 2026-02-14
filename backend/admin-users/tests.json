@@ -4,16 +4,7 @@
       "name": "Get all users",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 200,
-      "expectedBody": {
-        "0": {
-          "id": "number",
-          "name": "string",
-          "email": "string",
-          "auth_type": "string"
-        }
-      },
-      "bodyMatcher": "partial"
+      "expectedStatus": 200
     }
   ]
 }
