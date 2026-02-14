@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,12 +27,15 @@ import funcUrls from '../../../backend/func2url.json';
 
 const API_URL = funcUrls.chats;
 
-type Channel = 'telegram' | 'email' | 'broadcast';
+interface AvailableChannel {
+  id: string;
+  enabled: boolean;
+}
 
 interface ChatMessage {
   id: number;
   text: string;
-  channel: Channel;
+  channel: string;
   direction: 'in' | 'out';
   timestamp: string;
 }
@@ -44,7 +47,16 @@ interface ChatUser {
   lastMessage: string;
   lastTime: string;
   unread: number;
-  channels: Channel[];
+  channels: string[];
+  availableChannels?: AvailableChannel[];
+}
+
+interface UserDetail {
+  id: number;
+  name: string;
+  telegram_username: string | null;
+  telegram_id: number | null;
+  availableChannels: AvailableChannel[];
 }
 
 const CHANNEL_META: Record<string, { label: string; icon: string; color: string }> = {
@@ -68,11 +80,20 @@ export default function AdminChatsTab() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
+  const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [loading, setLoading] = useState(false);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [messageText, setMessageText] = useState('');
+  const [selectedChannel, setSelectedChannel] = useState<string>('');
+  const [sending, setSending] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: 'clear' | 'delete'; userId: number; userName: string } | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const fetchChatList = useCallback(async () => {
     setLoading(true);
@@ -93,6 +114,16 @@ export default function AdminChatsTab() {
       const res = await fetch(`${API_URL}?user_id=${userId}`);
       const data = await res.json();
       setMessages(data.messages || []);
+      if (data.user) {
+        setUserDetail(data.user);
+        const enabledCh = (data.user.availableChannels || []).find((c: AvailableChannel) => c.enabled);
+        if (enabledCh) {
+          setSelectedChannel(enabledCh.id);
+        } else {
+          const anyCh = (data.user.availableChannels || [])[0];
+          setSelectedChannel(anyCh?.id || '');
+        }
+      }
     } catch {
       toast.error('Ошибка загрузки сообщений');
     } finally {
@@ -110,6 +141,10 @@ export default function AdminChatsTab() {
     }
   }, [selectedUserId, fetchMessages]);
 
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const filteredUsers = users.filter(u =>
     u.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -117,7 +152,47 @@ export default function AdminChatsTab() {
   const handleSelectUser = (user: ChatUser) => {
     setSelectedUserId(user.id);
     setSelectedUser(user);
+    setMessageText('');
     setShowMobileChat(true);
+  };
+
+  const handleSendMessage = async () => {
+    if (!selectedUserId || !messageText.trim() || !selectedChannel) return;
+
+    const channelInfo = userDetail?.availableChannels.find(c => c.id === selectedChannel);
+    if (channelInfo && !channelInfo.enabled) {
+      toast.error('Этот канал отключён пользователем');
+      return;
+    }
+
+    setSending(true);
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: selectedUserId,
+          text: messageText.trim(),
+          channel: selectedChannel,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка');
+      setMessages(prev => [...prev, data.message]);
+      setMessageText('');
+      fetchChatList();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Ошибка отправки');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
   const handleClearChat = async () => {
@@ -143,6 +218,7 @@ export default function AdminChatsTab() {
       toast.success('Чат удалён');
       setSelectedUserId(null);
       setSelectedUser(null);
+      setUserDetail(null);
       setMessages([]);
       setShowMobileChat(false);
       fetchChatList();
@@ -152,6 +228,9 @@ export default function AdminChatsTab() {
       setConfirmAction(null);
     }
   };
+
+  const availableChannels = userDetail?.availableChannels || [];
+  const hasEnabledChannel = availableChannels.some(c => c.enabled);
 
   const ChatList = () => (
     <div className="flex flex-col h-full">
@@ -221,10 +300,7 @@ export default function AdminChatsTab() {
       {selectedUser ? (
         <>
           <div className="p-3 border-b border-[#748c6d]/10 flex items-center gap-3">
-            <button
-              onClick={() => setShowMobileChat(false)}
-              className="lg:hidden p-1"
-            >
+            <button onClick={() => setShowMobileChat(false)} className="lg:hidden p-1">
               <Icon name="ArrowLeft" size={20} className="text-[#4a5446]" />
             </button>
             <div className="w-9 h-9 rounded-full bg-[#748c6d]/20 flex items-center justify-center">
@@ -267,59 +343,94 @@ export default function AdminChatsTab() {
 
           <ScrollArea className="flex-1 p-4">
             {messagesLoading ? (
-              <div className="flex items-center justify-center h-full text-[#4a5446]/50 text-sm">
-                Загрузка...
-              </div>
+              <div className="flex items-center justify-center h-full text-[#4a5446]/50 text-sm">Загрузка...</div>
             ) : messages.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-[#4a5446]/40 text-sm">
-                Нет сообщений
-              </div>
+              <div className="flex items-center justify-center h-full text-[#4a5446]/40 text-sm">Нет сообщений</div>
             ) : (
               <div className="space-y-3">
                 {messages.map(msg => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.direction === 'out' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${
-                        msg.direction === 'out'
-                          ? 'bg-[#748c6d] text-white rounded-br-md'
-                          : 'bg-white border border-[#748c6d]/15 text-[#4a5446] rounded-bl-md'
-                      }`}
-                    >
+                  <div key={msg.id} className={`flex ${msg.direction === 'out' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${
+                      msg.direction === 'out'
+                        ? 'bg-[#748c6d] text-white rounded-br-md'
+                        : 'bg-white border border-[#748c6d]/15 text-[#4a5446] rounded-bl-md'
+                    }`}>
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                      <div className={`flex items-center gap-1.5 mt-1 ${
-                        msg.direction === 'out' ? 'justify-end' : 'justify-start'
-                      }`}>
+                      <div className={`flex items-center gap-1.5 mt-1 ${msg.direction === 'out' ? 'justify-end' : 'justify-start'}`}>
                         <ChannelBadge channel={msg.channel} />
-                        <span className={`text-[10px] ${
-                          msg.direction === 'out' ? 'text-white/60' : 'text-[#4a5446]/40'
-                        }`}>
+                        <span className={`text-[10px] ${msg.direction === 'out' ? 'text-white/60' : 'text-[#4a5446]/40'}`}>
                           {msg.timestamp}
                         </span>
                       </div>
                     </div>
                   </div>
                 ))}
+                <div ref={messagesEndRef} />
               </div>
             )}
           </ScrollArea>
 
           <div className="p-3 border-t border-[#748c6d]/10">
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Написать сообщение..."
-                className="flex-1 bg-white/50 border-[#748c6d]/20 h-10"
-                disabled
-              />
-              <Button size="icon" className="bg-[#748c6d] hover:bg-[#5f7a59] h-10 w-10 shrink-0" disabled>
-                <Icon name="SendHorizontal" size={18} />
-              </Button>
-            </div>
-            <p className="text-[10px] text-[#4a5446]/40 mt-1.5 text-center">
-              Отправка сообщений будет доступна после подключения каналов
-            </p>
+            {availableChannels.length > 0 ? (
+              <>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-[10px] text-[#4a5446]/50 mr-1">Канал:</span>
+                  {availableChannels.map(ch => {
+                    const meta = CHANNEL_META[ch.id] || { label: ch.id, icon: 'Circle', color: '' };
+                    const isSelected = selectedChannel === ch.id;
+                    const isDisabled = !ch.enabled;
+                    return (
+                      <button
+                        key={ch.id}
+                        onClick={() => !isDisabled && setSelectedChannel(ch.id)}
+                        disabled={isDisabled}
+                        className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border transition-all ${
+                          isDisabled
+                            ? 'opacity-40 cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400'
+                            : isSelected
+                              ? 'border-[#748c6d] bg-[#748c6d]/10 text-[#748c6d]'
+                              : 'border-[#748c6d]/20 bg-white hover:bg-[#748c6d]/5 text-[#4a5446]'
+                        }`}
+                        title={isDisabled ? 'Уведомления отключены пользователем' : meta.label}
+                      >
+                        <Icon name={meta.icon} size={12} />
+                        {meta.label}
+                        {isDisabled && <Icon name="BellOff" size={10} className="ml-0.5" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="Написать сообщение..."
+                    value={messageText}
+                    onChange={e => setMessageText(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="flex-1 bg-white/50 border-[#748c6d]/20 h-10"
+                    disabled={!hasEnabledChannel || sending}
+                  />
+                  <Button
+                    size="icon"
+                    className="bg-[#748c6d] hover:bg-[#5f7a59] h-10 w-10 shrink-0"
+                    disabled={!messageText.trim() || !hasEnabledChannel || sending}
+                    onClick={handleSendMessage}
+                  >
+                    <Icon name="SendHorizontal" size={18} />
+                  </Button>
+                </div>
+                {!hasEnabledChannel && (
+                  <p className="text-[10px] text-orange-500/80 mt-1.5 text-center">
+                    Пользователь отключил уведомления
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-1">
+                <p className="text-[11px] text-[#4a5446]/40">
+                  Нет доступных каналов для отправки
+                </p>
+              </div>
+            )}
           </div>
         </>
       ) : (

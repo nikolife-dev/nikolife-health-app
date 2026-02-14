@@ -146,6 +146,30 @@ def handle_start(chat_id: int) -> None:
     bot.send_message(chat_id, "Привет! Используйте кнопку «Войти через Telegram» на сайте.")
 
 
+def save_incoming_message(telegram_id: int, text: str) -> None:
+    """Сохраняет входящее сообщение из Telegram в chat_messages."""
+    schema = get_schema()
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            f"SELECT id FROM {schema}users WHERE telegram_id = %s",
+            (telegram_id,)
+        )
+        row = cursor.fetchone()
+        if row:
+            user_id = row[0]
+            cursor.execute(
+                f"INSERT INTO {schema}chat_messages (user_id, text, channel, direction) VALUES (%s, %s, 'telegram', 'in')",
+                (user_id, text)
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"Error saving incoming message: {e}")
+    finally:
+        conn.close()
+
+
 def process_webhook(body: dict) -> dict:
     """Обработка webhook от Telegram."""
     message = body.get("message")
@@ -167,6 +191,8 @@ def process_webhook(body: dict) -> dict:
                 handle_web_auth(chat_id, user)
             else:
                 handle_start(chat_id)
+        else:
+            save_incoming_message(chat_id, text)
     except telebot.apihelper.ApiTelegramException as e:
         print(f"Telegram API error: {e}")
     except Exception as e:
