@@ -47,7 +47,7 @@ def handler(event: dict, context) -> dict:
         conn = psycopg2.connect(database_url)
         cur = conn.cursor()
         
-        cur.execute(f"SELECT id, name, email, telegram_id, telegram_username, selected_plan, onboarding_completed FROM {schema}.users WHERE auth_token = %s", (auth_token,))
+        cur.execute(f"SELECT id, name, email, telegram_id, telegram_username, selected_plan, onboarding_completed, receive_notifications FROM {schema}.users WHERE auth_token = %s", (auth_token,))
         user = cur.fetchone()
         
         if not user:
@@ -60,7 +60,7 @@ def handler(event: dict, context) -> dict:
                 'isBase64Encoded': False
             }
         
-        user_id, current_name, current_email, telegram_id, telegram_username, selected_plan, onboarding_completed = user
+        user_id, current_name, current_email, telegram_id, telegram_username, selected_plan, onboarding_completed, receive_notifications = user
         
         if method == 'GET':
             initials = ''.join([word[0] for word in current_name.split()[:2]]).upper()
@@ -98,7 +98,8 @@ def handler(event: dict, context) -> dict:
                         'telegram_username': telegram_username,
                         'selected_plan': selected_plan,
                         'onboarding_completed': onboarding_completed,
-                        'onboarding_data': onboarding_data
+                        'onboarding_data': onboarding_data,
+                        'receive_notifications': receive_notifications if receive_notifications is not None else True
                     }
                 }),
                 'isBase64Encoded': False
@@ -111,6 +112,7 @@ def handler(event: dict, context) -> dict:
             new_telegram_id = body.get('telegram_id')
             new_telegram_username = body.get('telegram_username')
             new_selected_plan = body.get('selected_plan')
+            new_receive_notifications = body.get('receive_notifications')
             
             # Обработка данных онбординга
             onboarding_data = body.get('onboarding_data')
@@ -200,6 +202,9 @@ def handler(event: dict, context) -> dict:
             if new_selected_plan is not None:
                 update_fields.append('selected_plan = %s')
                 update_values.append(new_selected_plan)
+            if new_receive_notifications is not None:
+                update_fields.append('receive_notifications = %s')
+                update_values.append(bool(new_receive_notifications))
             
             update_values.append(user_id)
             

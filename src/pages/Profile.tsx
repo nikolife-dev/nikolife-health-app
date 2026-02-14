@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import Icon from '@/components/ui/icon';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -43,14 +44,16 @@ export default function Profile() {
     email: '',
     avatar: '',
     telegram_username: '',
-    selected_plan: ''
+    selected_plan: '',
+    receive_notifications: true
   });
   
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
   const [editForm, setEditForm] = useState({
     name: '',
-    email: ''
+    email: '',
+    receive_notifications: true
   });
 
   const [onboardingData, setOnboardingData] = useState({
@@ -162,7 +165,8 @@ export default function Profile() {
     logInfo(`Текущие данные: name="${userProfile.name}", email="${userProfile.email}"`);
     setEditForm({
       name: userProfile.name,
-      email: userProfile.email
+      email: userProfile.email,
+      receive_notifications: userProfile.receive_notifications !== false
     });
     setIsEditDialogOpen(true);
   };
@@ -248,7 +252,8 @@ export default function Profile() {
       logInfo('Отправка PUT запроса на /profile endpoint');
       const requestBody = {
         name: editForm.name,
-        email: editForm.email
+        email: editForm.email,
+        receive_notifications: editForm.receive_notifications
       };
       logInfo(`Body запроса: ${JSON.stringify(requestBody)}`);
       logInfo(`Headers: X-Authorization=Bearer ${token.substring(0, 15)}...`);
@@ -469,6 +474,18 @@ export default function Profile() {
                 value={editForm.email}
                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                 placeholder="Введите ваш email"
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg border border-[#748c6d]/20 bg-[#748c6d]/5">
+              <div className="space-y-0.5">
+                <Label htmlFor="notifications-toggle" className="text-sm font-medium cursor-pointer">Получать рассылки</Label>
+                <p className="text-xs text-[#4a5446]/60">Уведомления и новости в Telegram</p>
+              </div>
+              <Switch
+                id="notifications-toggle"
+                checked={editForm.receive_notifications}
+                onCheckedChange={(checked) => setEditForm({ ...editForm, receive_notifications: checked })}
               />
             </div>
           </div>

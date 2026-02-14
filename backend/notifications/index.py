@@ -50,6 +50,7 @@ def broadcast_telegram(title, text):
             SELECT title, goal FROM habits WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1
         ) h ON true
         WHERE u.telegram_id IS NOT NULL
+          AND u.receive_notifications = TRUE
     """)
     rows = cur.fetchall()
     cur.close()
