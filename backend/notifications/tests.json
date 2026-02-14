@@ -1,0 +1,64 @@
+{
+  "tests": [
+    {
+      "name": "List notifications",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "List sent notifications",
+      "method": "GET",
+      "path": "/?status=sent",
+      "expectedStatus": 200,
+      "expectedBody": [],
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create notification",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "title": "Test notification",
+        "text": "Test text content",
+        "channels": ["telegram", "email"]
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "title": "string",
+        "status": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create with missing fields",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "title": "",
+        "text": ""
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Delete nonexistent",
+      "method": "DELETE",
+      "path": "/?id=99999",
+      "expectedStatus": 404,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "CORS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}

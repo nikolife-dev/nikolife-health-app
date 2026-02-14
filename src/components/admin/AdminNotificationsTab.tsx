@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TabsContent as OuterTabsContent } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
+import { toast } from 'sonner';
+import funcUrls from '../../../backend/func2url.json';
+
+const API_URL = funcUrls.notifications;
 
 interface Notification {
   id: number;
@@ -30,7 +34,7 @@ interface Notification {
   channels: string[];
   status: 'draft' | 'scheduled' | 'sent';
   createdAt: string;
-  sentAt?: string;
+  sentAt?: string | null;
   recipients?: number;
 }
 
@@ -38,66 +42,6 @@ const CHANNELS = [
   { id: 'telegram', label: 'Телеграм', icon: 'Send' },
   { id: 'email', label: 'E-mail', icon: 'Mail' },
   { id: 'vk', label: 'ВКонтакте', icon: 'MessageCircle' },
-];
-
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: 1,
-    title: 'Новогодняя акция',
-    text: 'Скидка 30% на все подписки до конца января!',
-    channels: ['telegram', 'email'],
-    status: 'draft',
-    createdAt: '14.02.2026',
-  },
-  {
-    id: 2,
-    title: 'Обновление приложения',
-    text: 'Мы добавили новые тренировки и рецепты. Обновите приложение!',
-    channels: ['telegram', 'email', 'vk'],
-    status: 'scheduled',
-    createdAt: '13.02.2026',
-  },
-  {
-    id: 3,
-    title: 'Напоминание о тренировке',
-    text: 'Не забудьте про тренировку сегодня!',
-    channels: ['telegram'],
-    status: 'draft',
-    createdAt: '12.02.2026',
-  },
-];
-
-const MOCK_HISTORY: Notification[] = [
-  {
-    id: 101,
-    title: 'Февральская распродажа',
-    text: 'Скидка 20% на годовую подписку!',
-    channels: ['telegram', 'email'],
-    status: 'sent',
-    createdAt: '10.02.2026',
-    sentAt: '10.02.2026 14:30',
-    recipients: 843,
-  },
-  {
-    id: 102,
-    title: 'Новый раздел: Ментальное здоровье',
-    text: 'Мы запустили раздел ментального здоровья с медитациями и практиками.',
-    channels: ['telegram', 'email', 'vk'],
-    status: 'sent',
-    createdAt: '05.02.2026',
-    sentAt: '05.02.2026 10:00',
-    recipients: 1128,
-  },
-  {
-    id: 103,
-    title: 'Приветственная рассылка',
-    text: 'Добро пожаловать в NikoLife! Начните с выбора привычек.',
-    channels: ['email'],
-    status: 'sent',
-    createdAt: '01.02.2026',
-    sentAt: '01.02.2026 09:00',
-    recipients: 256,
-  },
 ];
 
 const getStatusBadge = (status: string) => {
@@ -130,8 +74,33 @@ export default function AdminNotificationsTab() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
-  const [notifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
-  const [history] = useState<Notification[]>(MOCK_HISTORY);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [history, setHistory] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [formTitle, setFormTitle] = useState('');
+  const [formText, setFormText] = useState('');
+
+  const fetchNotifications = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [draftRes, sentRes] = await Promise.all([
+        fetch(API_URL),
+        fetch(`${API_URL}?status=sent`),
+      ]);
+      const drafts = await draftRes.json();
+      const sent = await sentRes.json();
+      setNotifications(drafts);
+      setHistory(sent);
+    } catch {
+      toast.error('Ошибка загрузки уведомлений');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const toggleChannel = (channelId: string) => {
     setSelectedChannels(prev =>
@@ -144,12 +113,104 @@ export default function AdminNotificationsTab() {
   const openEdit = (notification: Notification) => {
     setSelectedNotification(notification);
     setSelectedChannels(notification.channels);
+    setFormTitle(notification.title);
+    setFormText(notification.text);
     setIsEditOpen(true);
   };
 
   const openCreate = () => {
     setSelectedChannels([]);
+    setFormTitle('');
+    setFormText('');
     setIsCreateOpen(true);
+  };
+
+  const handleCreate = async (status: 'draft' | 'sent') => {
+    if (!formTitle.trim() || !formText.trim()) {
+      toast.error('Заполните название и текст');
+      return;
+    }
+    if (selectedChannels.length === 0) {
+      toast.error('Выберите хотя бы один канал');
+      return;
+    }
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formTitle.trim(),
+          text: formText.trim(),
+          channels: selectedChannels,
+          status,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(status === 'sent' ? 'Рассылка запущена' : 'Черновик сохранён');
+      setIsCreateOpen(false);
+      fetchNotifications();
+    } catch {
+      toast.error('Ошибка создания рассылки');
+    }
+  };
+
+  const handleUpdate = async (status?: 'sent') => {
+    if (!selectedNotification) return;
+    if (!formTitle.trim() || !formText.trim()) {
+      toast.error('Заполните название и текст');
+      return;
+    }
+    try {
+      const res = await fetch(API_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedNotification.id,
+          title: formTitle.trim(),
+          text: formText.trim(),
+          channels: selectedChannels,
+          status: status || selectedNotification.status,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(status === 'sent' ? 'Рассылка запущена' : 'Рассылка обновлена');
+      setIsEditOpen(false);
+      fetchNotifications();
+    } catch {
+      toast.error('Ошибка обновления');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      const res = await fetch(`${API_URL}?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      toast.success('Рассылка удалена');
+      fetchNotifications();
+    } catch {
+      toast.error('Ошибка удаления');
+    }
+  };
+
+  const handleSend = async (notification: Notification) => {
+    try {
+      const res = await fetch(API_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: notification.id,
+          title: notification.title,
+          text: notification.text,
+          channels: notification.channels,
+          status: 'sent',
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Рассылка запущена');
+      fetchNotifications();
+    } catch {
+      toast.error('Ошибка запуска рассылки');
+    }
   };
 
   return (
@@ -175,7 +236,12 @@ export default function AdminNotificationsTab() {
             </TabsList>
 
             <TabsContent value="all" className="space-y-4">
-              {notifications.length === 0 ? (
+              {loading ? (
+                <div className="text-center py-12 text-[#4a5446]/60">
+                  <Icon name="Loader2" size={32} className="mx-auto mb-4 animate-spin opacity-50" />
+                  <p>Загрузка...</p>
+                </div>
+              ) : notifications.length === 0 ? (
                 <div className="text-center py-12 text-[#4a5446]/60">
                   <Icon name="Bell" size={48} className="mx-auto mb-4 opacity-50" />
                   <p>Рассылок пока нет</p>
@@ -224,6 +290,7 @@ export default function AdminNotificationsTab() {
                                 variant="ghost"
                                 className="min-h-[36px] min-w-[36px] p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                                 title="Удалить"
+                                onClick={() => handleDelete(n.id)}
                               >
                                 <Icon name="Trash2" size={16} />
                               </Button>
@@ -232,6 +299,7 @@ export default function AdminNotificationsTab() {
                                 variant="ghost"
                                 className="min-h-[36px] min-w-[36px] p-0 text-[#748c6d] hover:text-[#5f7a59] hover:bg-[#748c6d]/10"
                                 title="Запустить рассылку"
+                                onClick={() => handleSend(n)}
                               >
                                 <Icon name="Play" size={16} />
                               </Button>
@@ -246,7 +314,12 @@ export default function AdminNotificationsTab() {
             </TabsContent>
 
             <TabsContent value="history" className="space-y-4">
-              {history.length === 0 ? (
+              {loading ? (
+                <div className="text-center py-12 text-[#4a5446]/60">
+                  <Icon name="Loader2" size={32} className="mx-auto mb-4 animate-spin opacity-50" />
+                  <p>Загрузка...</p>
+                </div>
+              ) : history.length === 0 ? (
                 <div className="text-center py-12 text-[#4a5446]/60">
                   <Icon name="Clock" size={48} className="mx-auto mb-4 opacity-50" />
                   <p>История рассылок пуста</p>
@@ -302,11 +375,22 @@ export default function AdminNotificationsTab() {
           <div className="space-y-4">
             <div>
               <Label>Название</Label>
-              <Input placeholder="Заголовок рассылки" maxLength={60} />
+              <Input
+                placeholder="Заголовок рассылки"
+                maxLength={60}
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+              />
             </div>
             <div>
               <Label>Текст сообщения</Label>
-              <Textarea placeholder="Текст, который получат пользователи..." rows={4} maxLength={1000} />
+              <Textarea
+                placeholder="Текст, который получат пользователи..."
+                rows={4}
+                maxLength={1000}
+                value={formText}
+                onChange={(e) => setFormText(e.target.value)}
+              />
             </div>
             <div>
               <Label>Каналы рассылки</Label>
@@ -333,14 +417,14 @@ export default function AdminNotificationsTab() {
             <div className="flex gap-2 pt-2">
               <Button
                 className="flex-1 bg-[#748c6d] hover:bg-[#5f7a59] min-h-[44px]"
-                onClick={() => setIsCreateOpen(false)}
+                onClick={() => handleCreate('draft')}
               >
                 Сохранить черновик
               </Button>
               <Button
                 variant="outline"
                 className="min-h-[44px] gap-2 border-[#748c6d] text-[#748c6d] hover:bg-[#748c6d]/10"
-                onClick={() => setIsCreateOpen(false)}
+                onClick={() => handleCreate('sent')}
               >
                 <Icon name="Play" size={16} />
                 Запустить
@@ -359,11 +443,20 @@ export default function AdminNotificationsTab() {
             <div className="space-y-4">
               <div>
                 <Label>Название</Label>
-                <Input defaultValue={selectedNotification.title} maxLength={60} />
+                <Input
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  maxLength={60}
+                />
               </div>
               <div>
                 <Label>Текст сообщения</Label>
-                <Textarea defaultValue={selectedNotification.text} rows={4} maxLength={1000} />
+                <Textarea
+                  value={formText}
+                  onChange={(e) => setFormText(e.target.value)}
+                  rows={4}
+                  maxLength={1000}
+                />
               </div>
               <div>
                 <Label>Каналы рассылки</Label>
@@ -390,14 +483,14 @@ export default function AdminNotificationsTab() {
               <div className="flex gap-2 pt-2">
                 <Button
                   className="flex-1 bg-[#748c6d] hover:bg-[#5f7a59] min-h-[44px]"
-                  onClick={() => setIsEditOpen(false)}
+                  onClick={() => handleUpdate()}
                 >
                   Сохранить
                 </Button>
                 <Button
                   variant="outline"
                   className="min-h-[44px] gap-2 border-[#748c6d] text-[#748c6d] hover:bg-[#748c6d]/10"
-                  onClick={() => setIsEditOpen(false)}
+                  onClick={() => handleUpdate('sent')}
                 >
                   <Icon name="Play" size={16} />
                   Запустить
