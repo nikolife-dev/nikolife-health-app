@@ -2,14 +2,65 @@ import json
 import os
 import psycopg2
 import psycopg2.extras
+import urllib.request
+import urllib.parse
 
 
 def get_conn():
     return psycopg2.connect(os.environ['DATABASE_URL'])
 
 
+def send_telegram_message(chat_id, text):
+    """Отправка сообщения в Telegram через Bot API"""
+    token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    if not token:
+        return False
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    data = json.dumps({
+        'chat_id': chat_id,
+        'text': text,
+        'parse_mode': 'HTML',
+    }).encode('utf-8')
+    req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+    try:
+        urllib.request.urlopen(req, timeout=10)
+        return True
+    except Exception:
+        return False
+
+
+def broadcast_telegram(title, text):
+    """Рассылка сообщения всем пользователям с telegram_id. Возвращает количество успешных отправок."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT telegram_id FROM users WHERE telegram_id IS NOT NULL")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    message = f"<b>{title}</b>\n\n{text}"
+    sent_count = 0
+    for (chat_id,) in rows:
+        if send_telegram_message(chat_id, message):
+            sent_count += 1
+    return sent_count
+
+
+def format_row(r):
+    return {
+        'id': r['id'],
+        'title': r['title'],
+        'text': r['text'],
+        'channels': r['channels'] if r['channels'] else [],
+        'status': r['status'],
+        'recipients': r['recipients'] or 0,
+        'createdAt': r['created_at'].strftime('%d.%m.%Y') if r['created_at'] else '',
+        'sentAt': r['sent_at'].strftime('%d.%m.%Y %H:%M') if r['sent_at'] else None,
+    }
+
+
 def handler(event, context):
-    """CRUD API для управления рассылками уведомлений"""
+    """CRUD API для управления рассылками с отправкой через Telegram"""
     if event.get('httpMethod') == 'OPTIONS':
         return {
             'statusCode': 200,
@@ -56,20 +107,7 @@ def handle_list(params, headers):
     cur.close()
     conn.close()
 
-    result = []
-    for r in rows:
-        result.append({
-            'id': r['id'],
-            'title': r['title'],
-            'text': r['text'],
-            'channels': r['channels'] if r['channels'] else [],
-            'status': r['status'],
-            'recipients': r['recipients'] or 0,
-            'createdAt': r['created_at'].strftime('%d.%m.%Y') if r['created_at'] else '',
-            'sentAt': r['sent_at'].strftime('%d.%m.%Y %H:%M') if r['sent_at'] else None,
-        })
-
-    return {'statusCode': 200, 'headers': headers, 'body': json.dumps(result)}
+    return {'statusCode': 200, 'headers': headers, 'body': json.dumps([format_row(r) for r in rows])}
 
 
 def handle_create(body, headers):
@@ -84,13 +122,17 @@ def handle_create(body, headers):
     if status not in ('draft', 'sent'):
         status = 'draft'
 
+    recipients = 0
+    if status == 'sent' and 'telegram' in channels:
+        recipients = broadcast_telegram(title, text)
+
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     if status == 'sent':
         cur.execute(
-            "INSERT INTO notifications (title, text, channels, status, sent_at) VALUES (%s, %s, %s, 'sent', NOW()) RETURNING *",
-            (title, text, channels)
+            "INSERT INTO notifications (title, text, channels, status, sent_at, recipients) VALUES (%s, %s, %s, 'sent', NOW(), %s) RETURNING *",
+            (title, text, channels, recipients)
         )
     else:
         cur.execute(
@@ -103,18 +145,7 @@ def handle_create(body, headers):
     cur.close()
     conn.close()
 
-    result = {
-        'id': row['id'],
-        'title': row['title'],
-        'text': row['text'],
-        'channels': row['channels'] if row['channels'] else [],
-        'status': row['status'],
-        'recipients': row['recipients'] or 0,
-        'createdAt': row['created_at'].strftime('%d.%m.%Y') if row['created_at'] else '',
-        'sentAt': row['sent_at'].strftime('%d.%m.%Y %H:%M') if row['sent_at'] else None,
-    }
-
-    return {'statusCode': 201, 'headers': headers, 'body': json.dumps(result)}
+    return {'statusCode': 201, 'headers': headers, 'body': json.dumps(format_row(row))}
 
 
 def handle_update(body, headers):
@@ -127,13 +158,17 @@ def handle_update(body, headers):
     channels = body.get('channels', [])
     status = body.get('status')
 
+    recipients = 0
+    if status == 'sent' and 'telegram' in channels:
+        recipients = broadcast_telegram(title, text)
+
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     if status == 'sent':
         cur.execute(
-            "UPDATE notifications SET title=%s, text=%s, channels=%s, status='sent', sent_at=NOW(), updated_at=NOW() WHERE id=%s RETURNING *",
-            (title, text, channels, notif_id)
+            "UPDATE notifications SET title=%s, text=%s, channels=%s, status='sent', sent_at=NOW(), updated_at=NOW(), recipients=%s WHERE id=%s RETURNING *",
+            (title, text, channels, recipients, notif_id)
         )
     else:
         cur.execute(
@@ -149,18 +184,7 @@ def handle_update(body, headers):
     if not row:
         return {'statusCode': 404, 'headers': headers, 'body': json.dumps({'error': 'Notification not found'})}
 
-    result = {
-        'id': row['id'],
-        'title': row['title'],
-        'text': row['text'],
-        'channels': row['channels'] if row['channels'] else [],
-        'status': row['status'],
-        'recipients': row['recipients'] or 0,
-        'createdAt': row['created_at'].strftime('%d.%m.%Y') if row['created_at'] else '',
-        'sentAt': row['sent_at'].strftime('%d.%m.%Y %H:%M') if row['sent_at'] else None,
-    }
-
-    return {'statusCode': 200, 'headers': headers, 'body': json.dumps(result)}
+    return {'statusCode': 200, 'headers': headers, 'body': json.dumps(format_row(row))}
 
 
 def handle_delete(params, headers):
