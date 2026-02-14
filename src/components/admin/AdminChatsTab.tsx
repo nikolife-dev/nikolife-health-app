@@ -251,7 +251,7 @@ export default function AdminChatsTab() {
   const availableChannels = userDetail?.availableChannels || [];
   const hasEnabledChannel = availableChannels.some(c => c.enabled);
 
-  const ChatList = () => (
+  const chatList = (
     <div className="flex flex-col h-full">
       <div className="p-3 border-b border-[#748c6d]/10">
         <div className="relative">
@@ -314,7 +314,7 @@ export default function AdminChatsTab() {
     </div>
   );
 
-  const ChatWindow = () => (
+  const chatWindow = (
     <div className="flex flex-col h-full">
       {selectedUser ? (
         <>
@@ -481,10 +481,10 @@ export default function AdminChatsTab() {
         <CardContent className="p-0">
           <div className="border-t border-[#748c6d]/10 h-[600px] flex">
             <div className={`w-full lg:w-80 border-r border-[#748c6d]/10 ${showMobileChat ? 'hidden lg:block' : 'block'}`}>
-              <ChatList />
+              {chatList}
             </div>
             <div className={`flex-1 ${showMobileChat ? 'block' : 'hidden lg:block'}`}>
-              <ChatWindow />
+              {chatWindow}
             </div>
           </div>
         </CardContent>
