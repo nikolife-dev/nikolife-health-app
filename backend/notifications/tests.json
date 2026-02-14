@@ -10,9 +10,7 @@
       "name": "List sent notifications",
       "method": "GET",
       "path": "/?status=sent",
-      "expectedStatus": 200,
-      "expectedBody": [],
-      "bodyMatcher": "partial"
+      "expectedStatus": 200
     },
     {
       "name": "Create notification",

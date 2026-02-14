@@ -29,19 +29,43 @@ def send_telegram_message(chat_id, text):
         return False
 
 
+def personalize(template, user_data):
+    """Подставляет теги {имя}, {привычка}, {цель} для конкретного пользователя"""
+    result = template
+    result = result.replace('{имя}', user_data.get('name') or 'друг')
+    result = result.replace('{привычка}', user_data.get('habit_title') or '')
+    result = result.replace('{цель}', user_data.get('habit_goal') or '')
+    return result
+
+
 def broadcast_telegram(title, text):
-    """Рассылка сообщения всем пользователям с telegram_id. Возвращает количество успешных отправок."""
+    """Рассылка персонализированного сообщения всем пользователям с telegram_id"""
     conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT telegram_id FROM users WHERE telegram_id IS NOT NULL")
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT u.telegram_id, u.name,
+               h.title AS habit_title, h.goal AS habit_goal
+        FROM users u
+        LEFT JOIN LATERAL (
+            SELECT title, goal FROM habits WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1
+        ) h ON true
+        WHERE u.telegram_id IS NOT NULL
+    """)
     rows = cur.fetchall()
     cur.close()
     conn.close()
 
-    message = f"<b>{title}</b>\n\n{text}"
     sent_count = 0
-    for (chat_id,) in rows:
-        if send_telegram_message(chat_id, message):
+    for row in rows:
+        user_data = {
+            'name': row['name'],
+            'habit_title': row['habit_title'],
+            'habit_goal': row['habit_goal'],
+        }
+        personal_title = personalize(title, user_data)
+        personal_text = personalize(text, user_data)
+        message = f"<b>{personal_title}</b>\n\n{personal_text}"
+        if send_telegram_message(row['telegram_id'], message):
             sent_count += 1
     return sent_count
 

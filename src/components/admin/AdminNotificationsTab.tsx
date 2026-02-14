@@ -19,6 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TabsContent as OuterTabsContent } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
@@ -79,6 +89,8 @@ export default function AdminNotificationsTab() {
   const [loading, setLoading] = useState(false);
   const [formTitle, setFormTitle] = useState('');
   const [formText, setFormText] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingSendAction, setPendingSendAction] = useState<(() => void) | null>(null);
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -123,6 +135,19 @@ export default function AdminNotificationsTab() {
     setFormTitle('');
     setFormText('');
     setIsCreateOpen(true);
+  };
+
+  const requestConfirm = (action: () => void) => {
+    setPendingSendAction(() => action);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirm = () => {
+    setConfirmOpen(false);
+    if (pendingSendAction) {
+      pendingSendAction();
+      setPendingSendAction(null);
+    }
   };
 
   const handleCreate = async (status: 'draft' | 'sent') => {
@@ -299,7 +324,7 @@ export default function AdminNotificationsTab() {
                                 variant="ghost"
                                 className="min-h-[36px] min-w-[36px] p-0 text-[#748c6d] hover:text-[#5f7a59] hover:bg-[#748c6d]/10"
                                 title="Запустить рассылку"
-                                onClick={() => handleSend(n)}
+                                onClick={() => requestConfirm(() => handleSend(n))}
                               >
                                 <Icon name="Play" size={16} />
                               </Button>
@@ -385,12 +410,33 @@ export default function AdminNotificationsTab() {
             <div>
               <Label>Текст сообщения</Label>
               <Textarea
-                placeholder="Текст, который получат пользователи..."
+                placeholder="Привет, {имя}! Твоя привычка «{привычка}» ждёт тебя..."
                 rows={4}
                 maxLength={1000}
                 value={formText}
                 onChange={(e) => setFormText(e.target.value)}
               />
+              <div className="mt-2 p-3 bg-[#748c6d]/5 rounded-lg border border-[#748c6d]/15">
+                <p className="text-xs font-medium text-[#4a5446]/80 mb-1.5">Доступные теги (подставятся для каждого получателя):</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { tag: '{имя}', desc: 'имя пользователя' },
+                    { tag: '{привычка}', desc: 'название привычки' },
+                    { tag: '{цель}', desc: 'цель привычки' },
+                  ].map(t => (
+                    <button
+                      key={t.tag}
+                      type="button"
+                      onClick={() => setFormText(prev => prev + t.tag)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white border border-[#748c6d]/20 text-xs text-[#748c6d] hover:bg-[#748c6d]/10 transition-colors cursor-pointer"
+                      title={`Вставить ${t.tag} — ${t.desc}`}
+                    >
+                      <code className="font-mono font-semibold">{t.tag}</code>
+                      <span className="text-[#4a5446]/50">— {t.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
             <div>
               <Label>Каналы рассылки</Label>
@@ -424,7 +470,7 @@ export default function AdminNotificationsTab() {
               <Button
                 variant="outline"
                 className="min-h-[44px] gap-2 border-[#748c6d] text-[#748c6d] hover:bg-[#748c6d]/10"
-                onClick={() => handleCreate('sent')}
+                onClick={() => requestConfirm(() => handleCreate('sent'))}
               >
                 <Icon name="Play" size={16} />
                 Запустить
@@ -457,6 +503,27 @@ export default function AdminNotificationsTab() {
                   rows={4}
                   maxLength={1000}
                 />
+                <div className="mt-2 p-3 bg-[#748c6d]/5 rounded-lg border border-[#748c6d]/15">
+                  <p className="text-xs font-medium text-[#4a5446]/80 mb-1.5">Доступные теги (подставятся для каждого получателя):</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { tag: '{имя}', desc: 'имя пользователя' },
+                      { tag: '{привычка}', desc: 'название привычки' },
+                      { tag: '{цель}', desc: 'цель привычки' },
+                    ].map(t => (
+                      <button
+                        key={t.tag}
+                        type="button"
+                        onClick={() => setFormText(prev => prev + t.tag)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white border border-[#748c6d]/20 text-xs text-[#748c6d] hover:bg-[#748c6d]/10 transition-colors cursor-pointer"
+                        title={`Вставить ${t.tag} — ${t.desc}`}
+                      >
+                        <code className="font-mono font-semibold">{t.tag}</code>
+                        <span className="text-[#4a5446]/50">— {t.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div>
                 <Label>Каналы рассылки</Label>
@@ -490,7 +557,7 @@ export default function AdminNotificationsTab() {
                 <Button
                   variant="outline"
                   className="min-h-[44px] gap-2 border-[#748c6d] text-[#748c6d] hover:bg-[#748c6d]/10"
-                  onClick={() => handleUpdate('sent')}
+                  onClick={() => requestConfirm(() => handleUpdate('sent'))}
                 >
                   <Icon name="Play" size={16} />
                   Запустить
@@ -500,6 +567,25 @@ export default function AdminNotificationsTab() {
           )}
         </DialogContent>
       </Dialog>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Подтвердите отправку</AlertDialogTitle>
+            <AlertDialogDescription>
+              Рассылка будет отправлена всем пользователям с привязанным Telegram. Это действие нельзя отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="min-h-[44px]">Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              className="min-h-[44px] bg-[#748c6d] hover:bg-[#5f7a59]"
+              onClick={handleConfirm}
+            >
+              Отправить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </OuterTabsContent>
   );
 }
