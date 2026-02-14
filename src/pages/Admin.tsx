@@ -29,6 +29,7 @@ import AdminWorkoutsTab from '@/components/admin/AdminWorkoutsTab';
 import AdminMentalHealthTab from '@/components/admin/AdminMentalHealthTab';
 import AdminUsersTab from '@/components/admin/AdminUsersTab';
 import AdminRecipesTab from '@/components/admin/AdminRecipesTab';
+import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -146,6 +147,7 @@ export default function Admin() {
     { value: 'trainings', label: 'Тренировки', icon: 'Dumbbell' },
     { value: 'nutrition', label: 'Питание', icon: 'Apple' },
     { value: 'mental', label: 'Ментальное здоровье', icon: 'Brain' },
+    { value: 'notifications', label: 'Уведомления', icon: 'Bell' },
   ];
 
   const TabNavigation = ({ className = '' }: { className?: string }) => (
@@ -338,6 +340,7 @@ export default function Admin() {
           <AdminRecipesTab />
 
           <AdminMentalHealthTab />
+          <AdminNotificationsTab />
             </Tabs>
           </div>
         </main>
