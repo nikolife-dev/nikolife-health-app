@@ -1,11 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TabsContent } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import Icon from '@/components/ui/icon';
+import { toast } from 'sonner';
+import funcUrls from '../../../backend/func2url.json';
+
+const API_URL = funcUrls.chats;
 
 type Channel = 'telegram' | 'email' | 'broadcast';
 
@@ -20,55 +40,21 @@ interface ChatMessage {
 interface ChatUser {
   id: number;
   name: string;
+  telegram_username: string | null;
   lastMessage: string;
   lastTime: string;
   unread: number;
   channels: Channel[];
 }
 
-const CHANNEL_META: Record<Channel, { label: string; icon: string; color: string }> = {
+const CHANNEL_META: Record<string, { label: string; icon: string; color: string }> = {
   telegram: { label: 'Telegram', icon: 'Send', color: 'bg-blue-500/10 text-blue-700' },
   email: { label: 'E-mail', icon: 'Mail', color: 'bg-orange-500/10 text-orange-700' },
   broadcast: { label: 'Рассылка', icon: 'Megaphone', color: 'bg-purple-500/10 text-purple-700' },
 };
 
-const MOCK_USERS: ChatUser[] = [
-  { id: 25, name: 'Андрей Николаев', lastMessage: 'Спасибо за напоминание!', lastTime: '10:40', unread: 1, channels: ['telegram'] },
-  { id: 27, name: 'Матвей', lastMessage: 'Как изменить план питания?', lastTime: '09:55', unread: 2, channels: ['telegram'] },
-  { id: 28, name: 'Кирилл Николаев', lastMessage: 'Понял, спасибо', lastTime: 'Вчера', unread: 0, channels: ['telegram'] },
-  { id: 29, name: 'Матвей', lastMessage: 'Получил письмо, всё ок', lastTime: 'Вчера', unread: 0, channels: ['email'] },
-  { id: 26, name: 'Новый', lastMessage: 'Привет, подскажите по подписке', lastTime: '12 фев', unread: 0, channels: ['email'] },
-];
-
-const MOCK_MESSAGES: Record<number, ChatMessage[]> = {
-  25: [
-    { id: 1, text: 'Проверка рассылки из Nikolife', channel: 'broadcast', direction: 'out', timestamp: '14 фев, 09:09' },
-    { id: 2, text: 'Проверка рассылки из Nikolife', channel: 'email', direction: 'out', timestamp: '14 фев, 09:09' },
-    { id: 3, text: 'Получил, всё работает!', channel: 'telegram', direction: 'in', timestamp: '14 фев, 09:15' },
-    { id: 4, text: 'Андрей, я верю в тебя', channel: 'broadcast', direction: 'out', timestamp: '14 фев, 09:43' },
-    { id: 5, text: 'Спасибо за напоминание!', channel: 'telegram', direction: 'in', timestamp: '14 фев, 10:40' },
-  ],
-  27: [
-    { id: 1, text: 'Привет! Подскажите, как тренировки настроить?', channel: 'telegram', direction: 'in', timestamp: '13 фев, 18:30' },
-    { id: 2, text: 'Привет! Зайдите в раздел "Тренировки" в меню', channel: 'telegram', direction: 'out', timestamp: '13 фев, 19:00' },
-    { id: 3, text: 'Матвей, я верю в тебя', channel: 'broadcast', direction: 'out', timestamp: '14 фев, 09:43' },
-    { id: 4, text: 'Как изменить план питания?', channel: 'telegram', direction: 'in', timestamp: '14 фев, 09:55' },
-  ],
-  28: [
-    { id: 1, text: 'Проверка рассылки из Nikolife', channel: 'broadcast', direction: 'out', timestamp: '14 фев, 09:09' },
-    { id: 2, text: 'Понял, спасибо', channel: 'telegram', direction: 'in', timestamp: '14 фев, 09:20' },
-  ],
-  29: [
-    { id: 1, text: 'Проверка рассылки из Nikolife', channel: 'email', direction: 'out', timestamp: '14 фев, 09:09' },
-    { id: 2, text: 'Получил письмо, всё ок', channel: 'email', direction: 'in', timestamp: '14 фев, 11:00' },
-  ],
-  26: [
-    { id: 1, text: 'Привет, подскажите по подписке', channel: 'email', direction: 'in', timestamp: '12 фев, 14:22' },
-  ],
-};
-
-function ChannelBadge({ channel }: { channel: Channel }) {
-  const meta = CHANNEL_META[channel];
+function ChannelBadge({ channel }: { channel: string }) {
+  const meta = CHANNEL_META[channel] || { label: channel, icon: 'Circle', color: 'bg-gray-500/10 text-gray-700' };
   return (
     <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${meta.color}`}>
       <Icon name={meta.icon} size={10} />
@@ -78,20 +64,93 @@ function ChannelBadge({ channel }: { channel: Channel }) {
 }
 
 export default function AdminChatsTab() {
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(25);
+  const [users, setUsers] = useState<ChatUser[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showMobileChat, setShowMobileChat] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'clear' | 'delete'; userId: number; userName: string } | null>(null);
 
-  const filteredUsers = MOCK_USERS.filter(u =>
+  const fetchChatList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      setUsers(data);
+    } catch {
+      toast.error('Ошибка загрузки чатов');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchMessages = useCallback(async (userId: number) => {
+    setMessagesLoading(true);
+    try {
+      const res = await fetch(`${API_URL}?user_id=${userId}`);
+      const data = await res.json();
+      setMessages(data.messages || []);
+    } catch {
+      toast.error('Ошибка загрузки сообщений');
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchChatList();
+  }, [fetchChatList]);
+
+  useEffect(() => {
+    if (selectedUserId) {
+      fetchMessages(selectedUserId);
+    }
+  }, [selectedUserId, fetchMessages]);
+
+  const filteredUsers = users.filter(u =>
     u.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const selectedUser = MOCK_USERS.find(u => u.id === selectedUserId);
-  const messages = selectedUserId ? MOCK_MESSAGES[selectedUserId] || [] : [];
-
-  const handleSelectUser = (userId: number) => {
-    setSelectedUserId(userId);
+  const handleSelectUser = (user: ChatUser) => {
+    setSelectedUserId(user.id);
+    setSelectedUser(user);
     setShowMobileChat(true);
+  };
+
+  const handleClearChat = async () => {
+    if (!confirmAction) return;
+    try {
+      const res = await fetch(`${API_URL}?user_id=${confirmAction.userId}&action=clear`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      toast.success('Чат очищен');
+      setMessages([]);
+      fetchChatList();
+    } catch {
+      toast.error('Ошибка очистки чата');
+    } finally {
+      setConfirmAction(null);
+    }
+  };
+
+  const handleDeleteChat = async () => {
+    if (!confirmAction) return;
+    try {
+      const res = await fetch(`${API_URL}?user_id=${confirmAction.userId}&action=delete`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      toast.success('Чат удалён');
+      setSelectedUserId(null);
+      setSelectedUser(null);
+      setMessages([]);
+      setShowMobileChat(false);
+      fetchChatList();
+    } catch {
+      toast.error('Ошибка удаления чата');
+    } finally {
+      setConfirmAction(null);
+    }
   };
 
   const ChatList = () => (
@@ -108,47 +167,51 @@ export default function AdminChatsTab() {
         </div>
       </div>
       <ScrollArea className="flex-1">
-        <div className="divide-y divide-[#748c6d]/10">
-          {filteredUsers.map(user => (
-            <button
-              key={user.id}
-              onClick={() => handleSelectUser(user.id)}
-              className={`w-full text-left p-3 hover:bg-white/60 transition-colors ${
-                selectedUserId === user.id ? 'bg-[#748c6d]/10' : ''
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#748c6d]/20 flex items-center justify-center shrink-0">
-                  <span className="text-sm font-semibold text-[#748c6d]">
-                    {user.name.charAt(0)}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-[#4a5446] text-sm truncate">{user.name}</span>
-                    <span className="text-[10px] text-[#4a5446]/50 shrink-0">{user.lastTime}</span>
+        {loading ? (
+          <div className="p-6 text-center text-[#4a5446]/50 text-sm">Загрузка...</div>
+        ) : (
+          <div className="divide-y divide-[#748c6d]/10">
+            {filteredUsers.map(user => (
+              <button
+                key={user.id}
+                onClick={() => handleSelectUser(user)}
+                className={`w-full text-left p-3 hover:bg-white/60 transition-colors ${
+                  selectedUserId === user.id ? 'bg-[#748c6d]/10' : ''
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#748c6d]/20 flex items-center justify-center shrink-0">
+                    <span className="text-sm font-semibold text-[#748c6d]">
+                      {user.name.charAt(0)}
+                    </span>
                   </div>
-                  <p className="text-xs text-[#4a5446]/60 truncate mt-0.5">{user.lastMessage}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    {user.channels.map(ch => (
-                      <ChannelBadge key={ch} channel={ch} />
-                    ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-[#4a5446] text-sm truncate">{user.name}</span>
+                      <span className="text-[10px] text-[#4a5446]/50 shrink-0">{user.lastTime}</span>
+                    </div>
+                    <p className="text-xs text-[#4a5446]/60 truncate mt-0.5">{user.lastMessage}</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      {user.channels.map(ch => (
+                        <ChannelBadge key={ch} channel={ch} />
+                      ))}
+                    </div>
                   </div>
+                  {user.unread > 0 && (
+                    <span className="w-5 h-5 rounded-full bg-[#748c6d] text-white text-[10px] flex items-center justify-center shrink-0">
+                      {user.unread}
+                    </span>
+                  )}
                 </div>
-                {user.unread > 0 && (
-                  <span className="w-5 h-5 rounded-full bg-[#748c6d] text-white text-[10px] flex items-center justify-center shrink-0">
-                    {user.unread}
-                  </span>
-                )}
+              </button>
+            ))}
+            {filteredUsers.length === 0 && !loading && (
+              <div className="p-6 text-center text-[#4a5446]/50 text-sm">
+                {users.length === 0 ? 'Нет чатов. Отправьте рассылку, чтобы начать.' : 'Ничего не найдено'}
               </div>
-            </button>
-          ))}
-          {filteredUsers.length === 0 && (
-            <div className="p-6 text-center text-[#4a5446]/50 text-sm">
-              Ничего не найдено
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </ScrollArea>
     </div>
   );
@@ -177,37 +240,70 @@ export default function AdminChatsTab() {
                 ))}
               </div>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Icon name="MoreVertical" size={18} className="text-[#4a5446]" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => setConfirmAction({ type: 'clear', userId: selectedUser.id, userName: selectedUser.name })}
+                  className="gap-2"
+                >
+                  <Icon name="Eraser" size={16} />
+                  Очистить чат
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setConfirmAction({ type: 'delete', userId: selectedUser.id, userName: selectedUser.name })}
+                  className="gap-2 text-red-600 focus:text-red-600"
+                >
+                  <Icon name="Trash2" size={16} />
+                  Удалить чат
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <ScrollArea className="flex-1 p-4">
-            <div className="space-y-3">
-              {messages.map(msg => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.direction === 'out' ? 'justify-end' : 'justify-start'}`}
-                >
+            {messagesLoading ? (
+              <div className="flex items-center justify-center h-full text-[#4a5446]/50 text-sm">
+                Загрузка...
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-[#4a5446]/40 text-sm">
+                Нет сообщений
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {messages.map(msg => (
                   <div
-                    className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${
-                      msg.direction === 'out'
-                        ? 'bg-[#748c6d] text-white rounded-br-md'
-                        : 'bg-white border border-[#748c6d]/15 text-[#4a5446] rounded-bl-md'
-                    }`}
+                    key={msg.id}
+                    className={`flex ${msg.direction === 'out' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <p className="text-sm leading-relaxed">{msg.text}</p>
-                    <div className={`flex items-center gap-1.5 mt-1 ${
-                      msg.direction === 'out' ? 'justify-end' : 'justify-start'
-                    }`}>
-                      <ChannelBadge channel={msg.channel} />
-                      <span className={`text-[10px] ${
-                        msg.direction === 'out' ? 'text-white/60' : 'text-[#4a5446]/40'
+                    <div
+                      className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${
+                        msg.direction === 'out'
+                          ? 'bg-[#748c6d] text-white rounded-br-md'
+                          : 'bg-white border border-[#748c6d]/15 text-[#4a5446] rounded-bl-md'
+                      }`}
+                    >
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                      <div className={`flex items-center gap-1.5 mt-1 ${
+                        msg.direction === 'out' ? 'justify-end' : 'justify-start'
                       }`}>
-                        {msg.timestamp}
-                      </span>
+                        <ChannelBadge channel={msg.channel} />
+                        <span className={`text-[10px] ${
+                          msg.direction === 'out' ? 'text-white/60' : 'text-[#4a5446]/40'
+                        }`}>
+                          {msg.timestamp}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </ScrollArea>
 
           <div className="p-3 border-t border-[#748c6d]/10">
@@ -248,23 +344,46 @@ export default function AdminChatsTab() {
             </div>
             <Badge variant="outline" className="border-[#748c6d]/30 gap-1">
               <Icon name="MessageSquare" size={14} />
-              {MOCK_USERS.length} диалогов
+              {users.length} диалогов
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="border-t border-[#748c6d]/10 h-[600px] flex">
-            {/* Chat list — desktop always, mobile when chat not open */}
             <div className={`w-full lg:w-80 border-r border-[#748c6d]/10 ${showMobileChat ? 'hidden lg:block' : 'block'}`}>
               <ChatList />
             </div>
-            {/* Chat window — desktop always, mobile when chat open */}
             <div className={`flex-1 ${showMobileChat ? 'block' : 'hidden lg:block'}`}>
               <ChatWindow />
             </div>
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.type === 'clear' ? 'Очистить чат?' : 'Удалить чат?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.type === 'clear'
+                ? `Все сообщения с ${confirmAction?.userName} будут удалены. Это действие нельзя отменить.`
+                : `Чат с ${confirmAction?.userName} будет полностью удалён. Это действие нельзя отменить.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmAction?.type === 'clear' ? handleClearChat : handleDeleteChat}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {confirmAction?.type === 'clear' ? 'Очистить' : 'Удалить'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TabsContent>
   );
 }

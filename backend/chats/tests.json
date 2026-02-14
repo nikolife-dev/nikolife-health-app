@@ -1,0 +1,1 @@
+{"tests": [{"name": "Get chat list", "method": "GET", "path": "/", "expectedStatus": 200, "expectedBody": [], "bodyMatcher": "typeMatch"}, {"name": "Get messages for user", "method": "GET", "path": "/?user_id=2", "expectedStatus": 200, "expectedBody": {"messages": []}, "bodyMatcher": "partial"}]}

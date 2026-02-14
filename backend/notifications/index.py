@@ -38,12 +38,21 @@ def personalize(template, user_data):
     return result
 
 
+def save_chat_message(conn, user_id, text, channel):
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO chat_messages (user_id, text, channel, direction) VALUES (%s, %s, %s, 'out')",
+        (user_id, text, channel)
+    )
+    cur.close()
+
+
 def broadcast_telegram(title, text):
     """Рассылка персонализированного сообщения всем пользователям с telegram_id"""
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("""
-        SELECT u.telegram_id, u.name,
+        SELECT u.id, u.telegram_id, u.name,
                h.title AS habit_title, h.goal AS habit_goal
         FROM users u
         LEFT JOIN LATERAL (
@@ -53,8 +62,6 @@ def broadcast_telegram(title, text):
           AND u.receive_notifications = TRUE
     """)
     rows = cur.fetchall()
-    cur.close()
-    conn.close()
 
     sent_count = 0
     for row in rows:
@@ -68,7 +75,42 @@ def broadcast_telegram(title, text):
         message = f"<b>{personal_title}</b>\n\n{personal_text}"
         if send_telegram_message(row['telegram_id'], message):
             sent_count += 1
+            save_chat_message(conn, row['id'], f"{personal_title}\n{personal_text}", 'telegram')
+
+    conn.commit()
+    cur.close()
+    conn.close()
     return sent_count
+
+
+def broadcast_email_to_chat(title, text):
+    """Сохраняет email-рассылку в чат (фактическая отправка email пока не реализована)"""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT u.id, u.name,
+               h.title AS habit_title, h.goal AS habit_goal
+        FROM users u
+        LEFT JOIN LATERAL (
+            SELECT title, goal FROM habits WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1
+        ) h ON true
+        WHERE u.receive_notifications = TRUE
+    """)
+    rows = cur.fetchall()
+
+    for row in rows:
+        user_data = {
+            'name': row['name'],
+            'habit_title': row['habit_title'],
+            'habit_goal': row['habit_goal'],
+        }
+        personal_title = personalize(title, user_data)
+        personal_text = personalize(text, user_data)
+        save_chat_message(conn, row['id'], f"{personal_title}\n{personal_text}", 'email')
+
+    conn.commit()
+    cur.close()
+    conn.close()
 
 
 def format_row(r):
@@ -150,6 +192,8 @@ def handle_create(body, headers):
     recipients = 0
     if status == 'sent' and 'telegram' in channels:
         recipients = broadcast_telegram(title, text)
+    if status == 'sent' and 'email' in channels:
+        broadcast_email_to_chat(title, text)
 
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -186,6 +230,8 @@ def handle_update(body, headers):
     recipients = 0
     if status == 'sent' and 'telegram' in channels:
         recipients = broadcast_telegram(title, text)
+    if status == 'sent' and 'email' in channels:
+        broadcast_email_to_chat(title, text)
 
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
