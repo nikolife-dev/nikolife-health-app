@@ -377,8 +377,7 @@ export default function ImportRecipesDialog({ open, onOpenChange, onSuccess }: I
           )}
 
           {recipes.length > 0 && (
-            <>
-              <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border overflow-hidden">
                 <div className="bg-gray-50 px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
                   Предпросмотр ({recipes.length} строк)
                 </div>
@@ -419,32 +418,31 @@ export default function ImportRecipesDialog({ open, onOpenChange, onSuccess }: I
                     Показаны первые 20 из {recipes.length} строк
                   </div>
                 )}
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={handleClose} disabled={isImporting}>
-                  Отмена
-                </Button>
-                <Button
-                  className="bg-[#748c6d] hover:bg-[#5a7052]"
-                  onClick={handleImport}
-                  disabled={isImporting}
-                >
-                  {isImporting ? (
-                    <>
-                      <Icon name="Loader2" size={14} className="mr-1.5 animate-spin" />
-                      Импорт...
-                    </>
-                  ) : (
-                    <>
-                      <Icon name="Upload" size={14} className="mr-1.5" />
-                      Импортировать {recipes.length} рецептов
-                    </>
-                  )}
-                </Button>
-              </div>
-            </>
+            </div>
           )}
+
+          <div className="flex justify-end gap-2 pt-2 border-t">
+            <Button variant="outline" onClick={handleClose} disabled={isImporting}>
+              Отменить
+            </Button>
+            <Button
+              className="bg-[#748c6d] hover:bg-[#5a7052]"
+              onClick={handleImport}
+              disabled={isImporting || recipes.length === 0}
+            >
+              {isImporting ? (
+                <>
+                  <Icon name="Loader2" size={14} className="mr-1.5 animate-spin" />
+                  Импорт...
+                </>
+              ) : (
+                <>
+                  <Icon name="Check" size={14} className="mr-1.5" />
+                  Подтвердить {recipes.length > 0 ? `(${recipes.length})` : ''}
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
