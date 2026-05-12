@@ -22,7 +22,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AUTH_API_URL = 'https://functions.poehali.dev/5d61e550-4be2-483e-a685-bb7eaaaea724';
+const AUTH_API_URL = 'https://functions.poehali.dev/d33a823e-854d-4bbe-be97-af580ba01a06';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

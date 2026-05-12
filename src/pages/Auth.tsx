@@ -98,7 +98,7 @@ export default function Auth() {
         }
 
         logInfo('Отправка запроса регистрации...');
-        const response = await fetch('https://functions.poehali.dev/5d61e550-4be2-483e-a685-bb7eaaaea724', {
+        const response = await fetch('https://functions.poehali.dev/d33a823e-854d-4bbe-be97-af580ba01a06', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, password }),
@@ -153,7 +153,7 @@ export default function Auth() {
       } else if (mode === 'login') {
         // Вход
         logInfo('Отправка запроса на вход...');
-        const response = await fetch('https://functions.poehali.dev/5d61e550-4be2-483e-a685-bb7eaaaea724', {
+        const response = await fetch('https://functions.poehali.dev/d33a823e-854d-4bbe-be97-af580ba01a06', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
