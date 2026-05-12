@@ -159,14 +159,18 @@ export default function RecipeDetailsDialog({
                 Ингредиенты
               </h3>
               <ul className="space-y-2">
-                {recipe.ingredients.map((ingredient, index) => (
+                {recipe.ingredients.flatMap((ingredient) =>
+                  ingredient.includes('\n')
+                    ? ingredient.split('\n')
+                    : ingredient.split(',')
+                ).map((item, index) => item.trim()).filter(Boolean).map((item, index) => (
                   <li key={index} className="flex items-start gap-2">
                     <Icon
                       name="Check"
                       size={16}
                       className="text-[#748c6d] mt-1 flex-shrink-0"
                     />
-                    <span className="text-gray-700">{ingredient}</span>
+                    <span className="text-gray-700">{item}</span>
                   </li>
                 ))}
               </ul>
