@@ -100,7 +100,7 @@ export default function AdminChatsTab() {
     try {
       const res = await fetch(API_URL);
       const data = await res.json();
-      setUsers(data);
+      setUsers(Array.isArray(data) ? data : []);
     } catch {
       if (!silent) toast.error('Ошибка загрузки чатов');
     } finally {
