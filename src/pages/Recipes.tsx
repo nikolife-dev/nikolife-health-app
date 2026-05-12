@@ -44,19 +44,18 @@ export default function Recipes() {
   const [weekDates, setWeekDates] = useState<WeekDate[]>([]);
 
   const categories = [
-    'Гарниры',
-    'Десерты',
-    'Завтраки',
-    'Закуски',
-    'Ланч-боксы',
-    'Напитки',
-    'Основные блюда',
-    'Перекусы',
-    'Салаты',
-    'Смузи',
-    'Соусы и заправки',
-    'Супы',
-    'Хлеб без глютена'
+    { label: 'Завтраки', value: 'breakfast' },
+    { label: 'Обеды', value: 'lunch' },
+    { label: 'Ужины', value: 'dinner' },
+    { label: 'Салаты', value: 'salad' },
+    { label: 'Супы', value: 'soup' },
+    { label: 'Десерты', value: 'dessert' },
+    { label: 'Перекусы', value: 'snack' },
+    { label: 'Смузи', value: 'smoothie' },
+    { label: 'Напитки', value: 'drink' },
+    { label: 'Гарниры', value: 'side' },
+    { label: 'Основные блюда', value: 'main' },
+    { label: 'Закуски', value: 'appetizer' },
   ];
   
   // Для бесплатного тарифа - ограничение 30 рецептов
@@ -225,11 +224,11 @@ export default function Recipes() {
             </Badge>
             {categories.map((cat) => (
               <Badge
-                key={cat}
-                className={`cursor-pointer min-h-[36px] px-3 ${category === cat ? 'bg-[#748c6d]' : 'bg-gray-300'}`}
-                onClick={() => setCategory(cat)}
+                key={cat.value}
+                className={`cursor-pointer min-h-[36px] px-3 ${category === cat.value ? 'bg-[#748c6d]' : 'bg-gray-300'}`}
+                onClick={() => setCategory(cat.value)}
               >
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                {cat.label}
               </Badge>
             ))}
           </div>
