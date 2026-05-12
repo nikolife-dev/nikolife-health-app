@@ -1,0 +1,1 @@
+UPDATE t_p76837068_nikolife_health_app.users SET is_admin = true WHERE email = 'anna@example.com';
