@@ -164,8 +164,8 @@ def handler(event: dict, context) -> dict:
             query_params = []
             
             if category:
-                query += " AND category @> %s::jsonb"
-                query_params.append(json.dumps([category]))
+                query += " AND category = %s"
+                query_params.append(category)
             
             if search:
                 query += " AND (title ILIKE %s OR description ILIKE %s)"

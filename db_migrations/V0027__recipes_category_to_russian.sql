@@ -1,0 +1,12 @@
+UPDATE t_p76837068_nikolife_health_app.recipes SET category = 'Завтраки' WHERE category = 'breakfast';
+UPDATE t_p76837068_nikolife_health_app.recipes SET category = 'Обеды' WHERE category = 'lunch';
+UPDATE t_p76837068_nikolife_health_app.recipes SET category = 'Ужины' WHERE category = 'dinner';
+UPDATE t_p76837068_nikolife_health_app.recipes SET category = 'Салаты' WHERE category = 'salad';
+UPDATE t_p76837068_nikolife_health_app.recipes SET category = 'Супы' WHERE category = 'soup';
+UPDATE t_p76837068_nikolife_health_app.recipes SET category = 'Десерты' WHERE category = 'dessert';
+UPDATE t_p76837068_nikolife_health_app.recipes SET category = 'Перекусы' WHERE category = 'snack';
+UPDATE t_p76837068_nikolife_health_app.recipes SET category = 'Смузи' WHERE category = 'smoothie';
+UPDATE t_p76837068_nikolife_health_app.recipes SET category = 'Напитки' WHERE category = 'drink';
+UPDATE t_p76837068_nikolife_health_app.recipes SET category = 'Гарниры' WHERE category = 'side';
+UPDATE t_p76837068_nikolife_health_app.recipes SET category = 'Основные блюда' WHERE category = 'main';
+UPDATE t_p76837068_nikolife_health_app.recipes SET category = 'Закуски' WHERE category = 'appetizer';
