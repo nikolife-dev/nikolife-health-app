@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import funcUrls from '../../backend/func2url.json';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -187,7 +188,7 @@ export default function Profile() {
     try {
       logInfo('Отправка GET запроса на /profile endpoint');
       logInfo(`Headers: X-Authorization=Bearer ${token.substring(0, 15)}...`);
-      const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+      const response = await fetch(funcUrls.profile, {
         method: 'GET',
         headers: {
           'X-Authorization': `Bearer ${token}`
@@ -258,7 +259,7 @@ export default function Profile() {
       logInfo(`Body запроса: ${JSON.stringify(requestBody)}`);
       logInfo(`Headers: X-Authorization=Bearer ${token.substring(0, 15)}...`);
       
-      const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+      const response = await fetch(funcUrls.profile, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -337,7 +338,7 @@ export default function Profile() {
       };
       logInfo(`Body запроса: ${JSON.stringify(requestBody)}`);
       
-      const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+      const response = await fetch(funcUrls.profile, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

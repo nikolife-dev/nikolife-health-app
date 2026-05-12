@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import funcUrls from '../../backend/func2url.json';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Icon from "@/components/ui/icon";
@@ -59,7 +60,7 @@ export default function WeeklyMenu() {
       }
 
       const response = await fetch(
-        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6",
+        funcUrls['weekly-menu'],
         { headers: { "X-Auth-Token": token } },
       );
 
@@ -86,7 +87,7 @@ export default function WeeklyMenu() {
     try {
       const token = localStorage.getItem("auth_token");
       const response = await fetch(
-        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/generate",
+        `${funcUrls['weekly-menu']}/generate`,
         {
           method: "POST",
           headers: {
@@ -128,7 +129,7 @@ export default function WeeklyMenu() {
         return;
       }
 
-      const url = `https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6/${menuItemId}`;
+      const url = `${funcUrls['weekly-menu']}/${menuItemId}`;
       console.log("[DEL] request", { url, menuItemId });
 
       const response = await fetch(url, {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import funcUrls from '../../backend/func2url.json';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -73,7 +74,7 @@ export default function Index() {
       }
 
       const response = await fetch(
-        'https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de',
+        funcUrls.habits,
         {
           headers: { 'X-Auth-Token': token },
         }
@@ -100,7 +101,7 @@ export default function Index() {
       if (!token) return;
 
       const response = await fetch(
-        `https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de?habit_id=${habitId}&action=complete`,
+        `${funcUrls.habits}?habit_id=${habitId}&action=complete`,
         {
           method: 'POST',
           headers: { 'X-Auth-Token': token },
@@ -272,8 +273,8 @@ export default function Index() {
   const loadArticles = async () => {
     try {
       const url = articleCategory === 'all'
-        ? 'https://functions.poehali.dev/cea33162-065b-4e11-8767-9b4ffd23fa04'
-        : `https://functions.poehali.dev/cea33162-065b-4e11-8767-9b4ffd23fa04?category=${articleCategory}`;
+        ? funcUrls.articles
+        : `${funcUrls.articles}?category=${articleCategory}`;
       const response = await fetch(url);
       const data = await response.json();
       setArticles(data);

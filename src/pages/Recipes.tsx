@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import funcUrls from '../../backend/func2url.json';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -76,7 +77,7 @@ export default function Recipes() {
       if (!token) return;
 
       const response = await fetch(
-        'https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6',
+        funcUrls['weekly-menu'],
         { headers: { 'X-Auth-Token': token } }
       );
 
@@ -100,7 +101,7 @@ export default function Recipes() {
       params.append('limit', recipeLimit.toString());
 
       const response = await fetch(
-        `https://functions.poehali.dev/1fb55aac-7fec-4f7c-a5a0-625b2cfed416?${params}`,
+        `${funcUrls.recipes}?${params}`,
         {
           headers: token ? { 'X-Auth-Token': token } : {}
         }
@@ -138,7 +139,7 @@ export default function Recipes() {
       }
 
       const response = await fetch(
-        `https://functions.poehali.dev/1fb55aac-7fec-4f7c-a5a0-625b2cfed416/${recipeId}/favorite`,
+        `${funcUrls.recipes}/${recipeId}/favorite`,
         {
           method: 'POST',
           headers: { 'X-Auth-Token': token }

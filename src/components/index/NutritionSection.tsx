@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import funcUrls from '../../../backend/func2url.json';
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -130,8 +131,7 @@ export default function NutritionSection({
         return;
       }
 
-      const url =
-        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6";
+      const url = funcUrls['weekly-menu'];
       dbg("[MENU] loadMenu: fetch", { url });
 
       const response = await fetch(url, { headers: { "X-Auth-Token": token } });
@@ -196,8 +196,7 @@ export default function NutritionSection({
         return;
       }
 
-      const url =
-        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6?action=generate";
+      const url = `${funcUrls['weekly-menu']}?action=generate`;
       dbg("[GEN] request", { url, method: "POST" });
 
       const response = await fetch(url, {
@@ -260,8 +259,7 @@ export default function NutritionSection({
         return;
       }
 
-      const url =
-        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6?action=clear";
+      const url = `${funcUrls['weekly-menu']}?action=clear`;
       dbg("[CLEAR] request", { url, method: "POST" });
 
       const response = await fetch(url, {
@@ -325,7 +323,7 @@ export default function NutritionSection({
         return;
       }
 
-      const url = `https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6?id=${menuItemId}`;
+      const url = `${funcUrls['weekly-menu']}?id=${menuItemId}`;
       dbg("[DEL] request", { url, method: "DELETE" });
 
       const response = await fetch(url, {

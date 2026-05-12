@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import funcUrls from '../../../backend/func2url.json';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +19,7 @@ import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 import AddRecipeDialog from './recipes/AddRecipeDialog';
 import EditRecipeDialog from './recipes/EditRecipeDialog';
 
-const RECIPES_API = 'https://functions.poehali.dev/1fb55aac-7fec-4f7c-a5a0-625b2cfed416';
+const RECIPES_API = funcUrls.recipes;
 
 interface Recipe {
   id: number;

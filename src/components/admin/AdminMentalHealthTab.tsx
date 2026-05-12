@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import funcUrls from '../../../backend/func2url.json';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +25,7 @@ import {
 import { TabsContent } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 
-const MENTAL_HEALTH_API = 'https://functions.poehali.dev/54ce433a-6275-4e38-a7e6-935c9865f8f6';
+const MENTAL_HEALTH_API = funcUrls['mental-health'];
 
 interface MentalHealthPodcast {
   id: number;

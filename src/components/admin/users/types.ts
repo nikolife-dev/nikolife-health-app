@@ -1,4 +1,5 @@
-export const USERS_API = 'https://functions.poehali.dev/56005ce0-e77d-47e1-937e-21f0247bf260';
+import funcUrls from '../../../../backend/func2url.json';
+export const USERS_API = funcUrls['admin-users'];
 
 export interface User {
   id: number;

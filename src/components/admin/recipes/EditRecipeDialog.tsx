@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import funcUrls from '../../../../backend/func2url.json';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,7 @@ import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import CategorySelector from './CategorySelector';
 
-const RECIPES_API = 'https://functions.poehali.dev/1fb55aac-7fec-4f7c-a5a0-625b2cfed416';
+const RECIPES_API = funcUrls.recipes;
 
 interface Recipe {
   id: number;

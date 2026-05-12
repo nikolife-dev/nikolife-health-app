@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import funcUrls from '../../../backend/func2url.json';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +32,7 @@ import {
 import { TabsContent } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 
-const ARTICLES_API = 'https://functions.poehali.dev/cea33162-065b-4e11-8767-9b4ffd23fa04';
+const ARTICLES_API = funcUrls.articles;
 
 interface Article {
   id: number;

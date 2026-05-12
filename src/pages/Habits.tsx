@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import funcUrls from '../../backend/func2url.json';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
@@ -65,7 +66,7 @@ export default function Habits() {
 
       logInfo('Отправка запроса на загрузку привычек');
       const response = await fetch(
-        'https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de',
+        funcUrls.habits,
         { headers: { 'X-Auth-Token': token } }
       );
 
@@ -91,7 +92,7 @@ export default function Habits() {
     logInfo('Начало загрузки шаблонов');
     try {
       const response = await fetch(
-        'https://functions.poehali.dev/d15446be-71b4-42e4-8976-d49d651ef653'
+        funcUrls['habit-templates']
       );
 
       logInfo(`Статус загрузки шаблонов: ${response.status}`);
@@ -134,7 +135,7 @@ export default function Habits() {
 
       logInfo('Отправка POST запроса на создание привычки');
       const response = await fetch(
-        'https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de',
+        funcUrls.habits,
         {
           method: 'POST',
           headers: {
@@ -207,7 +208,7 @@ export default function Habits() {
       }
 
       const response = await fetch(
-        `https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de?habit_id=${editingHabit.id}`,
+        `${funcUrls.habits}?habit_id=${editingHabit.id}`,
         {
           method: 'PUT',
           headers: {
@@ -261,7 +262,7 @@ export default function Habits() {
       }
 
       const response = await fetch(
-        `https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de?habit_id=${habitId}`,
+        `${funcUrls.habits}?habit_id=${habitId}`,
         {
           method: 'DELETE',
           headers: { 'X-Auth-Token': token },
@@ -319,7 +320,7 @@ export default function Habits() {
 
       logInfo('Отправка запроса на отметку выполнения');
       const response = await fetch(
-        `https://functions.poehali.dev/19a5d173-2a31-481c-9899-a29eee8fe3de?habit_id=${habitId}&action=complete`,
+        `${funcUrls.habits}?habit_id=${habitId}&action=complete`,
         {
           method: 'POST',
           headers: { 'X-Auth-Token': token },

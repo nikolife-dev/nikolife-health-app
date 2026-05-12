@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import funcUrls from '../../backend/func2url.json';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -56,7 +57,7 @@ export default function Onboarding() {
       }
       
       console.log('[ONBOARDING handleNext] Отправка данных в backend...');
-      const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+      const response = await fetch(funcUrls.profile, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -139,7 +140,7 @@ export default function Onboarding() {
                 }
                 
                 console.log('[ONBOARDING SKIP] Отправка в backend...');
-                const response = await fetch('https://functions.poehali.dev/85f035ff-be32-471e-ad21-ad58c128096c', {
+                const response = await fetch(funcUrls.profile, {
                   method: 'PUT',
                   headers: {
                     'Content-Type': 'application/json',

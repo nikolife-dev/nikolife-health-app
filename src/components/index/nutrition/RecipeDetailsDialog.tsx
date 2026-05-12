@@ -1,4 +1,5 @@
 import { useState } from "react";
+import funcUrls from '../../../../backend/func2url.json';
 import {
   Dialog,
   DialogContent,
@@ -70,7 +71,7 @@ export default function RecipeDetailsDialog({
     try {
       const token = localStorage.getItem("auth_token");
       const response = await fetch(
-        "https://functions.poehali.dev/04c8bc71-af39-4f0e-9d65-323dba4a29b6",
+        funcUrls['weekly-menu'],
         {
           method: "POST",
           headers: {

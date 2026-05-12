@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import funcUrls from '../../../backend/func2url.json';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,7 @@ import Icon from '@/components/ui/icon';
 import AddWorkoutDialog from './workouts/AddWorkoutDialog';
 import EditWorkoutDialog from './workouts/EditWorkoutDialog';
 
-const WORKOUTS_API = 'https://functions.poehali.dev/10bc33f4-9e4c-47aa-a7b9-5097af1fdfeb';
+const WORKOUTS_API = funcUrls.workouts;
 
 interface Workout {
   id: number;
