@@ -57,7 +57,7 @@ def handler(event: dict, context) -> dict:
                 SELECT h.id, h.title, h.category, h.goal, h.goal_days, h.days_of_week, 
                        h.times_per_day, h.created_at,
                        (SELECT COUNT(*) FROM t_p76837068_nikolife_health_app.habit_completions 
-                        WHERE habit_id = h.id AND DATE(completed_at) = CURRENT_DATE) as completed_today,
+                        WHERE habit_id = h.id AND completed_date = CURRENT_DATE) as completed_today,
                        (SELECT COUNT(*) FROM t_p76837068_nikolife_health_app.habit_completions 
                         WHERE habit_id = h.id) as total_completions
                 FROM t_p76837068_nikolife_health_app.habits h
@@ -71,10 +71,10 @@ def handler(event: dict, context) -> dict:
                 days_of_week = json.loads(days_of_week_str) if days_of_week_str.startswith('[') else []
                 
                 cur.execute("""
-                    SELECT DATE(completed_at) 
+                    SELECT completed_date 
                     FROM t_p76837068_nikolife_health_app.habit_completions 
                     WHERE habit_id = %s 
-                    ORDER BY completed_at DESC
+                    ORDER BY completed_date DESC
                 """, (row[0],))
                 
                 completion_dates = [str(r[0]) for r in cur.fetchall()]
@@ -83,23 +83,23 @@ def handler(event: dict, context) -> dict:
                 cur.execute("""
                     SELECT COUNT(*) 
                     FROM t_p76837068_nikolife_health_app.habit_completions 
-                    WHERE habit_id = %s AND DATE(completed_at) = CURRENT_DATE
+                    WHERE habit_id = %s AND completed_date = CURRENT_DATE
                 """, (row[0],))
                 completions_today = cur.fetchone()[0]
                 
                 cur.execute("""
-                    SELECT DATE(completed_at), COUNT(*) 
+                    SELECT completed_date, COUNT(*) 
                     FROM t_p76837068_nikolife_health_app.habit_completions 
-                    WHERE habit_id = %s AND completed_at >= CURRENT_DATE - INTERVAL '7 days'
-                    GROUP BY DATE(completed_at)
+                    WHERE habit_id = %s AND completed_date >= CURRENT_DATE - INTERVAL '7 days'
+                    GROUP BY completed_date
                 """, (row[0],))
                 week_completions = cur.fetchall()
                 
                 cur.execute("""
-                    SELECT DATE(completed_at), COUNT(*) 
+                    SELECT completed_date, COUNT(*) 
                     FROM t_p76837068_nikolife_health_app.habit_completions 
-                    WHERE habit_id = %s AND completed_at >= CURRENT_DATE - INTERVAL '30 days'
-                    GROUP BY DATE(completed_at)
+                    WHERE habit_id = %s AND completed_date >= CURRENT_DATE - INTERVAL '30 days'
+                    GROUP BY completed_date
                 """, (row[0],))
                 month_completions = cur.fetchall()
                 
@@ -156,13 +156,13 @@ def handler(event: dict, context) -> dict:
                 }
             
             cur.execute("""
-                INSERT INTO t_p76837068_nikolife_health_app.habit_completions (habit_id) 
-                VALUES (%s)
-            """, (habit_id,))
+                INSERT INTO t_p76837068_nikolife_health_app.habit_completions (habit_id, user_id) 
+                VALUES (%s, %s)
+            """, (habit_id, user_id))
             
             cur.execute("""
                 SELECT COUNT(*) FROM t_p76837068_nikolife_health_app.habit_completions 
-                WHERE habit_id = %s AND DATE(completed_at) = CURRENT_DATE
+                WHERE habit_id = %s AND completed_date = CURRENT_DATE
             """, (habit_id,))
             
             completions_today = cur.fetchone()[0]
@@ -305,6 +305,9 @@ def handler(event: dict, context) -> dict:
             }
     
     except Exception as e:
+        import traceback
+        print(f"[HABITS ERROR] {str(e)}")
+        print(traceback.format_exc())
         conn.rollback()
         return {
             'statusCode': 500,
