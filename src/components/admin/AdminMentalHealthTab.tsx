@@ -56,7 +56,7 @@ export default function AdminMentalHealthTab() {
     try {
       const response = await fetch(MENTAL_HEALTH_API);
       const data = await response.json();
-      setPodcasts(data);
+      setPodcasts(Array.isArray(data) ? data : (data.podcasts || data.items || []));
     } catch (error) {
       console.error('Failed to load podcasts:', error);
     }

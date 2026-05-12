@@ -68,7 +68,7 @@ export default function AdminWorkoutsTab() {
         : `${WORKOUTS_API}?category=${workoutCategory}`;
       const response = await fetch(url);
       const data = await response.json();
-      setWorkouts(data);
+      setWorkouts(Array.isArray(data) ? data : (data.workouts || data.items || []));
     } catch (error) {
       console.error('Failed to load workouts:', error);
     }

@@ -73,7 +73,7 @@ export default function AdminLibraryTab() {
         : `${ARTICLES_API}?category=${selectedCategory}`;
       const response = await fetch(url);
       const data = await response.json();
-      setArticles(data);
+      setArticles(Array.isArray(data) ? data : (data.articles || data.items || []));
     } catch (error) {
       console.error('Failed to load articles:', error);
     }

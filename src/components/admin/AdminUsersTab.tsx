@@ -45,8 +45,9 @@ export default function AdminUsersTab() {
       const response = await fetch(USERS_API);
       logInfo(`Ответ GET ${USERS_API}: status=${response.status}`);
       const data = await response.json();
-      logSuccess(`Загружено ${data.length} пользователей`);
-      setUsers(data);
+      const users = Array.isArray(data) ? data : (data.users || data.items || []);
+      logSuccess(`Загружено ${users.length} пользователей`);
+      setUsers(users);
     } catch (error) {
       logError(`Ошибка загрузки: ${error instanceof Error ? error.message : 'unknown'}`);
       console.error('Failed to load users:', error);
