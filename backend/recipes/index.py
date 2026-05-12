@@ -231,19 +231,22 @@ def handler(event: dict, context) -> dict:
                     if isinstance(ingredients, str):
                         ingredients = [x.strip() for x in ingredients.split(';') if x.strip()]
                     
-                    category = r.get('category', [])
-                    if isinstance(category, str):
-                        category = [x.strip() for x in category.split(';') if x.strip()]
+                    category_raw = r.get('category', '')
+                    if isinstance(category_raw, list):
+                        category_str = category_raw[0].strip() if category_raw else ''
+                    else:
+                        parts = [x.strip() for x in str(category_raw).split(';') if x.strip()]
+                        category_str = parts[0] if parts else ''
                     
                     cur.execute(f"""
                         INSERT INTO {schema}.recipes 
                         (title, description, ingredients, instructions, cooking_time, servings, calories, protein, carbs, fats, image_url, category, tags, created_by)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         r.get('title'), r.get('description', ''), json.dumps(ingredients),
                         r.get('instructions', ''), r.get('cooking_time'), r.get('servings', 1),
                         r.get('calories'), r.get('protein'), r.get('carbs'), r.get('fats'),
-                        r.get('image_url'), json.dumps(category), json.dumps([]), user_id
+                        r.get('image_url'), category_str, json.dumps([]), user_id
                     ))
                     inserted += 1
                 except Exception as e:
