@@ -207,6 +207,24 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'recipes': recipes}), 'isBase64Encoded': False}
         
+        # POST check_duplicates — проверка дублей по названию
+        if method == 'POST' and action == 'check_duplicates':
+            if not is_admin:
+                return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Только администратор'}), 'isBase64Encoded': False}
+
+            body = json.loads(event.get('body', '{}'))
+            titles = body.get('titles', [])
+            if not titles:
+                return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'duplicates': []}), 'isBase64Encoded': False}
+
+            placeholders = ','.join(['%s'] * len(titles))
+            cur.execute(f"SELECT id, title FROM {schema}.recipes WHERE lower(title) IN ({placeholders}) AND is_active = true", [t.lower() for t in titles])
+            rows = cur.fetchall()
+            duplicates = [{'id': r[0], 'title': r[1]} for r in rows]
+            cur.close()
+            conn.close()
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'duplicates': duplicates}), 'isBase64Encoded': False}
+
         # POST bulk import
         if method == 'POST' and action == 'bulk_import':
             if not is_admin:
@@ -221,25 +239,51 @@ def handler(event: dict, context) -> dict:
             inserted = 0
             errors = []
             
+            # decisions: dict title -> 'replace' | 'skip' | 'add'
+            decisions = body.get('decisions', {})
+
             for i, r in enumerate(recipes_data):
                 try:
                     if not r.get('title'):
                         errors.append(f"Строка {i+1}: нет названия")
                         continue
-                    
+
+                    decision = decisions.get(r['title'], 'add')
+                    if decision == 'skip':
+                        continue
+
                     ingredients = r.get('ingredients', [])
                     if isinstance(ingredients, str):
                         ingredients = [x.strip() for x in ingredients.split(';') if x.strip()]
-                    
+
                     category_raw = r.get('category', '')
                     if isinstance(category_raw, list):
                         category_str = category_raw[0].strip() if category_raw else ''
                     else:
                         parts = [x.strip() for x in str(category_raw).split(';') if x.strip()]
                         category_str = parts[0] if parts else ''
-                    
+
+                    if decision == 'replace':
+                        cur.execute(f"SELECT id FROM {schema}.recipes WHERE lower(title) = lower(%s) AND is_active = true LIMIT 1", (r['title'],))
+                        existing = cur.fetchone()
+                        if existing:
+                            cur.execute(f"""
+                                UPDATE {schema}.recipes SET
+                                description=%s, ingredients=%s, instructions=%s, cooking_time=%s,
+                                servings=%s, calories=%s, protein=%s, carbs=%s, fats=%s,
+                                image_url=%s, category=%s
+                                WHERE id=%s
+                            """, (
+                                r.get('description', ''), json.dumps(ingredients),
+                                r.get('instructions', ''), r.get('cooking_time'), r.get('servings', 1),
+                                r.get('calories'), r.get('protein'), r.get('carbs'), r.get('fats'),
+                                r.get('image_url'), category_str, existing[0]
+                            ))
+                            inserted += 1
+                            continue
+
                     cur.execute(f"""
-                        INSERT INTO {schema}.recipes 
+                        INSERT INTO {schema}.recipes
                         (title, description, ingredients, instructions, cooking_time, servings, calories, protein, carbs, fats, image_url, category, tags, created_by)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (

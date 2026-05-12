@@ -212,13 +212,23 @@ function parseCsv(text: string): ParsedRecipe[] {
   })).filter(r => r.title);
 }
 
+type DuplicateDecision = 'replace' | 'skip' | 'add';
+
+interface Duplicate {
+  id: number;
+  title: string;
+}
+
 export default function ImportRecipesDialog({ open, onOpenChange, onSuccess }: ImportRecipesDialogProps) {
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [recipes, setRecipes] = useState<ParsedRecipe[]>([]);
   const [fileName, setFileName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   const [result, setResult] = useState<{ inserted: number; errors: string[] } | null>(null);
+  const [duplicates, setDuplicates] = useState<Duplicate[]>([]);
+  const [decisions, setDecisions] = useState<Record<string, DuplicateDecision>>({});
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -248,60 +258,75 @@ export default function ImportRecipesDialog({ open, onOpenChange, onSuccess }: I
     }
   };
 
-  const handleImport = async () => {
-    if (!recipes.length) return;
-    setIsImporting(true);
+  const buildPayload = () => recipes.map(r => ({
+    title: r.title,
+    description: '',
+    ingredients: r.ingredients || '',
+    instructions: parseSteps(r.steps),
+    cooking_time: normalizeInt(r.cooking_time),
+    servings: normalizeInt(r.servings) ?? 1,
+    weight_per_serving: normalizeInt(r.weight_per_serving),
+    calories: normalizeInt(r.calories),
+    protein: normalizeFloat(r.protein),
+    carbs: normalizeFloat(r.carbs),
+    fats: normalizeFloat(r.fats),
+    calories_100: normalizeInt(r.calories_100),
+    protein_100: normalizeFloat(r.protein_100),
+    fats_100: normalizeFloat(r.fats_100),
+    carbs_100: normalizeFloat(r.carbs_100),
+    category: r.categories || '',
+    user_groups: r.user_groups || '',
+    image_url: r.image_url_import || null,
+  }));
 
+  // Шаг 1 — проверка дублей
+  const handleCheck = async () => {
+    if (!recipes.length) return;
+    setIsChecking(true);
     try {
       const token = localStorage.getItem('auth_token');
-      const payload = recipes.map(r => ({
-        title: r.title,
-        description: '',
-        ingredients: r.ingredients || '',
-        instructions: parseSteps(r.steps),
-        cooking_time: normalizeInt(r.cooking_time),
-        servings: normalizeInt(r.servings) ?? 1,
-        weight_per_serving: normalizeInt(r.weight_per_serving),
-        calories: normalizeInt(r.calories),
-        protein: normalizeFloat(r.protein),
-        carbs: normalizeFloat(r.carbs),
-        fats: normalizeFloat(r.fats),
-        calories_100: normalizeInt(r.calories_100),
-        protein_100: normalizeFloat(r.protein_100),
-        fats_100: normalizeFloat(r.fats_100),
-        carbs_100: normalizeFloat(r.carbs_100),
-        category: r.categories || '',
-        user_groups: r.user_groups || '',
-        image_url: r.image_url_import || null,
-      }));
+      const res = await fetch(`${RECIPES_API}?action=check_duplicates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token! },
+        body: JSON.stringify({ titles: recipes.map(r => r.title) }),
+      });
+      const data = await res.json();
+      if (data.duplicates?.length > 0) {
+        setDuplicates(data.duplicates);
+        const initial: Record<string, DuplicateDecision> = {};
+        data.duplicates.forEach((d: Duplicate) => { initial[d.title] = 'replace'; });
+        setDecisions(initial);
+      } else {
+        await doImport({});
+      }
+    } catch {
+      toast({ title: 'Ошибка проверки', variant: 'destructive' });
+    } finally {
+      setIsChecking(false);
+    }
+  };
 
+  // Шаг 2 — импорт с решениями
+  const doImport = async (dec: Record<string, DuplicateDecision>) => {
+    setIsImporting(true);
+    try {
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`${RECIPES_API}?action=bulk_import`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Auth-Token': token!,
-        },
-        body: JSON.stringify({ recipes: payload }),
+        headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token! },
+        body: JSON.stringify({ recipes: buildPayload(), decisions: dec }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
+        setDuplicates([]);
         setResult({ inserted: data.inserted, errors: data.errors || [] });
-        toast({
-          title: 'Импорт завершён',
-          description: `Добавлено рецептов: ${data.inserted}`,
-        });
+        toast({ title: 'Импорт завершён', description: `Добавлено рецептов: ${data.inserted}` });
         onSuccess();
       } else {
         throw new Error(data.error || 'Ошибка импорта');
       }
     } catch (error) {
-      toast({
-        title: 'Ошибка',
-        description: error instanceof Error ? error.message : 'Не удалось импортировать',
-        variant: 'destructive',
-      });
+      toast({ title: 'Ошибка', description: error instanceof Error ? error.message : 'Не удалось импортировать', variant: 'destructive' });
     } finally {
       setIsImporting(false);
     }
@@ -311,6 +336,8 @@ export default function ImportRecipesDialog({ open, onOpenChange, onSuccess }: I
     setRecipes([]);
     setFileName('');
     setResult(null);
+    setDuplicates([]);
+    setDecisions({});
     if (fileRef.current) fileRef.current.value = '';
     onOpenChange(false);
   };
@@ -421,27 +448,68 @@ export default function ImportRecipesDialog({ open, onOpenChange, onSuccess }: I
             </div>
           )}
 
+          {duplicates.length > 0 && (
+            <div className="rounded-lg border border-yellow-200 bg-yellow-50 overflow-hidden">
+              <div className="px-4 py-2 bg-yellow-100 text-sm font-medium text-yellow-800 flex items-center gap-2">
+                <Icon name="AlertTriangle" size={16} />
+                Найдены совпадения по названию — выберите действие для каждого
+              </div>
+              <div className="divide-y">
+                {duplicates.map(d => (
+                  <div key={d.id} className="flex items-center justify-between px-4 py-3 gap-4">
+                    <span className="text-sm font-medium text-gray-800 flex-1">{d.title}</span>
+                    <div className="flex gap-2">
+                      {(['replace', 'add', 'skip'] as DuplicateDecision[]).map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => setDecisions(prev => ({ ...prev, [d.title]: opt }))}
+                          className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                            decisions[d.title] === opt
+                              ? opt === 'replace' ? 'bg-blue-600 text-white border-blue-600'
+                                : opt === 'add' ? 'bg-[#748c6d] text-white border-[#748c6d]'
+                                : 'bg-gray-500 text-white border-gray-500'
+                              : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                          }`}
+                        >
+                          {opt === 'replace' ? 'Заменить' : opt === 'add' ? 'Оставить оба' : 'Пропустить'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-2 border-t">
-            <Button variant="outline" onClick={handleClose} disabled={isImporting}>
+            <Button variant="outline" onClick={handleClose} disabled={isImporting || isChecking}>
               Отменить
             </Button>
-            <Button
-              className="bg-[#748c6d] hover:bg-[#5a7052]"
-              onClick={handleImport}
-              disabled={isImporting || recipes.length === 0}
-            >
-              {isImporting ? (
-                <>
-                  <Icon name="Loader2" size={14} className="mr-1.5 animate-spin" />
-                  Импорт...
-                </>
-              ) : (
-                <>
-                  <Icon name="Check" size={14} className="mr-1.5" />
-                  Подтвердить {recipes.length > 0 ? `(${recipes.length})` : ''}
-                </>
-              )}
-            </Button>
+            {duplicates.length > 0 ? (
+              <Button
+                className="bg-[#748c6d] hover:bg-[#5a7052]"
+                onClick={() => doImport(decisions)}
+                disabled={isImporting}
+              >
+                {isImporting ? (
+                  <><Icon name="Loader2" size={14} className="mr-1.5 animate-spin" />Импорт...</>
+                ) : (
+                  <><Icon name="Check" size={14} className="mr-1.5" />Импортировать</>
+                )}
+              </Button>
+            ) : (
+              <Button
+                className="bg-[#748c6d] hover:bg-[#5a7052]"
+                onClick={handleCheck}
+                disabled={isChecking || isImporting || recipes.length === 0}
+              >
+                {isChecking ? (
+                  <><Icon name="Loader2" size={14} className="mr-1.5 animate-spin" />Проверка...</>
+                ) : (
+                  <><Icon name="Check" size={14} className="mr-1.5" />Подтвердить {recipes.length > 0 ? `(${recipes.length})` : ''}</>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
