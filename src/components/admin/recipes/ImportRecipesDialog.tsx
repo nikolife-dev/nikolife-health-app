@@ -69,29 +69,43 @@ function normalizeInt(val: unknown): number | null {
   return isNaN(n) ? null : n;
 }
 
+function findCol(row: Record<string, unknown>, candidates: string[]): string {
+  const keys = Object.keys(row);
+  for (const c of candidates) {
+    const found = keys.find(k => k.trim().toLowerCase() === c.trim().toLowerCase());
+    if (found !== undefined) return String(row[found] ?? '').trim();
+  }
+  return '';
+}
+
 function parseExcel(buffer: ArrayBuffer): ParsedRecipe[] {
   const wb = XLSX.read(buffer, { type: 'array' });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
+  if (rows.length > 0) {
+    console.log('[ImportRecipes] Колонки в файле:', Object.keys(rows[0]));
+    console.log('[ImportRecipes] Первая строка:', rows[0]);
+  }
+
   return rows.map(row => {
-    const get = (key: string) => String(row[key] ?? '').trim();
+    const g = (candidates: string[]) => findCol(row, candidates);
     return {
-      title: get('title'),
-      servings: get('servings'),
-      cooking_time: get('time'),
-      steps: get('steps'),
-      ingredients: get('ingredients'),
-      categories: get('categories'),
-      weight_per_serving: get('грамм на 1 п'),
-      calories: get('КБЖУ на 1 п'),
-      protein: get('Б на 1 п'),
-      fats: get('Ж на 1 п'),
-      carbs: get('У на 1 п'),
-      calories_100: get('КБЖУ на 100'),
-      protein_100: get('Б на 100'),
-      fats_100: get('Ж на 100'),
-      carbs_100: get('У на 100'),
+      title: g(['title']),
+      servings: g(['servings']),
+      cooking_time: g(['time']),
+      steps: g(['steps']),
+      ingredients: g(['ingredients']),
+      categories: g(['categories']),
+      weight_per_serving: g(['грамм на 1 п', 'грамм на 1п', 'грамм на 1 порц', 'грамм на 1 порцию']),
+      calories: g(['КБЖУ на 1 п', 'КБЖУ на 1п', 'кбжу на 1 п']),
+      protein: g(['Б на 1 п', 'Б на 1п', 'б на 1 п']),
+      fats: g(['Ж на 1 п', 'Ж на 1п', 'ж на 1 п']),
+      carbs: g(['У на 1 п', 'У на 1п', 'у на 1 п', 'У на 1 порцию']),
+      calories_100: g(['КБЖУ на 100', 'кбжу на 100', 'КБЖУ на 100 г', 'КГБЖУ на 100']),
+      protein_100: g(['Б на 100', 'б на 100', 'Б на 100 г']),
+      fats_100: g(['Ж на 100', 'ж на 100', 'Ж на 100 г']),
+      carbs_100: g(['У на 100', 'у на 100', 'У на 100 г']),
     };
   }).filter(r => r.title);
 }
