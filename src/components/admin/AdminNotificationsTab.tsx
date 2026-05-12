@@ -101,8 +101,8 @@ export default function AdminNotificationsTab() {
       ]);
       const drafts = await draftRes.json();
       const sent = await sentRes.json();
-      setNotifications(drafts);
-      setHistory(sent);
+      setNotifications(Array.isArray(drafts) ? drafts : (drafts.notifications || drafts.items || []));
+      setHistory(Array.isArray(sent) ? sent : (sent.notifications || sent.items || []));
     } catch {
       toast.error('Ошибка загрузки уведомлений');
     } finally {
