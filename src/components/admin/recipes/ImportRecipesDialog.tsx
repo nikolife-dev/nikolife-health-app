@@ -81,33 +81,48 @@ function findCol(row: Record<string, unknown>, candidates: string[]): string {
 function parseExcel(buffer: ArrayBuffer): ParsedRecipe[] {
   const wb = XLSX.read(buffer, { type: 'array' });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
-  if (rows.length > 0) {
-    console.log('[ImportRecipes] Колонки в файле:', Object.keys(rows[0]));
-    console.log('[ImportRecipes] Первая строка:', rows[0]);
+  // Читаем все строки как массивы (без авто-заголовков)
+  const raw: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+  // Ищем строку-заголовок — ту, где есть 'title'
+  let headerIdx = -1;
+  for (let i = 0; i < raw.length; i++) {
+    const row = raw[i].map(c => String(c ?? '').trim().toLowerCase());
+    if (row.includes('title')) { headerIdx = i; break; }
   }
+  if (headerIdx === -1) return [];
 
-  return rows.map(row => {
-    const g = (candidates: string[]) => findCol(row, candidates);
-    return {
-      title: g(['title']),
-      servings: g(['servings']),
-      cooking_time: g(['time']),
-      steps: g(['steps']),
-      ingredients: g(['ingredients']),
-      categories: g(['categories']),
-      weight_per_serving: g(['грамм на 1 п', 'грамм на 1п', 'грамм на 1 порц', 'грамм на 1 порцию']),
-      calories: g(['КБЖУ на 1 п', 'КБЖУ на 1п', 'кбжу на 1 п']),
-      protein: g(['Б на 1 п', 'Б на 1п', 'б на 1 п']),
-      fats: g(['Ж на 1 п', 'Ж на 1п', 'ж на 1 п']),
-      carbs: g(['У на 1 п', 'У на 1п', 'у на 1 п', 'У на 1 порцию']),
-      calories_100: g(['КБЖУ на 100', 'кбжу на 100', 'КБЖУ на 100 г', 'КГБЖУ на 100']),
-      protein_100: g(['Б на 100', 'б на 100', 'Б на 100 г']),
-      fats_100: g(['Ж на 100', 'ж на 100', 'Ж на 100 г']),
-      carbs_100: g(['У на 100', 'у на 100', 'У на 100 г']),
-    };
-  }).filter(r => r.title);
+  const headers = raw[headerIdx].map(c => String(c ?? '').trim());
+  const dataRows = raw.slice(headerIdx + 1);
+
+  const getByHeader = (row: unknown[], candidates: string[]): string => {
+    for (const c of candidates) {
+      const idx = headers.findIndex(h => h.toLowerCase() === c.toLowerCase());
+      if (idx !== -1) return String(row[idx] ?? '').trim();
+    }
+    return '';
+  };
+
+  return dataRows
+    .map(row => ({
+      title: getByHeader(row, ['title']),
+      servings: getByHeader(row, ['servings']),
+      cooking_time: getByHeader(row, ['time']),
+      steps: getByHeader(row, ['steps']),
+      ingredients: getByHeader(row, ['ingredients']),
+      categories: getByHeader(row, ['categories']),
+      weight_per_serving: getByHeader(row, ['грамм на 1 п', 'грамм на 1п', 'грамм на 1 порц', 'грамм на 1 порцию']),
+      calories: getByHeader(row, ['КБЖУ на 1 п', 'КБЖУ на 1п']),
+      protein: getByHeader(row, ['Б на 1 п', 'Б на 1п']),
+      fats: getByHeader(row, ['Ж на 1 п', 'Ж на 1п']),
+      carbs: getByHeader(row, ['У на 1 п', 'У на 1п', 'У на 1 порцию']),
+      calories_100: getByHeader(row, ['КБЖУ на 100', 'КГБЖУ на 100', 'КБЖУ на 100 г']),
+      protein_100: getByHeader(row, ['Б на 100', 'Б на 100 г']),
+      fats_100: getByHeader(row, ['Ж на 100', 'Ж на 100 г']),
+      carbs_100: getByHeader(row, ['У на 100', 'У на 100 г']),
+    }))
+    .filter(r => r.title);
 }
 
 function parseCsv(text: string): ParsedRecipe[] {
