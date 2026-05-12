@@ -31,7 +31,7 @@ import PricingComparison from '@/components/profile/PricingComparison';
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, refreshUser } = useAuth();
   const { toast } = useToast();
   const { logs, clearLogs, logInfo, logSuccess, logError, logWarning } = useLiveLogs();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -276,6 +276,7 @@ export default function Profile() {
         logSuccess('Профиль успешно обновлён на сервере');
         logInfo(`Новые данные: name="${data.user.name}", email="${data.user.email}"`);
         setUserProfile(data.user);
+        await refreshUser();
         setIsEditDialogOpen(false);
         logInfo('Диалог редактирования закрыт');
         
