@@ -29,6 +29,8 @@ interface ParsedRecipe {
   steps: string;
   ingredients: string;
   categories: string;
+  user_groups: string;
+  image_url_import: string;
   weight_per_serving: string;
   calories: string;
   protein: string;
@@ -112,6 +114,8 @@ function parseExcel(buffer: ArrayBuffer): ParsedRecipe[] {
       steps: getByHeader(row, ['steps']),
       ingredients: getByHeader(row, ['ingredients']),
       categories: getByHeader(row, ['categories']),
+      user_groups: getByHeader(row, ['user_groups']),
+      image_url_import: getByHeader(row, ['image']),
       weight_per_serving: getByHeader(row, ['грамм на 1 п', 'грамм на 1п', 'грамм на 1 порц', 'грамм на 1 порцию']),
       calories: getByHeader(row, ['КБЖУ на 1 п', 'КБЖУ на 1п']),
       protein: getByHeader(row, ['Б на 1 п', 'Б на 1п']),
@@ -129,28 +133,42 @@ function parseCsv(text: string): ParsedRecipe[] {
   const lines = text.split('\n').filter(l => l.trim());
   if (lines.length < 2) return [];
 
-  const header = lines[0].split(';').map(h => h.trim().replace(/"/g, ''));
+  // Автоопределение разделителя: таб или точка с запятой
+  const firstLine = lines[0];
+  const sep = firstLine.includes('\t') ? '\t' : ';';
+
+  const header = firstLine.split(sep).map(h => h.trim().replace(/"/g, ''));
+
+  const getCol = (row: Record<string, string>, candidates: string[]) => {
+    for (const c of candidates) {
+      const key = Object.keys(row).find(k => k.trim().toLowerCase() === c.trim().toLowerCase());
+      if (key) return row[key] || '';
+    }
+    return '';
+  };
 
   return lines.slice(1).map(line => {
-    const values = line.split(';').map(v => v.trim().replace(/^"|"$/g, ''));
+    const values = line.split(sep).map(v => v.trim().replace(/^"|"$/g, ''));
     const row: Record<string, string> = {};
     header.forEach((col, i) => { row[col] = values[i] || ''; });
     return {
-      title: row['title'] || '',
-      servings: row['servings'] || '',
-      cooking_time: row['time'] || '',
-      steps: row['steps'] || '',
-      ingredients: row['ingredients'] || '',
-      categories: row['categories'] || '',
-      weight_per_serving: row['грамм на 1 п'] || '',
-      calories: row['КБЖУ на 1 п'] || '',
-      protein: row['Б на 1 п'] || '',
-      fats: row['Ж на 1 п'] || '',
-      carbs: row['У на 1 п'] || '',
-      calories_100: row['КБЖУ на 100'] || '',
-      protein_100: row['Б на 100'] || '',
-      fats_100: row['Ж на 100'] || '',
-      carbs_100: row['У на 100'] || '',
+      title: getCol(row, ['title']),
+      servings: getCol(row, ['servings']),
+      cooking_time: getCol(row, ['time']),
+      steps: getCol(row, ['steps']),
+      ingredients: getCol(row, ['ingredients']),
+      categories: getCol(row, ['categories']),
+      user_groups: getCol(row, ['user_groups']),
+      image_url_import: getCol(row, ['image']),
+      weight_per_serving: getCol(row, ['грамм на 1 п', 'грамм на 1п', 'грамм на 1 порц', 'грамм на 1 порцию']),
+      calories: getCol(row, ['КБЖУ на 1 п', 'КБЖУ на 1п']),
+      protein: getCol(row, ['Б на 1 п', 'Б на 1п']),
+      fats: getCol(row, ['Ж на 1 п', 'Ж на 1п']),
+      carbs: getCol(row, ['У на 1 п', 'У на 1п', 'У на 1 порцию']),
+      calories_100: getCol(row, ['КБЖУ на 100', 'КГБЖУ на 100', 'КБЖУ на 100 г']),
+      protein_100: getCol(row, ['Б на 100', 'Б на 100 г']),
+      fats_100: getCol(row, ['Ж на 100', 'Ж на 100 г']),
+      carbs_100: getCol(row, ['У на 100', 'У на 100 г']),
     };
   }).filter(r => r.title);
 }
@@ -214,7 +232,8 @@ export default function ImportRecipesDialog({ open, onOpenChange, onSuccess }: I
         fats_100: normalizeFloat(r.fats_100),
         carbs_100: normalizeFloat(r.carbs_100),
         category: r.categories || '',
-        image_url: null,
+        user_groups: r.user_groups || '',
+        image_url: r.image_url_import || null,
       }));
 
       const response = await fetch(`${RECIPES_API}?action=bulk_import`, {
