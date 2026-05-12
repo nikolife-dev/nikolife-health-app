@@ -5,6 +5,19 @@
       "method": "GET",
       "path": "/",
       "expectedStatus": 200
+    },
+    {
+      "name": "Get admin stats",
+      "method": "GET",
+      "path": "/?action=stats",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "total_users": 5,
+        "active_subscriptions": 4,
+        "monthly_revenue": 5070,
+        "new_this_week": 1
+      },
+      "bodyMatcher": "partial"
     }
   ]
 }

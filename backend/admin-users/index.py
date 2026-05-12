@@ -35,7 +35,56 @@ def handler(event: dict, context) -> dict:
 
     try:
         if method == 'GET':
-            user_id = event.get('queryStringParameters', {}).get('id')
+            params = event.get('queryStringParameters') or {}
+            action = params.get('action')
+
+            if action == 'stats':
+                schema = 't_p76837068_nikolife_health_app'
+                cur.execute(f"SELECT COUNT(*) as total FROM {schema}.users")
+                total_users = cur.fetchone()['total']
+
+                cur.execute(f"SELECT COUNT(*) as total FROM {schema}.subscriptions WHERE status = 'active'")
+                active_subs = cur.fetchone()['total']
+
+                cur.execute(f"""
+                    SELECT COALESCE(SUM(amount), 0) as total
+                    FROM {schema}.subscriptions
+                    WHERE status = 'active'
+                    AND created_at >= date_trunc('month', NOW())
+                """)
+                monthly_revenue = cur.fetchone()['total']
+
+                cur.execute(f"""
+                    SELECT COUNT(*) as total FROM {schema}.users
+                    WHERE created_at >= NOW() - INTERVAL '7 days'
+                """)
+                new_week = cur.fetchone()['total']
+
+                cur.execute(f"""
+                    SELECT COUNT(*) as total FROM {schema}.users
+                    WHERE created_at >= NOW() - INTERVAL '14 days'
+                    AND created_at < NOW() - INTERVAL '7 days'
+                """)
+                prev_week = cur.fetchone()['total']
+
+                week_change = None
+                if prev_week > 0:
+                    week_change = round((new_week - prev_week) / prev_week * 100)
+
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({
+                        'total_users': total_users,
+                        'active_subscriptions': active_subs,
+                        'monthly_revenue': monthly_revenue,
+                        'new_this_week': new_week,
+                        'week_change': week_change
+                    }),
+                    'isBase64Encoded': False
+                }
+
+            user_id = params.get('id')
             
             if user_id:
                 cur.execute("""

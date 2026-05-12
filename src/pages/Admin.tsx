@@ -31,12 +31,22 @@ import AdminUsersTab from '@/components/admin/AdminUsersTab';
 import AdminRecipesTab from '@/components/admin/AdminRecipesTab';
 import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 import AdminChatsTab from '@/components/admin/AdminChatsTab';
+import funcUrls from '../../backend/func2url.json';
+
+interface AdminStats {
+  total_users: number;
+  active_subscriptions: number;
+  monthly_revenue: number;
+  new_this_week: number;
+  week_change: number | null;
+}
 
 export default function Admin() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('users');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -45,41 +55,42 @@ export default function Admin() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const stats: Array<{
-    title: string;
-    value: string;
-    change: string;
-    icon: string;
-    trend: string;
-  }> = [
+  useEffect(() => {
+    fetch(`${funcUrls['admin-users']}?action=stats`)
+      .then(r => r.json())
+      .then(setAdminStats)
+      .catch(() => {});
+  }, []);
+
+  const formatRevenue = (val: number) => `₽${val.toLocaleString('ru-RU')}`;
+  const formatWeekChange = (val: number | null) =>
+    val !== null ? `${val > 0 ? '+' : ''}${val}% от пред. недели` : 'нет данных';
+
+  const stats = [
     {
       title: 'Всего пользователей',
-      value: '1,284',
-      change: '+12%',
+      value: adminStats ? adminStats.total_users.toLocaleString('ru-RU') : '—',
+      change: null,
       icon: 'Users',
-      trend: 'up'
     },
     {
       title: 'Активные подписки',
-      value: '892',
-      change: '+8%',
+      value: adminStats ? adminStats.active_subscriptions.toLocaleString('ru-RU') : '—',
+      change: null,
       icon: 'CreditCard',
-      trend: 'up'
     },
     {
       title: 'Доход за месяц',
-      value: '₽127,420',
-      change: '+23%',
+      value: adminStats ? formatRevenue(adminStats.monthly_revenue) : '—',
+      change: null,
       icon: 'TrendingUp',
-      trend: 'up'
     },
     {
       title: 'Новые за неделю',
-      value: '47',
-      change: '+5%',
+      value: adminStats ? adminStats.new_this_week.toLocaleString('ru-RU') : '—',
+      change: adminStats ? formatWeekChange(adminStats.week_change) : null,
       icon: 'UserPlus',
-      trend: 'up'
-    }
+    },
   ];
 
   const subscriptions = [
@@ -256,10 +267,12 @@ export default function Admin() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-[#748c6d]">{stat.value}</div>
-                <p className="text-xs text-green-600 flex items-center gap-1 mt-2">
-                  <Icon name="TrendingUp" size={14} />
-                  {stat.change} от прошлого месяца
-                </p>
+                {stat.change && (
+                  <p className="text-xs text-green-600 flex items-center gap-1 mt-2">
+                    <Icon name="TrendingUp" size={14} />
+                    {stat.change}
+                  </p>
+                )}
               </CardContent>
             </Card>
           ))}
