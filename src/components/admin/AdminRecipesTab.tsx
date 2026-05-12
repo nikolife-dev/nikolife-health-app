@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 import AddRecipeDialog from './recipes/AddRecipeDialog';
 import EditRecipeDialog from './recipes/EditRecipeDialog';
+import ImportRecipesDialog from './recipes/ImportRecipesDialog';
 
 const RECIPES_API = funcUrls.recipes;
 
@@ -49,6 +50,7 @@ export default function AdminRecipesTab() {
   const [category, setCategory] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
 
   const categories = [
@@ -231,13 +233,23 @@ export default function AdminRecipesTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-[#748c6d]">Рецепты</CardTitle>
-            <Button
-              onClick={() => setIsAddDialogOpen(true)}
-              className="bg-[#748c6d] hover:bg-[#5a7052]"
-            >
-              <Icon name="Plus" size={18} className="mr-2" />
-              Добавить рецепт
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsImportDialogOpen(true)}
+                className="border-[#748c6d]/40 text-[#748c6d] hover:bg-[#748c6d]/10"
+              >
+                <Icon name="FileSpreadsheet" size={18} className="mr-2" />
+                Импорт CSV
+              </Button>
+              <Button
+                onClick={() => setIsAddDialogOpen(true)}
+                className="bg-[#748c6d] hover:bg-[#5a7052]"
+              >
+                <Icon name="Plus" size={18} className="mr-2" />
+                Добавить рецепт
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -400,6 +412,14 @@ export default function AdminRecipesTab() {
         onSuccess={() => {
           setIsEditDialogOpen(false);
           setEditingRecipe(null);
+          loadRecipes();
+        }}
+      />
+
+      <ImportRecipesDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onSuccess={() => {
           loadRecipes();
         }}
       />

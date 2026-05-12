@@ -207,6 +207,57 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'recipes': recipes}), 'isBase64Encoded': False}
         
+        # POST bulk import
+        if method == 'POST' and action == 'bulk_import':
+            if not is_admin:
+                return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Только администратор'}), 'isBase64Encoded': False}
+            
+            body = json.loads(event.get('body', '{}'))
+            recipes_data = body.get('recipes', [])
+            
+            if not recipes_data:
+                return {'statusCode': 400, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Нет рецептов для импорта'}), 'isBase64Encoded': False}
+            
+            inserted = 0
+            errors = []
+            
+            for i, r in enumerate(recipes_data):
+                try:
+                    if not r.get('title'):
+                        errors.append(f"Строка {i+1}: нет названия")
+                        continue
+                    
+                    ingredients = r.get('ingredients', [])
+                    if isinstance(ingredients, str):
+                        ingredients = [x.strip() for x in ingredients.split(';') if x.strip()]
+                    
+                    category = r.get('category', [])
+                    if isinstance(category, str):
+                        category = [x.strip() for x in category.split(';') if x.strip()]
+                    
+                    cur.execute(f"""
+                        INSERT INTO {schema}.recipes 
+                        (title, description, ingredients, instructions, cooking_time, servings, calories, protein, carbs, fats, image_url, category, tags, created_by)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s)
+                    """, (
+                        r.get('title'), r.get('description', ''), json.dumps(ingredients),
+                        r.get('instructions', ''), r.get('cooking_time'), r.get('servings', 1),
+                        r.get('calories'), r.get('protein'), r.get('carbs'), r.get('fats'),
+                        r.get('image_url'), json.dumps(category), json.dumps([]), user_id
+                    ))
+                    inserted += 1
+                except Exception as e:
+                    errors.append(f"Строка {i+1}: {str(e)}")
+                    conn.rollback()
+                    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+                    psycopg2.extras.register_default_jsonb(conn)
+                    cur = conn.cursor()
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True, 'inserted': inserted, 'errors': errors}), 'isBase64Encoded': False}
+        
         # POST /
         if method == 'POST' and not recipe_id:
             if not user_id:
