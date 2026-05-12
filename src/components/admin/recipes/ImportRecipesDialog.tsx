@@ -34,6 +34,10 @@ interface ParsedRecipe {
   protein: string;
   fats: string;
   carbs: string;
+  calories_100: string;
+  protein_100: string;
+  fats_100: string;
+  carbs_100: string;
 }
 
 interface ImportRecipesDialogProps {
@@ -83,7 +87,11 @@ function parseExcel(buffer: ArrayBuffer): ParsedRecipe[] {
       calories: get('КБЖУ на 1 п'),
       protein: get('Б на 1 п'),
       fats: get('Ж на 1 п'),
-      carbs: get('У на 1 порцию'),
+      carbs: get('У на 1 п'),
+      calories_100: get('КБЖУ на 100'),
+      protein_100: get('Б на 100'),
+      fats_100: get('Ж на 100'),
+      carbs_100: get('У на 100'),
     };
   }).filter(r => r.title);
 }
@@ -109,7 +117,11 @@ function parseCsv(text: string): ParsedRecipe[] {
       calories: row['КБЖУ на 1 п'] || '',
       protein: row['Б на 1 п'] || '',
       fats: row['Ж на 1 п'] || '',
-      carbs: row['У на 1 порцию'] || '',
+      carbs: row['У на 1 п'] || '',
+      calories_100: row['КБЖУ на 100'] || '',
+      protein_100: row['Б на 100'] || '',
+      fats_100: row['Ж на 100'] || '',
+      carbs_100: row['У на 100'] || '',
     };
   }).filter(r => r.title);
 }
@@ -163,10 +175,15 @@ export default function ImportRecipesDialog({ open, onOpenChange, onSuccess }: I
         instructions: parseSteps(r.steps),
         cooking_time: normalizeInt(r.cooking_time),
         servings: normalizeInt(r.servings) ?? 1,
+        weight_per_serving: normalizeInt(r.weight_per_serving),
         calories: normalizeInt(r.calories),
         protein: normalizeFloat(r.protein),
         carbs: normalizeFloat(r.carbs),
         fats: normalizeFloat(r.fats),
+        calories_100: normalizeInt(r.calories_100),
+        protein_100: normalizeFloat(r.protein_100),
+        fats_100: normalizeFloat(r.fats_100),
+        carbs_100: normalizeFloat(r.carbs_100),
         category: r.categories || '',
         image_url: null,
       }));
@@ -226,7 +243,7 @@ export default function ImportRecipesDialog({ open, onOpenChange, onSuccess }: I
                 Загрузите файл с рецептами
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
-                Поддерживаются форматы .xlsx и .csv. Колонки: title, servings, time, steps, ingredients, categories, КБЖУ и т.д.
+                Поддерживаются форматы .xlsx и .csv
               </p>
             </div>
             <Button
@@ -284,23 +301,27 @@ export default function ImportRecipesDialog({ open, onOpenChange, onSuccess }: I
                       <TableRow>
                         <TableHead className="text-xs">Название</TableHead>
                         <TableHead className="text-xs">Порций</TableHead>
-                        <TableHead className="text-xs">Время (мин)</TableHead>
+                        <TableHead className="text-xs">Мин</TableHead>
                         <TableHead className="text-xs">Категории</TableHead>
-                        <TableHead className="text-xs">Ккал</TableHead>
-                        <TableHead className="text-xs">Б / Ж / У</TableHead>
-                        <TableHead className="text-xs">Ингредиенты</TableHead>
+                        <TableHead className="text-xs">Г/п</TableHead>
+                        <TableHead className="text-xs">Ккал/п</TableHead>
+                        <TableHead className="text-xs">Б/Ж/У на п</TableHead>
+                        <TableHead className="text-xs">Ккал/100</TableHead>
+                        <TableHead className="text-xs">Б/Ж/У на 100</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {recipes.slice(0, 20).map((r, i) => (
                         <TableRow key={i}>
-                          <TableCell className="text-xs font-medium max-w-[140px] truncate">{r.title}</TableCell>
+                          <TableCell className="text-xs font-medium max-w-[130px] truncate">{r.title}</TableCell>
                           <TableCell className="text-xs">{r.servings}</TableCell>
                           <TableCell className="text-xs">{r.cooking_time}</TableCell>
-                          <TableCell className="text-xs max-w-[100px] truncate">{r.categories}</TableCell>
+                          <TableCell className="text-xs max-w-[90px] truncate">{r.categories}</TableCell>
+                          <TableCell className="text-xs">{r.weight_per_serving}</TableCell>
                           <TableCell className="text-xs">{r.calories}</TableCell>
                           <TableCell className="text-xs whitespace-nowrap">{r.protein} / {r.fats} / {r.carbs}</TableCell>
-                          <TableCell className="text-xs max-w-[180px] truncate">{r.ingredients}</TableCell>
+                          <TableCell className="text-xs">{r.calories_100}</TableCell>
+                          <TableCell className="text-xs whitespace-nowrap">{r.protein_100} / {r.fats_100} / {r.carbs_100}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
