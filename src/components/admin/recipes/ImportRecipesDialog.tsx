@@ -482,10 +482,17 @@ export default function ImportRecipesDialog({ open, onOpenChange, onSuccess }: I
           )}
 
           <div className="flex justify-end gap-2 pt-2 border-t">
+            {result ? (
+              <Button className="bg-[#748c6d] hover:bg-[#5a7052]" onClick={handleClose}>
+                <Icon name="Check" size={14} className="mr-1.5" />
+                ОК
+              </Button>
+            ) : (
             <Button variant="outline" onClick={handleClose} disabled={isImporting || isChecking}>
               Отменить
             </Button>
-            {duplicates.length > 0 ? (
+            )}
+            {!result && (duplicates.length > 0 ? (
               <Button
                 className="bg-[#748c6d] hover:bg-[#5a7052]"
                 onClick={() => doImport(decisions)}
@@ -509,7 +516,7 @@ export default function ImportRecipesDialog({ open, onOpenChange, onSuccess }: I
                   <><Icon name="Check" size={14} className="mr-1.5" />Подтвердить {recipes.length > 0 ? `(${recipes.length})` : ''}</>
                 )}
               </Button>
-            )}
+            ))}
           </div>
         </div>
       </DialogContent>
