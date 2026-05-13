@@ -258,10 +258,10 @@ def handler(event: dict, context) -> dict:
 
                     category_raw = r.get('category', '')
                     if isinstance(category_raw, list):
-                        category_str = category_raw[0].strip() if category_raw else ''
+                        cats = [x.strip() for x in category_raw if str(x).strip()]
                     else:
-                        parts = [x.strip() for x in str(category_raw).split(';') if x.strip()]
-                        category_str = parts[0] if parts else ''
+                        cats = [x.strip() for x in str(category_raw).replace(';', ',').split(',') if x.strip()]
+                    category_str = ', '.join(cats)[:100]
 
                     if decision == 'replace':
                         cur.execute(f"SELECT id FROM {schema}.recipes WHERE lower(title) = lower(%s) AND is_active = true LIMIT 1", (r['title'],))
