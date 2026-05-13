@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import funcUrls from '../../../../backend/func2url.json';
+import { compressImage } from '@/lib/compressImage';
 
 const RECIPES_API = funcUrls.recipes;
 
@@ -21,11 +22,8 @@ export default function QuickImageCell({ recipeId, imageUrl, recipeTitle, onUpda
 
   const uploadFile = async (file: File) => {
     if (!file.type.startsWith('image/')) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Размер изображения не должен превышать 5 МБ');
-      return;
-    }
     setIsUploading(true);
+    file = await compressImage(file);
     try {
       const reader = new FileReader();
       const base64 = await new Promise<string>((resolve) => {

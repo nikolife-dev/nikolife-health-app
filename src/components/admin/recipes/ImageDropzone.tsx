@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
 import Icon from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { compressImage } from '@/lib/compressImage';
 
 interface ImageDropzoneProps {
   imagePreview: string | null;
@@ -23,9 +24,10 @@ export default function ImageDropzone({
   const [urlError, setUrlError] = useState('');
 
   const processFile = useCallback(
-    (file: File) => {
+    async (file: File) => {
       if (!file.type.startsWith('image/')) return;
-      onFileSelected(file);
+      const compressed = await compressImage(file);
+      onFileSelected(compressed);
     },
     [onFileSelected],
   );
