@@ -52,6 +52,8 @@ export default function EditRecipeDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [copyImageToStorage, setCopyImageToStorage] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -92,18 +94,28 @@ export default function EditRecipeDialog({
         is_active: recipe.is_active,
       });
       setImagePreview(recipe.image_url);
+      setImageUrl(null);
     }
   }, [recipe]);
 
   const handleImageSelected = (file: File) => {
     setImageFile(file);
+    setImageUrl(null);
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
   };
 
+  const handleUrlSelected = (url: string, copy: boolean) => {
+    setImageFile(null);
+    setImageUrl(url);
+    setCopyImageToStorage(copy);
+    setImagePreview(url);
+  };
+
   const handleImageClear = () => {
     setImageFile(null);
+    setImageUrl(null);
     setImagePreview(null);
   };
 
@@ -157,10 +169,7 @@ export default function EditRecipeDialog({
       });
 
       if (imageFile) {
-        console.log('[EditRecipe] Конвертация изображения в base64', { 
-          fileName: imageFile.name, 
-          fileSize: imageFile.size 
-        });
+        console.log('[EditRecipe] Конвертация изображения в base64', { fileName: imageFile.name, fileSize: imageFile.size });
         const reader = new FileReader();
         const base64Promise = new Promise<string>((resolve) => {
           reader.onloadend = () => resolve(reader.result as string);
@@ -169,6 +178,12 @@ export default function EditRecipeDialog({
         const base64 = await base64Promise;
         payload.image_base64 = base64;
         console.log('[EditRecipe] Изображение конвертировано', { base64Length: base64.length });
+      } else if (imageUrl) {
+        if (copyImageToStorage) {
+          payload.image_url_import = imageUrl;
+        } else {
+          payload.image_url = imageUrl;
+        }
       }
 
       const url = `${RECIPES_API}?id=${recipe.id}`;
@@ -363,6 +378,7 @@ export default function EditRecipeDialog({
               <ImageDropzone
                 imagePreview={imagePreview}
                 onFileSelected={handleImageSelected}
+                onUrlSelected={handleUrlSelected}
                 onClear={handleImageClear}
               />
             </div>

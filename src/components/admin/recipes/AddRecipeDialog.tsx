@@ -32,6 +32,8 @@ export default function AddRecipeDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [copyImageToStorage, setCopyImageToStorage] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -49,13 +51,22 @@ export default function AddRecipeDialog({
 
   const handleImageSelected = (file: File) => {
     setImageFile(file);
+    setImageUrl(null);
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
   };
 
+  const handleUrlSelected = (url: string, copy: boolean) => {
+    setImageFile(null);
+    setImageUrl(url);
+    setCopyImageToStorage(copy);
+    setImagePreview(url);
+  };
+
   const handleImageClear = () => {
     setImageFile(null);
+    setImageUrl(null);
     setImagePreview(null);
   };
 
@@ -117,9 +128,13 @@ export default function AddRecipeDialog({
         });
         const base64 = await base64Promise;
         payload.image_base64 = base64;
-        console.log('[AddRecipe] Изображение конвертировано', { 
-          base64Length: `${(base64.length / 1024).toFixed(2)} KB` 
-        });
+        console.log('[AddRecipe] Изображение конвертировано', { base64Length: `${(base64.length / 1024).toFixed(2)} KB` });
+      } else if (imageUrl) {
+        if (copyImageToStorage) {
+          payload.image_url_import = imageUrl;
+        } else {
+          payload.image_url = imageUrl;
+        }
       }
 
       const payloadSize = JSON.stringify(payload).length;
@@ -207,6 +222,7 @@ export default function AddRecipeDialog({
     });
     setImageFile(null);
     setImagePreview(null);
+    setImageUrl(null);
     onClose();
   };
 
@@ -335,6 +351,7 @@ export default function AddRecipeDialog({
               <ImageDropzone
                 imagePreview={imagePreview}
                 onFileSelected={handleImageSelected}
+                onUrlSelected={handleUrlSelected}
                 onClear={handleImageClear}
               />
             </div>

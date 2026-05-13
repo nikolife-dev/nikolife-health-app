@@ -19,6 +19,7 @@ import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 import AddRecipeDialog from './recipes/AddRecipeDialog';
 import EditRecipeDialog from './recipes/EditRecipeDialog';
 import ImportRecipesDialog from './recipes/ImportRecipesDialog';
+import QuickImageCell from './recipes/QuickImageCell';
 
 const RECIPES_API = funcUrls.recipes;
 
@@ -324,13 +325,12 @@ export default function AdminRecipesTab() {
                   recipes.map((recipe) => (
                     <TableRow key={recipe.id}>
                       <TableCell>
-                        {recipe.image_url ? (
-                          <img src={recipe.image_url} alt={recipe.title} className="w-12 h-12 object-cover rounded" />
-                        ) : (
-                          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
-                            <Icon name="ImageOff" size={18} className="text-gray-400" />
-                          </div>
-                        )}
+                        <QuickImageCell
+                          recipeId={recipe.id}
+                          imageUrl={recipe.image_url}
+                          recipeTitle={recipe.title}
+                          onUpdated={loadRecipes}
+                        />
                       </TableCell>
                       <TableCell className="text-xs font-medium text-[#4a5446] max-w-[140px]">
                         {recipe.title}

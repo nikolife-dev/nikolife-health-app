@@ -323,6 +323,44 @@ def handler(event: dict, context) -> dict:
             if not body.get('title') or not body.get('ingredients') or not body.get('instructions'):
                 return {'statusCode': 400, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Отсутствуют обязательные поля'}), 'isBase64Encoded': False}
             
+            post_image_url = body.get('image_url')
+            
+            if body.get('image_url_import'):
+                try:
+                    import urllib.request
+                    ext_url = body['image_url_import']
+                    req = urllib.request.Request(ext_url, headers={'User-Agent': 'Mozilla/5.0'})
+                    with urllib.request.urlopen(req, timeout=15) as resp:
+                        img_data = resp.read()
+                        content_type = resp.headers.get('Content-Type', 'image/jpeg')
+                    file_ext = 'jpg'
+                    if 'png' in content_type: file_ext = 'png'
+                    elif 'webp' in content_type: file_ext = 'webp'
+                    s3 = boto3.client('s3', endpoint_url='https://bucket.poehali.dev',
+                        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'], aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'])
+                    filename = f"recipes/{uuid.uuid4()}.{file_ext}"
+                    s3.put_object(Bucket='files', Key=filename, Body=img_data, ContentType=f'image/{file_ext}')
+                    post_image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
+                except Exception as e:
+                    print(f"[RECIPES] ⚠️ Ошибка копирования изображения из URL: {e}")
+            
+            if body.get('image_base64'):
+                try:
+                    s3 = boto3.client('s3', endpoint_url='https://bucket.poehali.dev',
+                        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'], aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'])
+                    b64 = body['image_base64']
+                    if ',' in b64: b64 = b64.split(',')[1]
+                    img_data = base64.b64decode(b64)
+                    file_ext = 'jpg'
+                    if body['image_base64'].startswith('data:image/png'): file_ext = 'png'
+                    elif body['image_base64'].startswith('data:image/webp'): file_ext = 'webp'
+                    filename = f"recipes/{uuid.uuid4()}.{file_ext}"
+                    s3.put_object(Bucket='files', Key=filename, Body=img_data, ContentType=f'image/{file_ext}')
+                    post_image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
+                    print(f"[RECIPES] Изображение загружено при создании: {post_image_url}")
+                except Exception as e:
+                    print(f"[RECIPES] ⚠️ Ошибка загрузки изображения при создании: {e}")
+            
             cur.execute(f"""
                 INSERT INTO {schema}.recipes 
                 (title, description, ingredients, instructions, cooking_time, servings, calories, protein, carbs, fats, image_url, category, tags, created_by)
@@ -332,7 +370,7 @@ def handler(event: dict, context) -> dict:
                 body.get('title'), body.get('description'), json.dumps(body.get('ingredients')),
                 body.get('instructions'), body.get('cooking_time'), body.get('servings', 1),
                 body.get('calories'), body.get('protein'), body.get('carbs'), body.get('fats'),
-                body.get('image_url'), json.dumps(body.get('category', [])), json.dumps(body.get('tags', [])), user_id
+                post_image_url, json.dumps(body.get('category', [])), json.dumps(body.get('tags', [])), user_id
             ))
             
             new_id = cur.fetchone()[0]
@@ -363,6 +401,34 @@ def handler(event: dict, context) -> dict:
             print(f"[RECIPES] Body получен, размер: {len(event.get('body', ''))} байт")
             
             image_url = body.get('image_url')
+            
+            # Скачивание изображения из внешнего URL в S3
+            if body.get('image_url_import'):
+                try:
+                    import urllib.request
+                    ext_url = body['image_url_import']
+                    req = urllib.request.Request(ext_url, headers={'User-Agent': 'Mozilla/5.0'})
+                    with urllib.request.urlopen(req, timeout=15) as resp:
+                        img_data = resp.read()
+                        content_type = resp.headers.get('Content-Type', 'image/jpeg')
+                    file_ext = 'jpg'
+                    if 'png' in content_type:
+                        file_ext = 'png'
+                    elif 'webp' in content_type:
+                        file_ext = 'webp'
+                    elif 'gif' in content_type:
+                        file_ext = 'gif'
+                    s3 = boto3.client('s3',
+                        endpoint_url='https://bucket.poehali.dev',
+                        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+                    )
+                    filename = f"recipes/{uuid.uuid4()}.{file_ext}"
+                    s3.put_object(Bucket='files', Key=filename, Body=img_data, ContentType=f'image/{file_ext}')
+                    image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
+                    print(f"[RECIPES] Изображение скопировано из URL в S3: {image_url}")
+                except Exception as e:
+                    print(f"[RECIPES] ⚠️ Ошибка копирования изображения из URL: {e}")
             
             # Загрузка изображения в S3, если передан base64
             if body.get('image_base64'):
