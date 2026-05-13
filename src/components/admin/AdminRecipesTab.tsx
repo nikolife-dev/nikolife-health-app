@@ -26,18 +26,24 @@ interface Recipe {
   id: number;
   title: string;
   description: string;
-  cooking_time: number;
-  servings: number;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fats: number;
+  cooking_time: number | null;
+  servings: number | null;
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  fats: number | null;
   image_url: string | null;
   category: string[];
   ingredients: string[];
   instructions: string;
   is_active: boolean;
   created_at: string;
+  weight_per_serving: number | null;
+  calories_100: number | null;
+  protein_100: number | null;
+  fats_100: number | null;
+  carbs_100: number | null;
+  user_groups: string | null;
 }
 
 export default function AdminRecipesTab() {
@@ -293,20 +299,24 @@ export default function AdminRecipesTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Фото</TableHead>
-                  <TableHead>Название</TableHead>
-                  <TableHead>Категория</TableHead>
-                  <TableHead>Время</TableHead>
-                  <TableHead>Калории</TableHead>
-                  <TableHead>Порции</TableHead>
-                  <TableHead>Статус</TableHead>
-                  <TableHead className="text-right">Действия</TableHead>
+                  <TableHead className="text-xs">Фото</TableHead>
+                  <TableHead className="text-xs">Название</TableHead>
+                  <TableHead className="text-xs">Категории</TableHead>
+                  <TableHead className="text-xs">Мин</TableHead>
+                  <TableHead className="text-xs">Порций</TableHead>
+                  <TableHead className="text-xs">Г/п</TableHead>
+                  <TableHead className="text-xs">Ккал/п</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Б/Ж/У на п</TableHead>
+                  <TableHead className="text-xs">Ккал/100</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Б/Ж/У на 100</TableHead>
+                  <TableHead className="text-xs">Статус</TableHead>
+                  <TableHead className="text-xs text-right">Действия</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {recipes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={12} className="text-center py-8 text-gray-500">
                       Рецепты не найдены
                     </TableCell>
                   </TableRow>
@@ -315,71 +325,55 @@ export default function AdminRecipesTab() {
                     <TableRow key={recipe.id}>
                       <TableCell>
                         {recipe.image_url ? (
-                          <img
-                            src={recipe.image_url}
-                            alt={recipe.title}
-                            className="w-16 h-16 object-cover rounded"
-                          />
+                          <img src={recipe.image_url} alt={recipe.title} className="w-12 h-12 object-cover rounded" />
                         ) : (
-                          <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
-                            <Icon name="ImageOff" size={24} className="text-gray-400" />
+                          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                            <Icon name="ImageOff" size={18} className="text-gray-400" />
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="font-medium text-[#4a5446]">
+                      <TableCell className="text-xs font-medium text-[#4a5446] max-w-[140px]">
                         {recipe.title}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {recipe.category && Array.isArray(recipe.category) && recipe.category.length > 0 ? (
+                          {recipe.category?.length > 0 ? (
                             recipe.category.map((cat, idx) => (
-                              <Badge key={idx} className={getCategoryBadge(cat)}>
-                                {cat}
-                              </Badge>
+                              <Badge key={idx} className={`text-xs ${getCategoryBadge(cat)}`}>{cat}</Badge>
                             ))
                           ) : (
-                            <Badge className="bg-gray-500/10 text-gray-700">Без категории</Badge>
+                            <span className="text-xs text-gray-400">—</span>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-[#4a5446]/80">
-                        {recipe.cooking_time} мин
+                      <TableCell className="text-xs text-[#4a5446]/80">{recipe.cooking_time ?? '—'}</TableCell>
+                      <TableCell className="text-xs text-[#4a5446]/80">{recipe.servings ?? '—'}</TableCell>
+                      <TableCell className="text-xs text-[#4a5446]/80">{recipe.weight_per_serving ?? '—'}</TableCell>
+                      <TableCell className="text-xs text-[#4a5446]/80">{recipe.calories ?? '—'}</TableCell>
+                      <TableCell className="text-xs text-[#4a5446]/80 whitespace-nowrap">
+                        {recipe.protein ?? '—'} / {recipe.fats ?? '—'} / {recipe.carbs ?? '—'}
                       </TableCell>
-                      <TableCell className="text-[#4a5446]/80">
-                        {recipe.calories} ккал
-                      </TableCell>
-                      <TableCell className="text-[#4a5446]/80">
-                        {recipe.servings}
+                      <TableCell className="text-xs text-[#4a5446]/80">{recipe.calories_100 ?? '—'}</TableCell>
+                      <TableCell className="text-xs text-[#4a5446]/80 whitespace-nowrap">
+                        {recipe.protein_100 ?? '—'} / {recipe.fats_100 ?? '—'} / {recipe.carbs_100 ?? '—'}
                       </TableCell>
                       <TableCell>
                         <Badge
-                          className={
-                            recipe.is_active
-                              ? 'bg-green-500/10 text-green-700 cursor-pointer hover:bg-green-500/20 min-h-[36px] px-3'
-                              : 'bg-gray-500/10 text-gray-700 cursor-pointer hover:bg-gray-500/20 min-h-[36px] px-3'
-                          }
+                          className={recipe.is_active
+                            ? 'text-xs bg-green-500/10 text-green-700 cursor-pointer hover:bg-green-500/20'
+                            : 'text-xs bg-gray-500/10 text-gray-700 cursor-pointer hover:bg-gray-500/20'}
                           onClick={() => handleToggleActive(recipe)}
                         >
                           {recipe.is_active ? 'Активен' : 'Скрыт'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(recipe)}
-                            className="min-w-[44px] min-h-[44px]"
-                          >
-                            <Icon name="Pencil" size={16} />
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(recipe)} className="min-w-[36px] min-h-[36px]">
+                            <Icon name="Pencil" size={14} />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(recipe.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 min-w-[44px] min-h-[44px]"
-                          >
-                            <Icon name="Trash2" size={16} />
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(recipe.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50 min-w-[36px] min-h-[36px]">
+                            <Icon name="Trash2" size={14} />
                           </Button>
                         </div>
                       </TableCell>

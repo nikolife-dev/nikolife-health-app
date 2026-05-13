@@ -6,6 +6,25 @@ import boto3
 import base64
 import uuid
 
+def row_to_recipe(row, is_favorite=False) -> dict:
+    return {
+        'id': row[0], 'title': row[1], 'description': row[2], 'ingredients': row[3],
+        'instructions': row[4], 'cooking_time': row[5], 'servings': row[6], 'calories': row[7],
+        'protein': float(row[8]) if row[8] is not None else None,
+        'carbs': float(row[9]) if row[9] is not None else None,
+        'fats': float(row[10]) if row[10] is not None else None,
+        'image_url': row[11], 'category': parse_category(row[12]),
+        'tags': row[13], 'is_active': row[14],
+        'weight_per_serving': row[18] if len(row) > 18 else None,
+        'calories_100': row[19] if len(row) > 19 else None,
+        'protein_100': float(row[20]) if len(row) > 20 and row[20] is not None else None,
+        'fats_100': float(row[21]) if len(row) > 21 and row[21] is not None else None,
+        'carbs_100': float(row[22]) if len(row) > 22 and row[22] is not None else None,
+        'user_groups': row[23] if len(row) > 23 else None,
+        'is_favorite': is_favorite,
+    }
+
+
 def parse_category(raw) -> list:
     """Превращает строку категорий или список в список строк."""
     if not raw:
@@ -100,16 +119,7 @@ def handler(event: dict, context) -> dict:
                 ORDER BY uf.created_at DESC
             """, (user_id,))
             
-            recipes = []
-            for row in cur.fetchall():
-                recipes.append({
-                    'id': row[0], 'title': row[1], 'description': row[2], 'ingredients': row[3],
-                    'instructions': row[4], 'cooking_time': row[5], 'servings': row[6], 'calories': row[7],
-                    'protein': float(row[8]) if row[8] else None, 'carbs': float(row[9]) if row[9] else None,
-                    'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': parse_category(row[12]),
-                    'tags': row[13], 'is_favorite': True
-                })
-            
+            recipes = [row_to_recipe(row, is_favorite=True) for row in cur.fetchall()]
             cur.close()
             conn.close()
             return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'recipes': recipes})}
@@ -149,13 +159,7 @@ def handler(event: dict, context) -> dict:
                 cur.execute(f"SELECT id FROM {schema}.user_favorites WHERE user_id = %s AND recipe_id = %s", (user_id, recipe_id))
                 is_favorite = cur.fetchone() is not None
             
-            recipe = {
-                'id': row[0], 'title': row[1], 'description': row[2], 'ingredients': row[3],
-                'instructions': row[4], 'cooking_time': row[5], 'servings': row[6], 'calories': row[7],
-                'protein': float(row[8]) if row[8] else None, 'carbs': float(row[9]) if row[9] else None,
-                'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': parse_category(row[12]),
-                'tags': row[13], 'is_favorite': is_favorite
-            }
+            recipe = row_to_recipe(row, is_favorite=is_favorite)
             
             cur.close()
             conn.close()
@@ -190,13 +194,7 @@ def handler(event: dict, context) -> dict:
             recipe_ids = []
             for row in cur.fetchall():
                 recipe_ids.append(row[0])
-                recipes.append({
-                    'id': row[0], 'title': row[1], 'description': row[2], 'ingredients': row[3],
-                    'instructions': row[4], 'cooking_time': row[5], 'servings': row[6], 'calories': row[7],
-                    'protein': float(row[8]) if row[8] else None, 'carbs': float(row[9]) if row[9] else None,
-                    'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': parse_category(row[12]),
-                    'tags': row[13], 'is_favorite': False
-                })
+                recipes.append(row_to_recipe(row))
             
             if user_id and recipe_ids:
                 placeholders = ','.join(['%s'] * len(recipe_ids))
@@ -274,26 +272,33 @@ def handler(event: dict, context) -> dict:
                                 UPDATE {schema}.recipes SET
                                 description=%s, ingredients=%s, instructions=%s, cooking_time=%s,
                                 servings=%s, calories=%s, protein=%s, carbs=%s, fats=%s,
-                                image_url=%s, category=%s
+                                image_url=%s, category=%s, weight_per_serving=%s,
+                                calories_100=%s, protein_100=%s, fats_100=%s, carbs_100=%s, user_groups=%s
                                 WHERE id=%s
                             """, (
                                 r.get('description', ''), json.dumps(ingredients),
                                 r.get('instructions', ''), r.get('cooking_time'), r.get('servings', 1),
                                 r.get('calories'), r.get('protein'), r.get('carbs'), r.get('fats'),
-                                r.get('image_url'), category_str, existing[0]
+                                r.get('image_url'), category_str,
+                                r.get('weight_per_serving'), r.get('calories_100'),
+                                r.get('protein_100'), r.get('fats_100'), r.get('carbs_100'),
+                                r.get('user_groups'), existing[0]
                             ))
                             inserted += 1
                             continue
 
                     cur.execute(f"""
                         INSERT INTO {schema}.recipes
-                        (title, description, ingredients, instructions, cooking_time, servings, calories, protein, carbs, fats, image_url, category, tags, created_by)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        (title, description, ingredients, instructions, cooking_time, servings, calories, protein, carbs, fats, image_url, category, tags, created_by, weight_per_serving, calories_100, protein_100, fats_100, carbs_100, user_groups)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         r.get('title'), r.get('description', ''), json.dumps(ingredients),
                         r.get('instructions', ''), r.get('cooking_time'), r.get('servings', 1),
                         r.get('calories'), r.get('protein'), r.get('carbs'), r.get('fats'),
-                        r.get('image_url'), category_str, json.dumps([]), user_id
+                        r.get('image_url'), category_str, json.dumps([]), user_id,
+                        r.get('weight_per_serving'), r.get('calories_100'),
+                        r.get('protein_100'), r.get('fats_100'), r.get('carbs_100'),
+                        r.get('user_groups')
                     ))
                     inserted += 1
                 except Exception as e:
