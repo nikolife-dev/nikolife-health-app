@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import CategorySelector from './CategorySelector';
+import ImageDropzone from './ImageDropzone';
 
 const RECIPES_API = funcUrls.recipes;
 
@@ -46,16 +47,16 @@ export default function AddRecipeDialog({
     instructions: '',
   });
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleImageSelected = (file: File) => {
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageClear = () => {
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const handleSubmit = async () => {
@@ -329,22 +330,14 @@ export default function AddRecipeDialog({
           </div>
 
           <div>
-            <Label htmlFor="image">Фото рецепта</Label>
-            <Input
-              id="image"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-            />
-            {imagePreview && (
-              <div className="mt-2">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-48 object-cover rounded"
-                />
-              </div>
-            )}
+            <Label>Фото рецепта</Label>
+            <div className="mt-1">
+              <ImageDropzone
+                imagePreview={imagePreview}
+                onFileSelected={handleImageSelected}
+                onClear={handleImageClear}
+              />
+            </div>
           </div>
 
           <div>
