@@ -28,7 +28,7 @@ interface Recipe {
   carbs: number;
   fats: number;
   image_url: string | null;
-  category: string[];
+  category: string[] | string;
   ingredients: string[];
   instructions: string;
   is_active: boolean;
@@ -69,17 +69,24 @@ export default function EditRecipeDialog({
 
   useEffect(() => {
     if (recipe) {
+      const cat = recipe.category;
+      const categories = Array.isArray(cat)
+        ? cat
+        : typeof cat === 'string' && cat
+          ? cat.split(',').map(s => s.trim()).filter(Boolean)
+          : [];
+
       setFormData({
         title: recipe.title,
         description: recipe.description || '',
-        categories: Array.isArray(recipe.category) ? recipe.category : [],
-        cooking_time: recipe.cooking_time.toString(),
-        servings: recipe.servings.toString(),
-        calories: recipe.calories.toString(),
-        protein: recipe.protein.toString(),
-        carbs: recipe.carbs.toString(),
-        fats: recipe.fats.toString(),
-        ingredients: recipe.ingredients.join('\n'),
+        categories,
+        cooking_time: recipe.cooking_time != null ? String(recipe.cooking_time) : '',
+        servings: recipe.servings != null ? String(recipe.servings) : '',
+        calories: recipe.calories != null ? String(recipe.calories) : '',
+        protein: recipe.protein != null ? String(recipe.protein) : '',
+        carbs: recipe.carbs != null ? String(recipe.carbs) : '',
+        fats: recipe.fats != null ? String(recipe.fats) : '',
+        ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients.join('\n') : '',
         instructions: recipe.instructions || '',
         is_active: recipe.is_active,
       });
