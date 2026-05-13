@@ -6,6 +6,21 @@ import boto3
 import base64
 import uuid
 
+def parse_category(raw) -> list:
+    """Превращает строку категорий или список в список строк."""
+    if not raw:
+        return []
+    if isinstance(raw, list):
+        return [x.strip() for x in raw if str(x).strip()]
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, list):
+            return [x.strip() for x in parsed if str(x).strip()]
+    except Exception:
+        pass
+    return [x.strip() for x in str(raw).split(',') if x.strip()]
+
+
 def handler(event: dict, context) -> dict:
     """
     API для управления рецептами
@@ -87,17 +102,11 @@ def handler(event: dict, context) -> dict:
             
             recipes = []
             for row in cur.fetchall():
-                category = row[12]
-                if isinstance(category, str):
-                    try:
-                        category = json.loads(category)
-                    except:
-                        category = [category] if category else []
                 recipes.append({
                     'id': row[0], 'title': row[1], 'description': row[2], 'ingredients': row[3],
                     'instructions': row[4], 'cooking_time': row[5], 'servings': row[6], 'calories': row[7],
                     'protein': float(row[8]) if row[8] else None, 'carbs': float(row[9]) if row[9] else None,
-                    'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': category,
+                    'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': parse_category(row[12]),
                     'tags': row[13], 'is_favorite': True
                 })
             
@@ -144,7 +153,7 @@ def handler(event: dict, context) -> dict:
                 'id': row[0], 'title': row[1], 'description': row[2], 'ingredients': row[3],
                 'instructions': row[4], 'cooking_time': row[5], 'servings': row[6], 'calories': row[7],
                 'protein': float(row[8]) if row[8] else None, 'carbs': float(row[9]) if row[9] else None,
-                'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': row[12],
+                'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': parse_category(row[12]),
                 'tags': row[13], 'is_favorite': is_favorite
             }
             
@@ -164,8 +173,8 @@ def handler(event: dict, context) -> dict:
             query_params = []
             
             if category:
-                query += " AND category = %s"
-                query_params.append(category)
+                query += " AND (category = %s OR category ILIKE %s OR category ILIKE %s OR category ILIKE %s)"
+                query_params.extend([category, f"{category},%", f"%, {category}", f"%, {category},%"])
             
             if search:
                 query += " AND (title ILIKE %s OR description ILIKE %s)"
@@ -181,17 +190,11 @@ def handler(event: dict, context) -> dict:
             recipe_ids = []
             for row in cur.fetchall():
                 recipe_ids.append(row[0])
-                category = row[12]
-                if isinstance(category, str):
-                    try:
-                        category = json.loads(category)
-                    except:
-                        category = [category] if category else []
                 recipes.append({
                     'id': row[0], 'title': row[1], 'description': row[2], 'ingredients': row[3],
                     'instructions': row[4], 'cooking_time': row[5], 'servings': row[6], 'calories': row[7],
                     'protein': float(row[8]) if row[8] else None, 'carbs': float(row[9]) if row[9] else None,
-                    'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': category,
+                    'fats': float(row[10]) if row[10] else None, 'image_url': row[11], 'category': parse_category(row[12]),
                     'tags': row[13], 'is_favorite': False
                 })
             
