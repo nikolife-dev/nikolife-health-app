@@ -70,19 +70,21 @@ def handler(event: dict, context) -> dict:
         user_id = None
         is_admin = False
         
+        user_plan = None
         if auth_token:
             conn = psycopg2.connect(os.environ['DATABASE_URL'])
             psycopg2.extras.register_default_jsonb(conn)
             cur = conn.cursor()
             schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
             
-            cur.execute(f"SELECT id, is_admin FROM {schema}.users WHERE auth_token = %s", (auth_token,))
+            cur.execute(f"SELECT id, is_admin, selected_plan FROM {schema}.users WHERE auth_token = %s", (auth_token,))
             user_data = cur.fetchone()
             
             if user_data:
                 user_id = user_data[0]
                 is_admin = user_data[1] if len(user_data) > 1 else False
-                print(f"[RECIPES] Пользователь: id={user_id}, is_admin={is_admin}")
+                user_plan = user_data[2] if len(user_data) > 2 else None
+                print(f"[RECIPES] Пользователь: id={user_id}, is_admin={is_admin}, plan={user_plan}")
             else:
                 print("[RECIPES] ⚠️ Пользователь с таким токеном не найден в БД")
             
@@ -107,6 +109,26 @@ def handler(event: dict, context) -> dict:
         cur = conn.cursor()
         schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
         
+        # GET settings (для админки)
+        if method == 'GET' and action == 'get_settings':
+            cur.execute(f"SELECT key, value, description FROM {schema}.app_settings WHERE key LIKE 'basic_plan_%'")
+            settings = {row[0]: {'value': row[1], 'description': row[2]} for row in cur.fetchall()}
+            cur.close()
+            conn.close()
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'settings': settings}), 'isBase64Encoded': False}
+
+        # POST update_settings (только для администратора)
+        if method == 'POST' and action == 'update_settings':
+            if not is_admin:
+                return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Только администратор'}), 'isBase64Encoded': False}
+            body = json.loads(event.get('body', '{}'))
+            for key, value in body.items():
+                cur.execute(f"UPDATE {schema}.app_settings SET value = %s, updated_at = NOW() WHERE key = %s", (str(value), key))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True}), 'isBase64Encoded': False}
+
         # GET /favorites
         if method == 'GET' and action == 'favorites':
             if not user_id:
@@ -170,9 +192,18 @@ def handler(event: dict, context) -> dict:
             params = event.get('queryStringParameters') or {}
             category = params.get('category')
             search = params.get('search')
-            limit = int(params.get('limit', 50))
+            limit = int(params.get('limit', 200))
             offset = int(params.get('offset', 0))
-            
+
+            # Определяем лимит для базового тарифа из настроек
+            is_basic = (user_plan == 'free' or user_plan is None) and not is_admin
+            basic_limit_per_category = 3
+            if is_basic:
+                cur.execute(f"SELECT value FROM {schema}.app_settings WHERE key = 'basic_plan_recipes_per_category'")
+                row_setting = cur.fetchone()
+                if row_setting:
+                    basic_limit_per_category = int(row_setting[0])
+
             query = f"SELECT * FROM {schema}.recipes WHERE is_active = true"
             query_params = []
             
@@ -195,6 +226,19 @@ def handler(event: dict, context) -> dict:
             for row in cur.fetchall():
                 recipe_ids.append(row[0])
                 recipes.append(row_to_recipe(row))
+
+            # Для базового тарифа помечаем рецепты сверх лимита в каждой категории
+            if is_basic:
+                category_counts: dict = {}
+                for recipe in recipes:
+                    cats = recipe['category'] if isinstance(recipe['category'], list) else [recipe['category']]
+                    primary_cat = cats[0] if cats else 'other'
+                    count = category_counts.get(primary_cat, 0)
+                    if count >= basic_limit_per_category:
+                        recipe['is_locked'] = True
+                    else:
+                        recipe['is_locked'] = False
+                        category_counts[primary_cat] = count + 1
             
             if user_id and recipe_ids:
                 placeholders = ','.join(['%s'] * len(recipe_ids))
@@ -206,7 +250,7 @@ def handler(event: dict, context) -> dict:
             
             cur.close()
             conn.close()
-            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'recipes': recipes}), 'isBase64Encoded': False}
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'recipes': recipes, 'basic_limit_per_category': basic_limit_per_category if is_basic else None}), 'isBase64Encoded': False}
         
         # POST check_duplicates — проверка дублей по названию
         if method == 'POST' and action == 'check_duplicates':

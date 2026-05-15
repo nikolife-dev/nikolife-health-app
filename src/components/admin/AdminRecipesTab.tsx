@@ -57,6 +57,8 @@ export default function AdminRecipesTab() {
   const [category, setCategory] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [basicLimitPerCategory, setBasicLimitPerCategory] = useState<number>(3);
+  const [isSavingLimit, setIsSavingLimit] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
 
@@ -79,7 +81,43 @@ export default function AdminRecipesTab() {
 
   useEffect(() => {
     loadRecipes();
+    loadSettings();
   }, [category]);
+
+  const loadSettings = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${RECIPES_API}?action=get_settings`, {
+        headers: token ? { 'X-Auth-Token': token } : {}
+      });
+      const data = await res.json();
+      if (data.settings?.basic_plan_recipes_per_category) {
+        setBasicLimitPerCategory(Number(data.settings.basic_plan_recipes_per_category.value));
+      }
+    } catch (e) {
+      console.error('loadSettings error', e);
+    }
+  };
+
+  const saveSettings = async () => {
+    setIsSavingLimit(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${RECIPES_API}?action=update_settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'X-Auth-Token': token } : {}) },
+        body: JSON.stringify({ basic_plan_recipes_per_category: basicLimitPerCategory })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: 'Сохранено', description: 'Лимит обновлён' });
+      }
+    } catch {
+      toast({ title: 'Ошибка', description: 'Не удалось сохранить', variant: 'destructive' });
+    } finally {
+      setIsSavingLimit(false);
+    }
+  };
 
   const loadRecipes = async () => {
     setIsLoading(true);
@@ -236,6 +274,36 @@ export default function AdminRecipesTab() {
 
   return (
     <TabsContent value="nutrition" className="space-y-4">
+      <Card className="bg-white/80 backdrop-blur border-[#748c6d]/20">
+        <CardContent className="pt-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Icon name="Lock" size={16} className="text-[#748c6d]" />
+              <span className="text-sm font-medium text-gray-700">Базовый тариф — рецептов в категории:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                value={basicLimitPerCategory}
+                onChange={(e) => setBasicLimitPerCategory(Number(e.target.value))}
+                className="w-20 h-8 text-sm"
+              />
+              <Button
+                size="sm"
+                onClick={saveSettings}
+                disabled={isSavingLimit}
+                className="bg-[#748c6d] hover:bg-[#5a7052] h-8 text-xs"
+              >
+                {isSavingLimit ? <Icon name="Loader2" size={14} className="animate-spin" /> : 'Сохранить'}
+              </Button>
+            </div>
+            <span className="text-xs text-muted-foreground">Премиум — без ограничений</span>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="bg-white/80 backdrop-blur border-[#748c6d]/20">
         <CardHeader>
           <div className="flex items-center justify-between">

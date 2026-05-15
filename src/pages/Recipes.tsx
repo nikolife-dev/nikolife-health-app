@@ -21,6 +21,7 @@ interface Recipe {
   image_url: string;
   category: string;
   is_favorite: boolean;
+  is_locked?: boolean;
   ingredients?: string[];
   instructions?: string;
 }
@@ -61,9 +62,8 @@ export default function Recipes() {
     'Хлеб без глютена',
   ];
   
-  // Для бесплатного тарифа - ограничение 30 рецептов
-  const isFreeUser = user?.selected_plan === 'free';
-  const recipeLimit = isFreeUser ? 30 : 1000;
+  const isFreeUser = !user?.selected_plan || user?.selected_plan === 'free';
+  const [basicLimitPerCategory, setBasicLimitPerCategory] = useState<number | null>(null);
 
   useEffect(() => {
     logInfo('Загрузка страницы рецептов');
@@ -100,7 +100,6 @@ export default function Recipes() {
       const params = new URLSearchParams();
       if (category) params.append('category', category);
       if (search) params.append('search', search);
-      params.append('limit', recipeLimit.toString());
 
       const response = await fetch(
         `${funcUrls.recipes}?${params}`,
@@ -113,6 +112,9 @@ export default function Recipes() {
       if (data.recipes) {
         logSuccess(`Загружено ${data.recipes.length} рецептов`);
         setRecipes(data.recipes);
+        if (data.basic_limit_per_category != null) {
+          setBasicLimitPerCategory(data.basic_limit_per_category);
+        }
       }
     } catch (error) {
       logError('Не удалось загрузить рецепты');
@@ -186,15 +188,15 @@ export default function Recipes() {
         {isFreeUser && (
           <Card className="p-4 bg-yellow-50 border-yellow-200">
             <div className="flex items-start gap-3">
-              <Icon name="Info" size={20} className="text-yellow-600 mt-0.5 flex-shrink-0" />
+              <Icon name="Lock" size={20} className="text-yellow-600 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
                 <p className="text-sm text-gray-700">
-                  <strong>Бесплатный тариф:</strong> Доступно 30 рецептов.{' '}
+                  <strong>Базовый тариф:</strong> Доступно {basicLimitPerCategory ?? '...'} рецептов в каждой категории.{' '}
                   <button
                     onClick={() => navigate('/pricing')}
                     className="text-[#748c6d] hover:underline font-semibold"
                   >
-                    Обновите тариф
+                    Перейти на Премиум
                   </button>
                   {' '}для полного доступа ко всем рецептам.
                 </p>
@@ -244,34 +246,49 @@ export default function Recipes() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {recipes.map((recipe) => (
-              <Card 
-                key={recipe.id} 
-                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => setSelectedRecipe(recipe)}
+              <Card
+                key={recipe.id}
+                className={`overflow-hidden transition-shadow ${recipe.is_locked ? 'opacity-60 cursor-default' : 'hover:shadow-lg cursor-pointer'}`}
+                onClick={() => !recipe.is_locked && setSelectedRecipe(recipe)}
               >
-                {recipe.image_url && (
-                  <img
-                    src={recipe.image_url}
-                    alt={recipe.title}
-                    className="w-full h-48 object-cover"
-                  />
-                )}
+                <div className="relative">
+                  {recipe.image_url && (
+                    <img
+                      src={recipe.image_url}
+                      alt={recipe.title}
+                      className={`w-full h-48 object-cover ${recipe.is_locked ? 'blur-[2px]' : ''}`}
+                    />
+                  )}
+                  {recipe.is_locked && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 gap-2">
+                      <Icon name="Lock" size={32} className="text-white" />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigate('/pricing'); }}
+                        className="text-xs bg-white text-gray-900 font-semibold px-3 py-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                      >
+                        Перейти на Премиум
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <div className="p-6 space-y-3">
                   <div className="flex items-start justify-between">
                     <h3 className="text-xl font-bold text-gray-900">{recipe.title}</h3>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(recipe.id);
-                      }}
-                      className="text-yellow-500 hover:text-yellow-600 transition-colors"
-                    >
-                      <Icon
-                        name="Star"
-                        size={24}
-                        className={recipe.is_favorite ? 'fill-current' : ''}
-                      />
-                    </button>
+                    {!recipe.is_locked && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(recipe.id);
+                        }}
+                        className="text-yellow-500 hover:text-yellow-600 transition-colors"
+                      >
+                        <Icon
+                          name="Star"
+                          size={24}
+                          className={recipe.is_favorite ? 'fill-current' : ''}
+                        />
+                      </button>
+                    )}
                   </div>
 
                   <p className="text-gray-600 text-sm line-clamp-2">{recipe.description}</p>
@@ -293,6 +310,7 @@ export default function Recipes() {
 
                   <div className="flex gap-2 pt-2">
                     <Badge className="bg-[#748c6d]">{recipe.category}</Badge>
+                    {recipe.is_locked && <Badge className="bg-amber-500 text-white text-xs">Премиум</Badge>}
                   </div>
 
 

@@ -10,8 +10,14 @@
       "name": "GET all recipes",
       "method": "GET",
       "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET settings",
+      "method": "GET",
+      "path": "/?action=get_settings",
       "expectedStatus": 200,
-      "expectedBody": {"recipes": []},
+      "expectedBody": {"settings": {}},
       "bodyMatcher": "partial"
     }
   ]
