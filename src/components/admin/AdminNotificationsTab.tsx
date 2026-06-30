@@ -1,18 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -29,54 +17,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TabsContent as OuterTabsContent } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { toast } from 'sonner';
 import funcUrls from '../../../backend/func2url.json';
+import { Notification } from './notifications/notificationsShared';
+import NotificationsTables from './notifications/NotificationsTables';
+import NotificationFormFields from './notifications/NotificationFormFields';
 
 const API_URL = funcUrls.notifications;
-
-interface Notification {
-  id: number;
-  title: string;
-  text: string;
-  channels: string[];
-  status: 'draft' | 'scheduled' | 'sent';
-  createdAt: string;
-  sentAt?: string | null;
-  recipients?: number;
-}
-
-const CHANNELS = [
-  { id: 'telegram', label: 'Телеграм', icon: 'Send' },
-  { id: 'email', label: 'E-mail', icon: 'Mail' },
-  { id: 'vk', label: 'ВКонтакте', icon: 'MessageCircle' },
-];
-
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case 'draft':
-      return <Badge variant="secondary">Черновик</Badge>;
-    case 'scheduled':
-      return <Badge className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/20">Запланирована</Badge>;
-    case 'sent':
-      return <Badge className="bg-green-500/10 text-green-700 hover:bg-green-500/20">Отправлена</Badge>;
-    default:
-      return <Badge variant="secondary">{status}</Badge>;
-  }
-};
-
-const getChannelBadge = (channelId: string) => {
-  const ch = CHANNELS.find(c => c.id === channelId);
-  if (!ch) return null;
-  return (
-    <Badge key={channelId} variant="outline" className="border-[#748c6d]/30 gap-1">
-      <Icon name={ch.icon} size={12} />
-      {ch.label}
-    </Badge>
-  );
-};
 
 export default function AdminNotificationsTab() {
   const [innerTab, setInnerTab] = useState('all');
@@ -254,141 +203,17 @@ export default function AdminNotificationsTab() {
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs value={innerTab} onValueChange={setInnerTab}>
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="all">Все рассылки</TabsTrigger>
-              <TabsTrigger value="history">История</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="all" className="space-y-4">
-              {loading ? (
-                <div className="text-center py-12 text-[#4a5446]/60">
-                  <Icon name="Loader2" size={32} className="mx-auto mb-4 animate-spin opacity-50" />
-                  <p>Загрузка...</p>
-                </div>
-              ) : notifications.length === 0 ? (
-                <div className="text-center py-12 text-[#4a5446]/60">
-                  <Icon name="Bell" size={48} className="mx-auto mb-4 opacity-50" />
-                  <p>Рассылок пока нет</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Название</TableHead>
-                        <TableHead>Каналы</TableHead>
-                        <TableHead>Статус</TableHead>
-                        <TableHead>Дата</TableHead>
-                        <TableHead className="text-right">Действия</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {notifications.map((n) => (
-                        <TableRow key={n.id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium text-[#4a5446]">{n.title}</p>
-                              <p className="text-xs text-[#4a5446]/60 mt-0.5 line-clamp-1">{n.text}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {n.channels.map(ch => getChannelBadge(ch))}
-                            </div>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(n.status)}</TableCell>
-                          <TableCell className="text-[#4a5446]/80 text-sm">{n.createdAt}</TableCell>
-                          <TableCell>
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => openEdit(n)}
-                                className="min-h-[36px] min-w-[36px] p-0"
-                                title="Редактировать"
-                              >
-                                <Icon name="Edit" size={16} />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="min-h-[36px] min-w-[36px] p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="Удалить"
-                                onClick={() => handleDelete(n.id)}
-                              >
-                                <Icon name="Trash2" size={16} />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="min-h-[36px] min-w-[36px] p-0 text-[#748c6d] hover:text-[#5f7a59] hover:bg-[#748c6d]/10"
-                                title="Запустить рассылку"
-                                onClick={() => requestConfirm(() => handleSend(n))}
-                              >
-                                <Icon name="Play" size={16} />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="history" className="space-y-4">
-              {loading ? (
-                <div className="text-center py-12 text-[#4a5446]/60">
-                  <Icon name="Loader2" size={32} className="mx-auto mb-4 animate-spin opacity-50" />
-                  <p>Загрузка...</p>
-                </div>
-              ) : history.length === 0 ? (
-                <div className="text-center py-12 text-[#4a5446]/60">
-                  <Icon name="Clock" size={48} className="mx-auto mb-4 opacity-50" />
-                  <p>История рассылок пуста</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Название</TableHead>
-                        <TableHead>Каналы</TableHead>
-                        <TableHead>Получатели</TableHead>
-                        <TableHead>Отправлена</TableHead>
-                        <TableHead>Статус</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {history.map((n) => (
-                        <TableRow key={n.id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium text-[#4a5446]">{n.title}</p>
-                              <p className="text-xs text-[#4a5446]/60 mt-0.5 line-clamp-1">{n.text}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {n.channels.map(ch => getChannelBadge(ch))}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-semibold text-[#748c6d]">{n.recipients}</span>
-                            <span className="text-[#4a5446]/60 text-sm"> чел.</span>
-                          </TableCell>
-                          <TableCell className="text-[#4a5446]/80 text-sm">{n.sentAt}</TableCell>
-                          <TableCell>{getStatusBadge(n.status)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+          <NotificationsTables
+            innerTab={innerTab}
+            setInnerTab={setInnerTab}
+            loading={loading}
+            notifications={notifications}
+            history={history}
+            openEdit={openEdit}
+            handleDelete={handleDelete}
+            requestConfirm={requestConfirm}
+            handleSend={handleSend}
+          />
         </CardContent>
       </Card>
 
@@ -398,68 +223,16 @@ export default function AdminNotificationsTab() {
             <DialogTitle>Новая рассылка</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Название</Label>
-              <Input
-                placeholder="Заголовок рассылки"
-                maxLength={60}
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Текст сообщения</Label>
-              <Textarea
-                placeholder="Привет, {имя}! Твоя привычка «{привычка}» ждёт тебя..."
-                rows={4}
-                maxLength={1000}
-                value={formText}
-                onChange={(e) => setFormText(e.target.value)}
-              />
-              <div className="mt-2 p-3 bg-[#748c6d]/5 rounded-lg border border-[#748c6d]/15">
-                <p className="text-xs font-medium text-[#4a5446]/80 mb-1.5">Доступные теги (подставятся для каждого получателя):</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { tag: '{имя}', desc: 'имя пользователя' },
-                    { tag: '{привычка}', desc: 'название привычки' },
-                    { tag: '{цель}', desc: 'цель привычки' },
-                  ].map(t => (
-                    <button
-                      key={t.tag}
-                      type="button"
-                      onClick={() => setFormText(prev => prev + t.tag)}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white border border-[#748c6d]/20 text-xs text-[#748c6d] hover:bg-[#748c6d]/10 transition-colors cursor-pointer"
-                      title={`Вставить ${t.tag} — ${t.desc}`}
-                    >
-                      <code className="font-mono font-semibold">{t.tag}</code>
-                      <span className="text-[#4a5446]/50">— {t.desc}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div>
-              <Label>Каналы рассылки</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {CHANNELS.map((ch) => (
-                  <button
-                    key={ch.id}
-                    onClick={() => toggleChannel(ch.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all min-h-[44px] ${
-                      selectedChannels.includes(ch.id)
-                        ? 'border-[#748c6d] bg-[#748c6d]/10 text-[#748c6d]'
-                        : 'border-gray-200 bg-white text-[#4a5446]/60 hover:border-gray-300'
-                    }`}
-                  >
-                    <Icon name={ch.icon} size={18} />
-                    <span className="font-medium text-sm">{ch.label}</span>
-                    {selectedChannels.includes(ch.id) && (
-                      <Icon name="Check" size={16} className="text-[#748c6d]" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <NotificationFormFields
+              formTitle={formTitle}
+              setFormTitle={setFormTitle}
+              formText={formText}
+              setFormText={setFormText}
+              selectedChannels={selectedChannels}
+              toggleChannel={toggleChannel}
+              titlePlaceholder="Заголовок рассылки"
+              textPlaceholder="Привет, {имя}! Твоя привычка «{привычка}» ждёт тебя..."
+            />
             <div className="flex gap-2 pt-2">
               <Button
                 className="flex-1 bg-[#748c6d] hover:bg-[#5f7a59] min-h-[44px]"
@@ -487,66 +260,14 @@ export default function AdminNotificationsTab() {
           </DialogHeader>
           {selectedNotification && (
             <div className="space-y-4">
-              <div>
-                <Label>Название</Label>
-                <Input
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  maxLength={60}
-                />
-              </div>
-              <div>
-                <Label>Текст сообщения</Label>
-                <Textarea
-                  value={formText}
-                  onChange={(e) => setFormText(e.target.value)}
-                  rows={4}
-                  maxLength={1000}
-                />
-                <div className="mt-2 p-3 bg-[#748c6d]/5 rounded-lg border border-[#748c6d]/15">
-                  <p className="text-xs font-medium text-[#4a5446]/80 mb-1.5">Доступные теги (подставятся для каждого получателя):</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { tag: '{имя}', desc: 'имя пользователя' },
-                      { tag: '{привычка}', desc: 'название привычки' },
-                      { tag: '{цель}', desc: 'цель привычки' },
-                    ].map(t => (
-                      <button
-                        key={t.tag}
-                        type="button"
-                        onClick={() => setFormText(prev => prev + t.tag)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white border border-[#748c6d]/20 text-xs text-[#748c6d] hover:bg-[#748c6d]/10 transition-colors cursor-pointer"
-                        title={`Вставить ${t.tag} — ${t.desc}`}
-                      >
-                        <code className="font-mono font-semibold">{t.tag}</code>
-                        <span className="text-[#4a5446]/50">— {t.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div>
-                <Label>Каналы рассылки</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {CHANNELS.map((ch) => (
-                    <button
-                      key={ch.id}
-                      onClick={() => toggleChannel(ch.id)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all min-h-[44px] ${
-                        selectedChannels.includes(ch.id)
-                          ? 'border-[#748c6d] bg-[#748c6d]/10 text-[#748c6d]'
-                          : 'border-gray-200 bg-white text-[#4a5446]/60 hover:border-gray-300'
-                      }`}
-                    >
-                      <Icon name={ch.icon} size={18} />
-                      <span className="font-medium text-sm">{ch.label}</span>
-                      {selectedChannels.includes(ch.id) && (
-                        <Icon name="Check" size={16} className="text-[#748c6d]" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <NotificationFormFields
+                formTitle={formTitle}
+                setFormTitle={setFormTitle}
+                formText={formText}
+                setFormText={setFormText}
+                selectedChannels={selectedChannels}
+                toggleChannel={toggleChannel}
+              />
               <div className="flex gap-2 pt-2">
                 <Button
                   className="flex-1 bg-[#748c6d] hover:bg-[#5f7a59] min-h-[44px]"
