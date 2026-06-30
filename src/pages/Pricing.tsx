@@ -27,12 +27,7 @@ export default function Pricing() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   // Автоматический редирект, если план уже выбран
-  useEffect(() => {
-    if (user?.selected_plan) {
-      console.log('[PRICING] План уже выбран:', user.selected_plan, '→ редирект на /');
-      navigate('/', { replace: true });
-    }
-  }, [user?.selected_plan, navigate]);
+
 
   const plans: PricingPlan[] = [
     {
