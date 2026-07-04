@@ -83,6 +83,8 @@ export default function Pricing() {
     }
   ];
 
+  const currentPlan = plans.find(p => p.id === user?.selected_plan);
+
   const handleSelectPlan = async (planId: string) => {
     console.log('[PRICING] Выбор плана:', planId);
     setSelectedPlan(planId);
@@ -159,6 +161,20 @@ export default function Pricing() {
             Начните путь к здоровому образу жизни с тарифом, который подходит именно вам
           </p>
 
+          {currentPlan && (
+            <div className="flex justify-center pt-2">
+              <div className="inline-flex items-center gap-3 rounded-2xl bg-white/70 backdrop-blur px-6 py-3 shadow-md border border-[#748c6d]/20">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#748c6d] to-[#5a7052] flex items-center justify-center">
+                  <Icon name={currentPlan.icon as "Heart" | "Sparkles" | "Users"} size={20} className="text-white" />
+                </div>
+                <div className="text-left">
+                  <div className="text-xs font-medium uppercase tracking-wide text-[#748c6d]">Ваш текущий тариф</div>
+                  <div className="text-lg font-bold text-gray-900">{currentPlan.name}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-center gap-4 pt-4">
             <Label htmlFor="billing-toggle" className={!isYearly ? 'font-semibold' : ''}>
               Ежемесячно
@@ -183,17 +199,27 @@ export default function Pricing() {
           {plans.map((plan) => {
             const price = isYearly ? plan.priceYearly : plan.priceMonthly;
             const monthlyPrice = isYearly ? Math.round(plan.priceYearly / 12) : plan.priceMonthly;
+            const isCurrent = plan.id === user?.selected_plan;
             
             return (
               <Card
                 key={plan.id}
                 className={`relative p-8 transition-all duration-300 ${
-                  plan.popular 
+                  isCurrent
+                    ? 'border-2 border-[#748c6d] ring-2 ring-[#748c6d]/30 shadow-2xl'
+                    : plan.popular 
                     ? 'border-2 border-[#748c6d] shadow-2xl scale-105 md:scale-110' 
                     : 'hover:shadow-xl'
                 }`}
               >
-                {plan.popular && (
+                {isCurrent ? (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <Badge className="bg-[#5a7052] text-white px-4 py-1">
+                      <Icon name="CheckCircle2" size={14} className="mr-1" />
+                      Ваш тариф
+                    </Badge>
+                  </div>
+                ) : plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <Badge className="bg-[#748c6d] text-white px-4 py-1">
                       <Icon name="Star" size={14} className="mr-1" />
@@ -236,15 +262,22 @@ export default function Pricing() {
 
                   <Button
                     onClick={() => handleSelectPlan(plan.id)}
-                    disabled={selectedPlan === plan.id}
+                    disabled={selectedPlan === plan.id || isCurrent}
                     className={`w-full h-12 text-lg ${
-                      plan.popular 
+                      isCurrent
+                        ? 'bg-[#e8e6dc] text-[#5a7052] hover:bg-[#e8e6dc]'
+                        : plan.popular 
                         ? 'bg-gradient-to-r from-[#748c6d] to-[#5a7052] hover:from-[#5a7052] hover:to-[#4a5f42]' 
                         : ''
                     }`}
-                    variant={plan.popular ? 'default' : 'outline'}
+                    variant={isCurrent ? 'secondary' : plan.popular ? 'default' : 'outline'}
                   >
-                    {selectedPlan === plan.id ? (
+                    {isCurrent ? (
+                      <>
+                        <Icon name="CheckCircle2" size={20} className="mr-2" />
+                        Ваш текущий план
+                      </>
+                    ) : selectedPlan === plan.id ? (
                       <>
                         <Icon name="Loader2" size={20} className="mr-2 animate-spin" />
                         Загрузка...
