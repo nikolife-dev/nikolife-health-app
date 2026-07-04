@@ -25,10 +25,17 @@ export default function SubscriptionCard({ currentPlan, onChangePlan }: Subscrip
       <div className="space-y-6">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-gray-900">Текущий тариф</h2>
+            <p className="text-sm font-medium uppercase tracking-wide text-[#748c6d]">Ваш текущий тариф:</p>
+            <div className="flex items-center gap-3">
+              <h2 className="text-3xl font-bold text-gray-900">{currentPlan.name}</h2>
+              <Badge className="bg-[#748c6d] text-white hover:bg-[#5a7052]">
+                <Icon name="CheckCircle2" size={14} className="mr-1" />
+                Активен
+              </Badge>
+            </div>
             <p className="text-gray-600">Управляйте своей подпиской</p>
           </div>
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#748c6d] to-[#5a7052] flex items-center justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#748c6d] to-[#5a7052] flex items-center justify-center shadow-lg">
             <Icon name={currentPlan.icon as "Sparkles" | "Heart" | "Users"} size={32} className="text-white" />
           </div>
         </div>
