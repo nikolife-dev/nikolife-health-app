@@ -23,6 +23,16 @@ def send_telegram_message(chat_id, text):
         return False
 
 
+def notify_admin_telegram(user, text):
+    """Дублирует обращение пользователя в групповой чат поддержки в Telegram"""
+    admin_chat_id = os.environ.get('TELEGRAM_ADMIN_CHAT_ID', '')
+    if not admin_chat_id:
+        return False
+    name = user.get('name') or f"Пользователь #{user.get('id')}"
+    msg = f"💬 Новое обращение\n\nОт: {name} (ID {user.get('id')})\n\n{text}"
+    return send_telegram_message(admin_chat_id, msg)
+
+
 FREE_MESSAGE_LIMIT = 2
 
 
@@ -386,6 +396,9 @@ def user_send_message(user, body, headers):
     conn.commit()
     cur.close()
     conn.close()
+
+    # Дублируем обращение в групповой чат поддержки в Telegram (если настроен)
+    notify_admin_telegram(user, text)
 
     limit = FREE_MESSAGE_LIMIT if is_free else None
     remaining = None if limit is None else max(0, limit - used)
