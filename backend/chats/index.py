@@ -29,7 +29,9 @@ def notify_admin_telegram(user, text):
     if not admin_chat_id:
         return False
     name = user.get('name') or f"Пользователь #{user.get('id')}"
-    msg = f"💬 Новое обращение\n\nОт: {name} (ID {user.get('id')})\n\n{text}"
+    tg = user.get('telegram_username')
+    tg_line = f"\nTelegram: @{tg}" if tg else ""
+    msg = f"💬 Новое обращение\n\nОт: {name} (ID {user.get('id')}){tg_line}\n\n{text}"
     return send_telegram_message(admin_chat_id, msg)
 
 
@@ -41,7 +43,7 @@ def get_user_by_token(token):
         return None
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT id, name, selected_plan FROM users WHERE auth_token = %s", (token,))
+    cur.execute("SELECT id, name, selected_plan, telegram_username FROM users WHERE auth_token = %s", (token,))
     user = cur.fetchone()
     cur.close()
     conn.close()
