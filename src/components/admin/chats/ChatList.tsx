@@ -65,6 +65,23 @@ export default function ChatList({
                         <ChannelBadge key={ch} channel={ch} />
                       ))}
                     </div>
+                    {user.messageLimit === null ? (
+                      <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-medium text-[#5a7052]">
+                        <Icon name="Infinity" size={12} />
+                        Обращений: без лимита
+                      </span>
+                    ) : (
+                      user.messagesRemaining !== undefined && user.messagesRemaining !== null && (
+                        <span
+                          className={`inline-flex items-center gap-1 mt-1 text-[10px] font-medium ${
+                            user.messagesRemaining === 0 ? 'text-red-600' : 'text-[#5a7052]'
+                          }`}
+                        >
+                          <Icon name="MessageCircle" size={12} />
+                          Осталось обращений: {user.messagesRemaining} из {user.messageLimit}
+                        </span>
+                      )
+                    )}
                   </div>
                   {user.unread > 0 && (
                     <span className="w-5 h-5 rounded-full bg-[#748c6d] text-white text-[10px] flex items-center justify-center shrink-0">

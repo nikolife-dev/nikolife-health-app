@@ -22,6 +22,10 @@ export interface ChatUser {
   unread: number;
   channels: string[];
   availableChannels?: AvailableChannel[];
+  isFree?: boolean;
+  messageLimit?: number | null;
+  messagesUsed?: number;
+  messagesRemaining?: number | null;
 }
 
 export interface UserDetail {

@@ -133,10 +133,13 @@ def get_chat_list(headers):
             u.telegram_id,
             u.telegram_username,
             u.receive_notifications,
+            u.selected_plan,
+            u.message_limit,
             m.text AS last_message,
             m.created_at AS last_time,
             m.channel AS last_channel,
             COALESCE(unread.cnt, 0) AS unread,
+            COALESCE(incoming.cnt, 0) AS incoming,
             channels.list AS channels
         FROM users u
         INNER JOIN LATERAL (
@@ -151,6 +154,11 @@ def get_chat_list(headers):
             FROM chat_messages
             WHERE user_id = u.id AND direction = 'in'
         ) unread ON true
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS cnt
+            FROM chat_messages
+            WHERE user_id = u.id AND direction = 'in'
+        ) incoming ON true
         LEFT JOIN LATERAL (
             SELECT ARRAY_AGG(DISTINCT channel) AS list
             FROM chat_messages
@@ -178,6 +186,12 @@ def get_chat_list(headers):
                 'enabled': bool(r['receive_notifications']),
             })
 
+        is_free = (r['selected_plan'] or 'free') == 'free'
+        used_in = r['incoming'] or 0
+        msg_limit = r['message_limit'] if r['message_limit'] is not None else FREE_MESSAGE_LIMIT
+        limit = msg_limit if is_free else None
+        remaining = None if limit is None else max(0, limit - used_in)
+
         result.append({
             'id': r['id'],
             'name': r['name'],
@@ -188,6 +202,10 @@ def get_chat_list(headers):
             'unread': r['unread'] or 0,
             'channels': r['channels'] or [],
             'availableChannels': available_channels,
+            'isFree': is_free,
+            'messageLimit': limit,
+            'messagesUsed': used_in,
+            'messagesRemaining': remaining,
         })
     return {'statusCode': 200, 'headers': headers, 'body': json.dumps(result)}
 

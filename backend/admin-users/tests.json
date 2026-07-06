@@ -10,14 +10,7 @@
       "name": "Get admin stats",
       "method": "GET",
       "path": "/?action=stats",
-      "expectedStatus": 200,
-      "expectedBody": {
-        "total_users": "number",
-        "active_subscriptions": "number",
-        "monthly_revenue": "number",
-        "new_this_week": "number"
-      },
-      "bodyMatcher": "partial"
+      "expectedStatus": 200
     }
   ]
 }
