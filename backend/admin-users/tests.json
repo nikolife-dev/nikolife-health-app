@@ -11,6 +11,12 @@
       "method": "GET",
       "path": "/?action=stats",
       "expectedStatus": 200
+    },
+    {
+      "name": "Get subscriptions list",
+      "method": "GET",
+      "path": "/?action=subscriptions",
+      "expectedStatus": 200
     }
   ]
 }

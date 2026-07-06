@@ -42,12 +42,28 @@ interface AdminStats {
   week_change: number | null;
 }
 
+interface Subscription {
+  id: number;
+  plan_id: string;
+  status: string;
+  amount: number;
+  is_yearly: boolean;
+  payment_method: string | null;
+  provider: string | null;
+  expires_at: string | null;
+  created_at: string | null;
+  name: string | null;
+  email: string | null;
+}
+
 export default function Admin() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('users');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [isLoadingSubs, setIsLoadingSubs] = useState(true);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -61,6 +77,12 @@ export default function Admin() {
       .then(r => r.json())
       .then(setAdminStats)
       .catch(() => {});
+
+    fetch(`${funcUrls['admin-users']}?action=subscriptions`)
+      .then(r => r.json())
+      .then((data) => setSubscriptions(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setIsLoadingSubs(false));
   }, []);
 
   const formatRevenue = (val: number) => `₽${val.toLocaleString('ru-RU')}`;
@@ -94,62 +116,35 @@ export default function Admin() {
     },
   ];
 
-  const subscriptions = [
-    {
-      id: 1,
-      user: 'Алексей Иванов',
-      plan: 'Премиум',
-      amount: '₽990',
-      status: 'active',
-      nextBilling: '15.03.2026',
-      startDate: '15.01.2026'
-    },
-    {
-      id: 2,
-      user: 'Мария Петрова',
-      plan: 'Стандарт',
-      amount: '₽690',
-      status: 'active',
-      nextBilling: '14.03.2026',
-      startDate: '14.01.2026'
-    },
-    {
-      id: 3,
-      user: 'Дмитрий Сидоров',
-      plan: 'Премиум',
-      amount: '₽990',
-      status: 'active',
-      nextBilling: '13.03.2026',
-      startDate: '13.01.2026'
-    },
-    {
-      id: 4,
-      user: 'Елена Васильева',
-      plan: 'Базовый',
-      amount: '₽390',
-      status: 'cancelled',
-      nextBilling: '-',
-      startDate: '12.01.2026'
-    },
-    {
-      id: 5,
-      user: 'Сергей Козлов',
-      plan: 'Стандарт',
-      amount: '₽690',
-      status: 'active',
-      nextBilling: '11.03.2026',
-      startDate: '11.01.2026'
-    }
-  ];
+  const planLabels: Record<string, string> = {
+    free: 'Бесплатный',
+    basic: 'Базовый',
+    standard: 'Стандарт',
+    premium: 'Премиум',
+  };
+
+  const formatPlan = (planId: string) => planLabels[planId] || planId;
+
+  const formatDate = (value: string | null) => {
+    if (!value) return '—';
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('ru-RU');
+  };
 
   const getStatusBadge = (status: string) => {
     if (status === 'active') {
-      return <Badge className="bg-green-500/10 text-green-700 hover:bg-green-500/20">Активен</Badge>;
+      return <Badge className="bg-green-500/10 text-green-700 hover:bg-green-500/20">Активна</Badge>;
+    }
+    if (status === 'pending') {
+      return <Badge className="bg-amber-500/10 text-amber-700 hover:bg-amber-500/20">Ожидает оплаты</Badge>;
     }
     if (status === 'cancelled') {
       return <Badge variant="secondary">Отменена</Badge>;
     }
-    return <Badge variant="secondary">Неактивен</Badge>;
+    if (status === 'expired') {
+      return <Badge className="bg-red-500/10 text-red-700 hover:bg-red-500/20">Истекла</Badge>;
+    }
+    return <Badge variant="secondary">Неактивна</Badge>;
   };
 
   const tabs = [
@@ -298,50 +293,72 @@ export default function Admin() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-[#748c6d]">Подписки</CardTitle>
+                    <p className="text-sm text-[#4a5446]/70 mt-1">
+                      Всего: {subscriptions.length}
+                    </p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
+                {isLoadingSubs ? (
+                  <div className="flex justify-center py-12">
+                    <Icon name="Loader2" size={40} className="animate-spin text-[#748c6d]" />
+                  </div>
+                ) : (
                 <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Пользователь</TableHead>
                       <TableHead>План</TableHead>
+                      <TableHead>Период</TableHead>
                       <TableHead>Сумма</TableHead>
                       <TableHead>Статус</TableHead>
                       <TableHead>Начало</TableHead>
-                      <TableHead className="text-right">Следующий платеж</TableHead>
+                      <TableHead className="text-right">Действует до</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {subscriptions.map((sub) => (
-                      <TableRow key={sub.id}>
-                        <TableCell className="font-medium text-[#4a5446]">
-                          {sub.user}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="border-[#748c6d]/30">
-                            {sub.plan}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-semibold text-[#748c6d]">
-                          {sub.amount}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(sub.status)}
-                        </TableCell>
-                        <TableCell className="text-[#4a5446]/80">
-                          {sub.startDate}
-                        </TableCell>
-                        <TableCell className="text-right text-[#4a5446]/80">
-                          {sub.nextBilling}
+                    {subscriptions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-[#4a5446]/60">
+                          Подписок пока нет
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      subscriptions.map((sub) => (
+                        <TableRow key={sub.id}>
+                          <TableCell className="font-medium text-[#4a5446]">
+                            <div>{sub.name || 'Без имени'}</div>
+                            <div className="text-xs text-[#4a5446]/60">{sub.email || '—'}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="border-[#748c6d]/30">
+                              {formatPlan(sub.plan_id)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-[#4a5446]/80">
+                            {sub.is_yearly ? 'Годовой' : 'Месячный'}
+                          </TableCell>
+                          <TableCell className="font-semibold text-[#748c6d]">
+                            ₽{(sub.amount || 0).toLocaleString('ru-RU')}
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(sub.status)}
+                          </TableCell>
+                          <TableCell className="text-[#4a5446]/80">
+                            {formatDate(sub.created_at)}
+                          </TableCell>
+                          <TableCell className="text-right text-[#4a5446]/80">
+                            {formatDate(sub.expires_at)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
                 </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

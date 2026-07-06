@@ -84,6 +84,33 @@ def handler(event: dict, context) -> dict:
                     'isBase64Encoded': False
                 }
 
+            if action == 'subscriptions':
+                schema = 't_p76837068_nikolife_health_app'
+                cur.execute(f"""
+                    SELECT
+                        s.id,
+                        s.plan_id,
+                        s.status,
+                        s.amount,
+                        s.is_yearly,
+                        s.payment_method,
+                        s.provider,
+                        s.expires_at,
+                        s.created_at,
+                        u.name,
+                        u.email
+                    FROM {schema}.subscriptions s
+                    LEFT JOIN {schema}.users u ON u.id = s.user_id
+                    ORDER BY s.created_at DESC
+                """)
+                subs = cur.fetchall()
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps([dict(s) for s in subs], default=str),
+                    'isBase64Encoded': False
+                }
+
             user_id = params.get('id')
             
             if user_id:
