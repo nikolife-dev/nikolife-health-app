@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Icon from '@/components/ui/icon';
 import { useAuth } from '@/contexts/AuthContext';
+import funcUrls from '../../../backend/func2url.json';
 
 interface IndexSidebarProps {
   activeSection: string;
@@ -12,6 +14,23 @@ interface IndexSidebarProps {
 export default function IndexSidebar({ activeSection, setActiveSection }: IndexSidebarProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (!user?.is_admin) return;
+    const load = async () => {
+      try {
+        const res = await fetch(`${funcUrls.chats}?action=unread_total`);
+        const data = await res.json();
+        setUnread(data.unread || 0);
+      } catch {
+        // ignore
+      }
+    };
+    load();
+    const interval = setInterval(load, 15000);
+    return () => clearInterval(interval);
+  }, [user?.is_admin]);
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col p-6 h-full">
@@ -91,6 +110,11 @@ export default function IndexSidebar({ activeSection, setActiveSection }: IndexS
           >
             <Icon name="MessageSquare" className="mr-3" size={20} />
             <span>Мессенджер</span>
+            {unread > 0 && (
+              <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold flex items-center justify-center">
+                {unread}
+              </span>
+            )}
           </Button>
         )}
       </nav>

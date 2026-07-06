@@ -111,6 +111,9 @@ def handler(event, context):
         body = json.loads(event.get('body') or '{}')
         return user_send_message(user, body, headers)
 
+    if action == 'unread_total' and method == 'GET':
+        return get_unread_total(headers)
+
     if method == 'GET':
         user_id = params.get('user_id')
         if user_id:
@@ -131,6 +134,25 @@ def handler(event, context):
         return delete_chat(int(user_id), headers)
 
     return {'statusCode': 405, 'headers': headers, 'body': json.dumps({'error': 'Method not allowed'})}
+
+
+def get_unread_total(headers):
+    """Количество диалогов, где последнее сообщение — от пользователя (ждут ответа менеджера)."""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT COUNT(*) AS cnt
+        FROM (
+            SELECT DISTINCT ON (user_id) user_id, direction
+            FROM chat_messages
+            ORDER BY user_id, created_at DESC
+        ) last_msgs
+        WHERE direction = 'in'
+    """)
+    cnt = cur.fetchone()['cnt']
+    cur.close()
+    conn.close()
+    return {'statusCode': 200, 'headers': headers, 'body': json.dumps({'unread': cnt or 0})}
 
 
 def get_chat_list(headers):
