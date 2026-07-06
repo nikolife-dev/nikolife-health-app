@@ -335,7 +335,7 @@ def handler(event: dict, context) -> dict:
             
             schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
             cur.execute(f"""
-                SELECT id, name, email, created_at, telegram_id, telegram_username, selected_plan, onboarding_completed 
+                SELECT id, name, email, created_at, telegram_id, telegram_username, selected_plan, onboarding_completed, is_admin 
                 FROM {schema}.users WHERE auth_token = %s
             """, (auth_token,))
             
@@ -368,7 +368,8 @@ def handler(event: dict, context) -> dict:
                     'telegram_id': row[4],
                     'telegram_username': row[5],
                     'selected_plan': row[6],
-                    'onboarding_completed': row[7]
+                    'onboarding_completed': row[7],
+                    'is_admin': row[8]
                 }),
                 'isBase64Encoded': False
             }

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Icon from '@/components/ui/icon';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface IndexSidebarProps {
   activeSection: string;
@@ -10,6 +11,7 @@ interface IndexSidebarProps {
 
 export default function IndexSidebar({ activeSection, setActiveSection }: IndexSidebarProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col p-6 h-full">
@@ -80,6 +82,17 @@ export default function IndexSidebar({ activeSection, setActiveSection }: IndexS
           <Icon name="MessageCircle" className="mr-3" size={20} />
           <span>Помощник по Здоровью</span>
         </Button>
+
+        {user?.is_admin && (
+          <Button
+            variant="ghost"
+            className="w-full justify-start min-h-[44px] text-emerald-700"
+            onClick={() => navigate('/messenger')}
+          >
+            <Icon name="MessageSquare" className="mr-3" size={20} />
+            <span>Мессенджер</span>
+          </Button>
+        )}
       </nav>
 
       <div className="pt-4 border-t border-gray-200">
