@@ -4,23 +4,15 @@ import funcUrls from '../../backend/func2url.json';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import Icon from '@/components/ui/icon';
 
 export default function Checkout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, refreshUser } = useAuth();
+  const { user, logout } = useAuth();
   const { planId, planName, price, isYearly } = location.state || {};
 
-  const [paymentMethod, setPaymentMethod] = useState('card');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-  const [cardHolder, setCardHolder] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   if (!planId || !planName || !price) {
@@ -28,84 +20,55 @@ export default function Checkout() {
     return null;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePay = async () => {
     setIsProcessing(true);
 
     try {
-      const response = await fetch('/api/payment/process', {
+      const response = await fetch(funcUrls.payment, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user?.id ? String(user.id) : '',
+        },
         body: JSON.stringify({
           planId,
           amount: price,
           isYearly,
-          paymentMethod,
-          cardDetails: paymentMethod === 'card' ? {
-            number: cardNumber,
-            expiry: cardExpiry,
-            cvv: cardCvv,
-            holder: cardHolder
-          } : null
-        })
+        }),
       });
 
       const result = await response.json();
 
-      if (result.success) {
-        // Обновляем выбранный тариф после оплаты
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          await fetch(funcUrls.profile, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ selected_plan: planId })
-          });
-          await refreshUser();
-        }
-        
-        // После успешной оплаты переходим в личный кабинет
-        navigate('/', { replace: true });
-      } else {
-        throw new Error(result.error);
+      if (!result.success) {
+        throw new Error(result.error || 'Не удалось создать заказ');
       }
+
+      if (result.paymentUrl) {
+        window.location.href = result.paymentUrl;
+        return;
+      }
+
+      navigate('/', { replace: true });
     } catch (error) {
-      alert('Ошибка обработки платежа. Попробуйте еще раз.');
-    } finally {
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Ошибка при переходе к оплате. Попробуйте ещё раз.'
+      );
       setIsProcessing(false);
     }
-  };
-
-  const formatCardNumber = (value: string) => {
-    const cleaned = value.replace(/\s/g, '');
-    const formatted = cleaned.match(/.{1,4}/g)?.join(' ') || cleaned;
-    return formatted.slice(0, 19);
-  };
-
-  const formatExpiry = (value: string) => {
-    const cleaned = value.replace(/\D/g, '');
-    if (cleaned.length >= 2) {
-      return cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4);
-    }
-    return cleaned;
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#d8d5c5] via-[#e8e6dc] to-[#c9c6b5] py-12 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/pricing')}
-          >
+          <Button variant="ghost" onClick={() => navigate('/pricing')}>
             <Icon name="ArrowLeft" size={20} className="mr-2" />
             Назад к тарифам
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => {
               logout();
               navigate('/auth');
@@ -121,183 +84,43 @@ export default function Checkout() {
             <Card className="p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Оформление подписки</h2>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Способ оплаты</h3>
-                  
-                  <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <div className="space-y-3">
-                      <Card 
-                        className={`p-4 cursor-pointer transition-all ${
-                          paymentMethod === 'card' ? 'border-[#748c6d] border-2 bg-[#e8e6dc]' : ''
-                        }`}
-                        onClick={() => setPaymentMethod('card')}
-                      >
-                        <div className="flex items-center space-x-4">
-                          <RadioGroupItem value="card" id="card" />
-                          <Icon name="CreditCard" size={24} className="text-[#748c6d]" />
-                          <Label htmlFor="card" className="flex-1 cursor-pointer">
-                            Банковская карта
-                          </Label>
-                        </div>
-                      </Card>
-
-                      <Card 
-                        className={`p-4 cursor-pointer transition-all ${
-                          paymentMethod === 'sbp' ? 'border-[#748c6d] border-2 bg-[#e8e6dc]' : ''
-                        }`}
-                        onClick={() => setPaymentMethod('sbp')}
-                      >
-                        <div className="flex items-center space-x-4">
-                          <RadioGroupItem value="sbp" id="sbp" />
-                          <Icon name="Smartphone" size={24} className="text-[#748c6d]" />
-                          <Label htmlFor="sbp" className="flex-1 cursor-pointer">
-                            Система быстрых платежей (СБП)
-                          </Label>
-                        </div>
-                      </Card>
-
-                      <Card 
-                        className={`p-4 cursor-pointer transition-all ${
-                          paymentMethod === 'wallet' ? 'border-[#748c6d] border-2 bg-[#e8e6dc]' : ''
-                        }`}
-                        onClick={() => setPaymentMethod('wallet')}
-                      >
-                        <div className="flex items-center space-x-4">
-                          <RadioGroupItem value="wallet" id="wallet" />
-                          <Icon name="Wallet" size={24} className="text-[#748c6d]" />
-                          <Label htmlFor="wallet" className="flex-1 cursor-pointer">
-                            Apple Pay / Google Pay
-                          </Label>
-                        </div>
-                      </Card>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                {paymentMethod === 'card' && (
-                  <div className="space-y-4 animate-fade-in">
-                    <h3 className="text-lg font-semibold text-gray-900">Данные карты</h3>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="cardNumber">Номер карты</Label>
-                      <div className="relative">
-                        <Input
-                          id="cardNumber"
-                          type="text"
-                          placeholder="1234 5678 9012 3456"
-                          value={cardNumber}
-                          onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                          required
-                          className="h-12 pr-12"
-                          maxLength={19}
-                        />
-                        <Icon name="CreditCard" size={20} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="cardExpiry">Срок действия</Label>
-                        <Input
-                          id="cardExpiry"
-                          type="text"
-                          placeholder="MM/YY"
-                          value={cardExpiry}
-                          onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
-                          required
-                          className="h-12"
-                          maxLength={5}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="cardCvv">CVV</Label>
-                        <Input
-                          id="cardCvv"
-                          type="text"
-                          placeholder="123"
-                          value={cardCvv}
-                          onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                          required
-                          className="h-12"
-                          maxLength={3}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="cardHolder">Имя владельца</Label>
-                      <Input
-                        id="cardHolder"
-                        type="text"
-                        placeholder="IVAN IVANOV"
-                        value={cardHolder}
-                        onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
-                        required
-                        className="h-12"
-                      />
+              <div className="space-y-6">
+                <Card className="p-6 bg-[#e8e6dc] border-[#748c6d]/40">
+                  <div className="flex gap-4">
+                    <Icon name="ShieldCheck" size={48} className="text-[#748c6d] flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">
+                        Безопасная оплата через Tribute
+                      </h4>
+                      <p className="text-sm text-gray-700 mb-3">
+                        После нажатия кнопки вы перейдёте на защищённую страницу оплаты.
+                        Доступны банковская карта, СБП и другие способы.
+                      </p>
+                      <ul className="text-sm text-gray-700 space-y-1">
+                        <li>✓ Платёжные данные не хранятся на нашем сайте</li>
+                        <li>✓ Мгновенная активация после оплаты</li>
+                        <li>✓ Автопродление можно отменить в любой момент</li>
+                      </ul>
                     </div>
                   </div>
-                )}
-
-                {paymentMethod === 'sbp' && (
-                  <Card className="p-6 bg-blue-50 border-blue-200 animate-fade-in">
-                    <div className="flex gap-4">
-                      <Icon name="Smartphone" size={48} className="text-blue-600 flex-shrink-0" />
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Оплата через СБП</h4>
-                        <p className="text-sm text-gray-700 mb-3">
-                          После подтверждения заказа откроется приложение вашего банка для завершения оплаты
-                        </p>
-                        <ul className="text-sm text-gray-700 space-y-1">
-                          <li>✓ Мгновенный перевод</li>
-                          <li>✓ Без комиссии</li>
-                          <li>✓ Безопасно</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </Card>
-                )}
-
-                {paymentMethod === 'wallet' && (
-                  <Card className="p-6 bg-purple-50 border-purple-200 animate-fade-in">
-                    <div className="flex gap-4">
-                      <Icon name="Wallet" size={48} className="text-purple-600 flex-shrink-0" />
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Цифровой кошелек</h4>
-                        <p className="text-sm text-gray-700 mb-3">
-                          Оплата через Apple Pay или Google Pay. Быстро и безопасно.
-                        </p>
-                        <div className="flex gap-4 mt-4">
-                          <div className="px-4 py-2 bg-black text-white rounded-lg text-sm font-semibold">
-                             Pay
-                          </div>
-                          <div className="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg text-sm font-semibold">
-                            G Pay
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                )}
+                </Card>
 
                 <Separator />
 
-                <Button 
-                  type="submit" 
+                <Button
+                  onClick={handlePay}
                   disabled={isProcessing}
                   className="w-full h-14 text-lg"
                 >
                   {isProcessing ? (
                     <>
                       <Icon name="Loader2" size={24} className="mr-2 animate-spin" />
-                      Обработка платежа...
+                      Переход к оплате...
                     </>
                   ) : (
                     <>
                       <Icon name="Lock" size={20} className="mr-2" />
-                      Оплатить {price.toLocaleString('ru-RU')} ₽
+                      Перейти к оплате {price.toLocaleString('ru-RU')} ₽
                     </>
                   )}
                 </Button>
@@ -306,7 +129,7 @@ export default function Checkout() {
                   Нажимая кнопку, вы соглашаетесь с условиями автоматического продления подписки.
                   Отменить можно в любой момент в настройках аккаунта.
                 </p>
-              </form>
+              </div>
             </Card>
           </div>
 
@@ -314,7 +137,7 @@ export default function Checkout() {
             <Card className="p-6 space-y-6 sticky top-8">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Детали заказа</h3>
-                
+
                 <div className="space-y-3">
                   <div className="flex justify-between items-start">
                     <div>

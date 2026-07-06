@@ -17,6 +17,20 @@
         "error": "string"
       },
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test POST create order without auth",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "planId": "premium",
+        "amount": 990
+      },
+      "expectedStatus": 401,
+      "expectedBody": {
+        "success": false
+      },
+      "bodyMatcher": "partial"
     }
   ]
 }
