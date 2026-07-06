@@ -195,6 +195,25 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'total': total}), 'isBase64Encoded': False}
 
+        # GET last_import — информация о последнем импорте (для кнопки отката)
+        if method == 'GET' and action == 'last_import':
+            if not is_admin:
+                return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Только администратор'}), 'isBase64Encoded': False}
+            cur.execute(f"""
+                SELECT import_batch_id, COUNT(*), MAX(created_at)
+                FROM {schema}.recipes
+                WHERE import_batch_id IS NOT NULL AND is_active = true
+                GROUP BY import_batch_id
+                ORDER BY MAX(created_at) DESC
+                LIMIT 1
+            """)
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            if not row:
+                return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'last_import': None}), 'isBase64Encoded': False}
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'last_import': {'batch_id': row[0], 'count': row[1], 'created_at': row[2].isoformat() if row[2] else None}}), 'isBase64Encoded': False}
+
         # GET /
         if method == 'GET':
             params = event.get('queryStringParameters') or {}
@@ -370,25 +389,6 @@ def handler(event: dict, context) -> dict:
             cur.close()
             conn.close()
             return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True, 'inserted': inserted, 'errors': errors, 'batch_id': batch_id}), 'isBase64Encoded': False}
-
-        # GET last_import — информация о последнем импорте (для кнопки отката)
-        if method == 'GET' and action == 'last_import':
-            if not is_admin:
-                return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Только администратор'}), 'isBase64Encoded': False}
-            cur.execute(f"""
-                SELECT import_batch_id, COUNT(*), MAX(created_at)
-                FROM {schema}.recipes
-                WHERE import_batch_id IS NOT NULL AND is_active = true
-                GROUP BY import_batch_id
-                ORDER BY MAX(created_at) DESC
-                LIMIT 1
-            """)
-            row = cur.fetchone()
-            cur.close()
-            conn.close()
-            if not row:
-                return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'last_import': None}), 'isBase64Encoded': False}
-            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'last_import': {'batch_id': row[0], 'count': row[1], 'created_at': row[2].isoformat() if row[2] else None}}), 'isBase64Encoded': False}
 
         # POST undo_import — откат последнего успешного импорта
         if method == 'POST' and action == 'undo_import':
