@@ -17,6 +17,7 @@ import LibrarySection from '@/components/index/LibrarySection';
 import CommunitySection from '@/components/index/CommunitySection';
 import MentalHealthSection from '@/components/index/MentalHealthSection';
 import ProgressSection from '@/components/index/ProgressSection';
+import SupportSection from '@/components/index/SupportSection';
 import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 
 interface Habit {
@@ -394,6 +395,10 @@ export default function Index() {
 
               {activeSection === 'progress' && (
                 <ProgressSection />
+              )}
+
+              {activeSection === 'support' && (
+                <SupportSection />
               )}
             </div>
           </ScrollArea>

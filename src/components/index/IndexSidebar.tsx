@@ -71,6 +71,15 @@ export default function IndexSidebar({ activeSection, setActiveSection }: IndexS
           <Icon name="CheckCircle2" className="mr-3" size={20} />
           <span>Привычки</span>
         </Button>
+
+        <Button
+          variant={activeSection === 'support' ? 'default' : 'ghost'}
+          className="w-full justify-start min-h-[44px]"
+          onClick={() => setActiveSection('support')}
+        >
+          <Icon name="MessageCircle" className="mr-3" size={20} />
+          <span>Чат с менеджером</span>
+        </Button>
       </nav>
 
       <div className="pt-4 border-t border-gray-200">

@@ -23,6 +23,21 @@ def send_telegram_message(chat_id, text):
         return False
 
 
+FREE_MESSAGE_LIMIT = 2
+
+
+def get_user_by_token(token):
+    if not token:
+        return None
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT id, name, selected_plan FROM users WHERE auth_token = %s", (token,))
+    user = cur.fetchone()
+    cur.close()
+    conn.close()
+    return user
+
+
 def handler(event, context):
     """API чатов: список диалогов, сообщения, отправка, очистка и удаление"""
     if event.get('httpMethod') == 'OPTIONS':
@@ -39,7 +54,24 @@ def handler(event, context):
 
     method = event.get('httpMethod', 'GET')
     params = event.get('queryStringParameters') or {}
+    action = params.get('action', '')
     headers = {'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json'}
+    req_headers = event.get('headers') or {}
+    auth_token = req_headers.get('X-Auth-Token') or req_headers.get('x-auth-token')
+
+    # Пользовательские эндпоинты — определяем пользователя по токену
+    if action == 'user_messages' and method == 'GET':
+        user = get_user_by_token(auth_token)
+        if not user:
+            return {'statusCode': 401, 'headers': headers, 'body': json.dumps({'error': 'Требуется авторизация'})}
+        return get_user_chat(user, headers)
+
+    if action == 'user_send' and method == 'POST':
+        user = get_user_by_token(auth_token)
+        if not user:
+            return {'statusCode': 401, 'headers': headers, 'body': json.dumps({'error': 'Требуется авторизация'})}
+        body = json.loads(event.get('body') or '{}')
+        return user_send_message(user, body, headers)
 
     if method == 'GET':
         user_id = params.get('user_id')
@@ -251,6 +283,126 @@ def send_message(body, headers):
     cur.close()
     conn.close()
     return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'error': 'Failed to send message'})}
+
+
+def get_user_chat(user, headers):
+    """История чата для самого пользователя + инфо о лимите обращений"""
+    user_id = user['id']
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT id, text, channel, direction, created_at
+        FROM chat_messages
+        WHERE user_id = %s
+        ORDER BY created_at ASC
+    """, (user_id,))
+    rows = cur.fetchall()
+
+    cur.execute(
+        "SELECT COUNT(*) AS cnt FROM chat_messages WHERE user_id = %s AND direction = 'in'",
+        (user_id,)
+    )
+    used = cur.fetchone()['cnt']
+    cur.close()
+    conn.close()
+
+    messages = []
+    for r in rows:
+        messages.append({
+            'id': r['id'],
+            'text': r['text'],
+            'channel': r['channel'],
+            'direction': r['direction'],
+            'timestamp': r['created_at'].strftime('%d %b, %H:%M') if r['created_at'] else '',
+            'timestampIso': r['created_at'].isoformat() if r['created_at'] else '',
+        })
+
+    is_free = (user.get('selected_plan') or 'free') == 'free'
+    limit = FREE_MESSAGE_LIMIT if is_free else None
+    remaining = None if limit is None else max(0, limit - used)
+
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'messages': messages,
+            'plan': user.get('selected_plan') or 'free',
+            'isFree': is_free,
+            'limit': limit,
+            'used': used,
+            'remaining': remaining,
+        }),
+    }
+
+
+def user_send_message(user, body, headers):
+    """Отправка сообщения от пользователя менеджеру (direction='in') с лимитом для free"""
+    user_id = user['id']
+    text = (body.get('text') or '').strip()
+    if not text:
+        return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'error': 'Введите сообщение'})}
+
+    is_free = (user.get('selected_plan') or 'free') == 'free'
+
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    if is_free:
+        cur.execute(
+            "SELECT COUNT(*) AS cnt FROM chat_messages WHERE user_id = %s AND direction = 'in'",
+            (user_id,)
+        )
+        used = cur.fetchone()['cnt']
+        if used >= FREE_MESSAGE_LIMIT:
+            cur.close()
+            conn.close()
+            return {
+                'statusCode': 403,
+                'headers': headers,
+                'body': json.dumps({
+                    'error': 'limit_reached',
+                    'message': f'В бесплатном тарифе доступно только {FREE_MESSAGE_LIMIT} обращения. Оформите подписку для безлимитного общения с менеджером.',
+                    'limit': FREE_MESSAGE_LIMIT,
+                    'used': used,
+                }),
+            }
+
+    cur.execute(
+        "INSERT INTO chat_messages (user_id, text, channel, direction) VALUES (%s, %s, 'support', 'in') RETURNING id, created_at",
+        (user_id, text)
+    )
+    row = cur.fetchone()
+
+    cur.execute(
+        "SELECT COUNT(*) AS cnt FROM chat_messages WHERE user_id = %s AND direction = 'in'",
+        (user_id,)
+    )
+    used = cur.fetchone()['cnt']
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    limit = FREE_MESSAGE_LIMIT if is_free else None
+    remaining = None if limit is None else max(0, limit - used)
+
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'success': True,
+            'message': {
+                'id': row['id'],
+                'text': text,
+                'channel': 'support',
+                'direction': 'in',
+                'timestamp': row['created_at'].strftime('%d %b, %H:%M') if row['created_at'] else '',
+                'timestampIso': row['created_at'].isoformat() if row['created_at'] else '',
+            },
+            'used': used,
+            'limit': limit,
+            'remaining': remaining,
+        }),
+    }
 
 
 def clear_chat(user_id, headers):
