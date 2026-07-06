@@ -3,6 +3,7 @@ import os
 import psycopg2
 import psycopg2.extras
 import urllib.request
+import urllib.error
 
 
 def get_conn():
@@ -22,7 +23,15 @@ def send_telegram_message(chat_id, text, parse_mode=None):
     try:
         urllib.request.urlopen(req, timeout=10)
         return True
-    except Exception:
+    except urllib.error.HTTPError as e:
+        try:
+            body = e.read().decode('utf-8')
+        except Exception:
+            body = ''
+        print(f'[TELEGRAM] HTTPError {e.code} for chat_id={chat_id}: {body}')
+        return False
+    except Exception as e:
+        print(f'[TELEGRAM] send failed for chat_id={chat_id}: {e}')
         return False
 
 
@@ -30,6 +39,7 @@ def notify_admin_telegram(user, text):
     """Дублирует обращение пользователя в групповой чат поддержки в Telegram"""
     admin_chat_id = os.environ.get('TELEGRAM_ADMIN_CHAT_ID', '')
     if not admin_chat_id:
+        print('[TELEGRAM] TELEGRAM_ADMIN_CHAT_ID is not set — skipping notification')
         return False
 
     def esc(s):
@@ -434,7 +444,8 @@ def user_send_message(user, body, headers):
     conn.close()
 
     # Дублируем обращение в групповой чат поддержки в Telegram (если настроен)
-    notify_admin_telegram(user, text)
+    sent = notify_admin_telegram(user, text)
+    print(f'[TELEGRAM] notify_admin_telegram for user_id={user_id} -> {sent}')
 
     limit = user_limit if is_free else None
     remaining = None if limit is None else max(0, limit - used)
