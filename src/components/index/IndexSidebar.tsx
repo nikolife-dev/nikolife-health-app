@@ -77,11 +77,11 @@ export default function IndexSidebar({ activeSection, setActiveSection }: IndexS
 
         <Button
           variant={activeSection === 'mental' ? 'default' : 'ghost'}
-          className="w-full justify-start min-h-[44px]"
+          className="w-full justify-start min-h-[44px] h-auto py-2 whitespace-normal text-left"
           onClick={() => setActiveSection('mental')}
         >
-          <Icon name="Brain" className="mr-3" size={20} />
-          <span>Ментальное Здоровье</span>
+          <Icon name="Brain" className="mr-3 shrink-0" size={20} />
+          <span className="leading-tight">Ментальное Здоровье</span>
         </Button>
 
         <Button
@@ -95,11 +95,11 @@ export default function IndexSidebar({ activeSection, setActiveSection }: IndexS
 
         <Button
           variant={activeSection === 'support' ? 'default' : 'ghost'}
-          className="w-full justify-start min-h-[44px]"
+          className="w-full justify-start min-h-[44px] h-auto py-2 whitespace-normal text-left"
           onClick={() => setActiveSection('support')}
         >
-          <Icon name="MessageCircle" className="mr-3" size={20} />
-          <span>Помощник по Здоровью</span>
+          <Icon name="MessageCircle" className="mr-3 shrink-0" size={20} />
+          <span className="leading-tight">Помощник по Здоровью</span>
         </Button>
 
         {user?.is_admin && (
