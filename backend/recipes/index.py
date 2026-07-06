@@ -187,6 +187,14 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps(recipe), 'isBase64Encoded': False}
         
+        # GET count — общее количество активных рецептов (доступно всем)
+        if method == 'GET' and action == 'count':
+            cur.execute(f"SELECT COUNT(*) FROM {schema}.recipes WHERE is_active = true")
+            total = cur.fetchone()[0]
+            cur.close()
+            conn.close()
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'total': total}), 'isBase64Encoded': False}
+
         # GET /
         if method == 'GET':
             params = event.get('queryStringParameters') or {}

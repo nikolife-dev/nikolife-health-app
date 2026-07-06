@@ -4,6 +4,7 @@ import Icon from "@/components/ui/icon";
 interface NutritionHeaderProps {
   isGenerating: boolean;
   hasMenu: boolean;
+  totalRecipes?: number | null;
   onGenerate: () => void;
   onClear: () => void;
   onAdd: () => void;
@@ -12,6 +13,7 @@ interface NutritionHeaderProps {
 export default function NutritionHeader({
   isGenerating,
   hasMenu,
+  totalRecipes,
   onGenerate,
   onClear,
   onAdd,
@@ -22,7 +24,15 @@ export default function NutritionHeader({
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
           План питания
         </h2>
-        <p className="text-sm sm:text-base text-gray-600">Моё меню на неделю</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm sm:text-base text-gray-600">Моё меню на неделю</p>
+          {typeof totalRecipes === "number" && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#748c6d]/10 px-3 py-1 text-xs sm:text-sm font-medium text-[#5a7052]">
+              <Icon name="BookOpen" size={14} />
+              {totalRecipes} рецептов в базе
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex flex-wrap gap-2 w-full sm:w-auto">
         <Button

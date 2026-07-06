@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import funcUrls from "../../../backend/func2url.json";
 import Icon from "@/components/ui/icon";
 import { LiveLogs } from "@/components/LiveLogs";
 import { useNutritionMenu } from "./nutrition/useNutritionMenu";
@@ -35,6 +37,19 @@ export default function NutritionSection({
   setMealPlan: _setMealPlan,
 }: NutritionSectionProps) {
   const navigate = useNavigate();
+  const [totalRecipes, setTotalRecipes] = useState<number | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    fetch(`${funcUrls.recipes}?action=count`, {
+      headers: token ? { "X-Auth-Token": token } : {},
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.total === "number") setTotalRecipes(data.total);
+      })
+      .catch(() => {});
+  }, []);
 
   const {
     logs,
@@ -71,6 +86,7 @@ export default function NutritionSection({
       <NutritionHeader
         isGenerating={isGenerating}
         hasMenu={menu.length > 0}
+        totalRecipes={totalRecipes}
         onGenerate={generateMenu}
         onClear={clearMenu}
         onAdd={() => navigate("/recipes")}

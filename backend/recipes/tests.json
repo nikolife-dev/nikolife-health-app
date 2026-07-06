@@ -21,6 +21,12 @@
       "bodyMatcher": "partial"
     },
     {
+      "name": "GET count",
+      "method": "GET",
+      "path": "/?action=count",
+      "expectedStatus": 200
+    },
+    {
       "name": "undo_import без прав",
       "method": "POST",
       "path": "/?action=undo_import",
