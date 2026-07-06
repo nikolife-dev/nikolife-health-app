@@ -33,6 +33,7 @@ export interface UserDetail {
 }
 
 export const CHANNEL_META: Record<string, { label: string; icon: string; color: string }> = {
+  support: { label: 'Чат на сайте', icon: 'MessageCircle', color: 'bg-[#748c6d]/10 text-[#5a7052]' },
   telegram: { label: 'Telegram', icon: 'Send', color: 'bg-blue-500/10 text-blue-700' },
   email: { label: 'E-mail', icon: 'Mail', color: 'bg-orange-500/10 text-orange-700' },
   broadcast: { label: 'Рассылка', icon: 'Megaphone', color: 'bg-purple-500/10 text-purple-700' },

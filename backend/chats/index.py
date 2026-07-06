@@ -137,7 +137,8 @@ def get_chat_list(headers):
 
     result = []
     for r in rows:
-        available_channels = []
+        # Внутренний канал "Сайт" всегда доступен — ответ показывается пользователю прямо в чате
+        available_channels = [{'id': 'support', 'enabled': True}]
         if r['telegram_id']:
             available_channels.append({
                 'id': 'telegram',
@@ -196,7 +197,8 @@ def get_messages(user_id, headers):
 
     user_data = None
     if user:
-        available_channels = []
+        # Внутренний канал "Сайт" всегда доступен — ответ показывается пользователю прямо в чате
+        available_channels = [{'id': 'support', 'enabled': True}]
         if user['telegram_id']:
             available_channels.append({
                 'id': 'telegram',
@@ -246,7 +248,10 @@ def send_message(body, headers):
         return {'statusCode': 404, 'headers': headers, 'body': json.dumps({'error': 'User not found'})}
 
     sent = False
-    if channel == 'telegram':
+    if channel == 'support':
+        # Внутренний чат на сайте — доставка не требуется, пользователь видит ответ в приложении
+        sent = True
+    elif channel == 'telegram':
         if not user['telegram_id']:
             cur.close()
             conn.close()
