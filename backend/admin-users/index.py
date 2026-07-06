@@ -411,6 +411,36 @@ def handler(event: dict, context) -> dict:
                 print(f'[DELETE] Deleted {cur.rowcount} health_parameters records')
                 
                 cur.execute("""
+                    DELETE FROM t_p76837068_nikolife_health_app.chat_messages 
+                    WHERE user_id = %s
+                """, (user_id,))
+                print(f'[DELETE] Deleted {cur.rowcount} chat_messages records')
+                
+                cur.execute("""
+                    DELETE FROM t_p76837068_nikolife_health_app.chats 
+                    WHERE user_id = %s
+                """, (user_id,))
+                print(f'[DELETE] Deleted {cur.rowcount} chats records')
+                
+                cur.execute("""
+                    DELETE FROM t_p76837068_nikolife_health_app.notifications 
+                    WHERE user_id = %s
+                """, (user_id,))
+                print(f'[DELETE] Deleted {cur.rowcount} notifications records')
+                
+                cur.execute("""
+                    DELETE FROM t_p76837068_nikolife_health_app.habit_completions 
+                    WHERE user_id = %s
+                """, (user_id,))
+                print(f'[DELETE] Deleted {cur.rowcount} habit_completions records')
+                
+                cur.execute("""
+                    DELETE FROM t_p76837068_nikolife_health_app.habits 
+                    WHERE user_id = %s
+                """, (user_id,))
+                print(f'[DELETE] Deleted {cur.rowcount} habits records')
+                
+                cur.execute("""
                     UPDATE t_p76837068_nikolife_health_app.recipes 
                     SET created_by = NULL 
                     WHERE created_by = %s
