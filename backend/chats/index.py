@@ -35,21 +35,22 @@ def send_telegram_message(chat_id, text, parse_mode=None):
         return False
 
 
-def notify_admin_telegram(user, text):
+def notify_admin_telegram(user, text, remaining=None, limit=None):
     """Дублирует обращение пользователя в групповой чат поддержки в Telegram"""
     admin_chat_id = os.environ.get('TELEGRAM_ADMIN_CHAT_ID', '')
     if not admin_chat_id:
         print('[TELEGRAM] TELEGRAM_ADMIN_CHAT_ID is not set — skipping notification')
         return False
 
-    def esc(s):
-        return str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-
-    name = esc(user.get('name') or f"Пользователь #{user.get('id')}")
     tg = user.get('telegram_username')
-    tg_line = f'\nTelegram: <a href="https://t.me/{esc(tg)}">@{esc(tg)}</a>' if tg else ""
-    msg = f"💬 Новое обращение\n\nОт: {name} (ID {user.get('id')}){tg_line}\n\n{esc(text)}"
-    return send_telegram_message(admin_chat_id, msg, parse_mode='HTML')
+    sender = f"@{tg}" if tg else (user.get('name') or f"Пользователь #{user.get('id')}")
+
+    counter = ""
+    if limit is not None and remaining is not None:
+        counter = f"\n\n💬 {remaining}({limit})"
+
+    msg = f"{sender}\n\n{text}{counter}"
+    return send_telegram_message(admin_chat_id, msg)
 
 
 FREE_MESSAGE_LIMIT = 2
@@ -443,12 +444,12 @@ def user_send_message(user, body, headers):
     cur.close()
     conn.close()
 
-    # Дублируем обращение в групповой чат поддержки в Telegram (если настроен)
-    sent = notify_admin_telegram(user, text)
-    print(f'[TELEGRAM] notify_admin_telegram for user_id={user_id} -> {sent}')
-
     limit = user_limit if is_free else None
     remaining = None if limit is None else max(0, limit - used)
+
+    # Дублируем обращение в групповой чат поддержки в Telegram (если настроен)
+    sent = notify_admin_telegram(user, text, remaining=remaining, limit=limit)
+    print(f'[TELEGRAM] notify_admin_telegram for user_id={user_id} -> {sent}')
 
     return {
         'statusCode': 200,
