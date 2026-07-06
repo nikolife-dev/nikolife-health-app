@@ -9,12 +9,15 @@ def get_conn():
     return psycopg2.connect(os.environ['DATABASE_URL'])
 
 
-def send_telegram_message(chat_id, text):
+def send_telegram_message(chat_id, text, parse_mode=None):
     token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
     if not token:
         return False
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    data = json.dumps({'chat_id': chat_id, 'text': text}).encode('utf-8')
+    payload = {'chat_id': chat_id, 'text': text}
+    if parse_mode:
+        payload['parse_mode'] = parse_mode
+    data = json.dumps(payload).encode('utf-8')
     req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
     try:
         urllib.request.urlopen(req, timeout=10)
@@ -28,11 +31,15 @@ def notify_admin_telegram(user, text):
     admin_chat_id = os.environ.get('TELEGRAM_ADMIN_CHAT_ID', '')
     if not admin_chat_id:
         return False
-    name = user.get('name') or f"Пользователь #{user.get('id')}"
+
+    def esc(s):
+        return str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+    name = esc(user.get('name') or f"Пользователь #{user.get('id')}")
     tg = user.get('telegram_username')
-    tg_line = f"\nTelegram: @{tg}" if tg else ""
-    msg = f"💬 Новое обращение\n\nОт: {name} (ID {user.get('id')}){tg_line}\n\n{text}"
-    return send_telegram_message(admin_chat_id, msg)
+    tg_line = f'\nTelegram: <a href="https://t.me/{esc(tg)}">@{esc(tg)}</a>' if tg else ""
+    msg = f"💬 Новое обращение\n\nОт: {name} (ID {user.get('id')}){tg_line}\n\n{esc(text)}"
+    return send_telegram_message(admin_chat_id, msg, parse_mode='HTML')
 
 
 FREE_MESSAGE_LIMIT = 2
