@@ -206,6 +206,31 @@ export default function AdminUsersTab() {
     }
   };
 
+  const handleSaveLimit = async (id: number, limit: number) => {
+    logInfo(`Сохранение лимита сообщений: user_id=${id}, limit=${limit}`);
+    try {
+      const response = await fetch(`${USERS_API}?id=${id}&action=message_limit`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_limit: limit })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        logSuccess(`Лимит обновлён: ${data.message_limit}`);
+        toast({ title: 'Успешно', description: `Лимит сообщений: ${data.message_limit}` });
+        setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, message_limit: data.message_limit } : u)));
+      } else {
+        const errorMsg = data.error || 'Не удалось сохранить лимит';
+        logError(`Ошибка сохранения лимита: ${errorMsg}`);
+        toast({ title: 'Ошибка', description: errorMsg, variant: 'destructive' });
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'unknown';
+      logError(`Критическая ошибка сохранения лимита: ${errorMsg}`);
+      toast({ title: 'Ошибка', description: errorMsg, variant: 'destructive' });
+    }
+  };
+
   return (
     <TabsContent value="users" className="space-y-4">
       <Card className="bg-white/80 backdrop-blur border-[#748c6d]/20">
@@ -234,6 +259,7 @@ export default function AdminUsersTab() {
             users={users} 
             onEdit={handleEditClick} 
             onDelete={handleDeleteUser} 
+            onSaveLimit={handleSaveLimit}
           />
         </CardContent>
       </Card>

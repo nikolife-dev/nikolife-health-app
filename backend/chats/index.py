@@ -45,12 +45,20 @@ def notify_admin_telegram(user, text):
 FREE_MESSAGE_LIMIT = 2
 
 
+def get_user_limit(user):
+    """Индивидуальный лимit сообщений для free-пользователя (из message_limit)."""
+    ml = user.get('message_limit')
+    if ml is None:
+        return FREE_MESSAGE_LIMIT
+    return int(ml)
+
+
 def get_user_by_token(token):
     if not token:
         return None
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT id, name, selected_plan, telegram_username FROM users WHERE auth_token = %s", (token,))
+    cur.execute("SELECT id, name, selected_plan, telegram_username, message_limit FROM users WHERE auth_token = %s", (token,))
     user = cur.fetchone()
     cur.close()
     conn.close()
@@ -342,7 +350,7 @@ def get_user_chat(user, headers):
         })
 
     is_free = (user.get('selected_plan') or 'free') == 'free'
-    limit = FREE_MESSAGE_LIMIT if is_free else None
+    limit = get_user_limit(user) if is_free else None
     remaining = None if limit is None else max(0, limit - used)
 
     return {
@@ -367,6 +375,7 @@ def user_send_message(user, body, headers):
         return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'error': 'Введите сообщение'})}
 
     is_free = (user.get('selected_plan') or 'free') == 'free'
+    user_limit = get_user_limit(user)
 
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -377,7 +386,7 @@ def user_send_message(user, body, headers):
             (user_id,)
         )
         used = cur.fetchone()['cnt']
-        if used >= FREE_MESSAGE_LIMIT:
+        if used >= user_limit:
             cur.close()
             conn.close()
             return {
@@ -385,8 +394,8 @@ def user_send_message(user, body, headers):
                 'headers': headers,
                 'body': json.dumps({
                     'error': 'limit_reached',
-                    'message': f'В бесплатном тарифе доступно только {FREE_MESSAGE_LIMIT} обращения. Оформите подписку для безлимитного общения с менеджером.',
-                    'limit': FREE_MESSAGE_LIMIT,
+                    'message': f'В бесплатном тарифе доступно только {user_limit} обращения. Оформите подписку для безлимитного общения с менеджером.',
+                    'limit': user_limit,
                     'used': used,
                 }),
             }
@@ -409,7 +418,7 @@ def user_send_message(user, body, headers):
     # Дублируем обращение в групповой чат поддержки в Telegram (если настроен)
     notify_admin_telegram(user, text)
 
-    limit = FREE_MESSAGE_LIMIT if is_free else None
+    limit = user_limit if is_free else None
     remaining = None if limit is None else max(0, limit - used)
 
     return {

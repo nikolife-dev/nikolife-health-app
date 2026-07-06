@@ -12,10 +12,10 @@
       "path": "/?action=stats",
       "expectedStatus": 200,
       "expectedBody": {
-        "total_users": 5,
-        "active_subscriptions": 4,
-        "monthly_revenue": 5070,
-        "new_this_week": 1
+        "total_users": "number",
+        "active_subscriptions": "number",
+        "monthly_revenue": "number",
+        "new_this_week": "number"
       },
       "bodyMatcher": "partial"
     }

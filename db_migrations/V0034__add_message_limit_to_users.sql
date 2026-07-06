@@ -1,0 +1,2 @@
+ALTER TABLE t_p76837068_nikolife_health_app.users
+ADD COLUMN IF NOT EXISTS message_limit INTEGER NOT NULL DEFAULT 2;

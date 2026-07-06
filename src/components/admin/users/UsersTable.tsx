@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -15,9 +17,35 @@ interface UsersTableProps {
   users: User[];
   onEdit: (user: User) => void;
   onDelete: (id: number, userName: string) => void;
+  onSaveLimit: (id: number, limit: number) => Promise<void> | void;
 }
 
-export default function UsersTable({ users, onEdit, onDelete }: UsersTableProps) {
+export default function UsersTable({ users, onEdit, onDelete, onSaveLimit }: UsersTableProps) {
+  const [limits, setLimits] = useState<Record<number, string>>({});
+  const [savingId, setSavingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    setLimits((prev) => {
+      const next = { ...prev };
+      users.forEach((u) => {
+        if (next[u.id] === undefined) {
+          next[u.id] = String(u.message_limit ?? 2);
+        }
+      });
+      return next;
+    });
+  }, [users]);
+
+  const handleSave = async (user: User) => {
+    const raw = limits[user.id];
+    const value = Math.max(0, parseInt(raw, 10) || 0);
+    setSavingId(user.id);
+    try {
+      await onSaveLimit(user.id, value);
+    } finally {
+      setSavingId(null);
+    }
+  };
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Никогда';
     return new Date(dateString).toLocaleString('ru-RU', {
@@ -68,6 +96,7 @@ export default function UsersTable({ users, onEdit, onDelete }: UsersTableProps)
             <TableHead>План</TableHead>
             <TableHead>Telegram</TableHead>
             <TableHead>Рассылка</TableHead>
+            <TableHead>Лимит сообщений</TableHead>
             <TableHead>Регистрация</TableHead>
             <TableHead>Последний вход</TableHead>
             <TableHead className="text-right">Действия</TableHead>
@@ -76,7 +105,7 @@ export default function UsersTable({ users, onEdit, onDelete }: UsersTableProps)
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center text-[#4a5446]/60">
+              <TableCell colSpan={10} className="text-center text-[#4a5446]/60">
                 Нет пользователей
               </TableCell>
             </TableRow>
@@ -118,6 +147,29 @@ export default function UsersTable({ users, onEdit, onDelete }: UsersTableProps)
                       Выкл
                     </Badge>
                   )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={limits[user.id] ?? ''}
+                      onChange={(e) =>
+                        setLimits((prev) => ({ ...prev, [user.id]: e.target.value }))
+                      }
+                      className="w-16 h-9"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSave(user)}
+                      disabled={savingId === user.id}
+                      title="Сохранить лимит"
+                      className="min-w-[40px] min-h-[40px] text-[#748c6d] hover:text-[#5a7052] hover:bg-[#748c6d]/10"
+                    >
+                      <Icon name={savingId === user.id ? 'Loader2' : 'Save'} size={16} className={savingId === user.id ? 'animate-spin' : ''} />
+                    </Button>
+                  </div>
                 </TableCell>
                 <TableCell className="text-[#4a5446]/80 text-sm">
                   {formatDate(user.created_at)}

@@ -99,6 +99,7 @@ def handler(event: dict, context) -> dict:
                         u.is_admin,
                         u.onboarding_completed,
                         u.receive_notifications,
+                        u.message_limit,
                         CASE 
                             WHEN u.telegram_username IS NOT NULL THEN 'telegram'
                             ELSE 'email'
@@ -141,6 +142,7 @@ def handler(event: dict, context) -> dict:
                         selected_plan,
                         is_admin,
                         receive_notifications,
+                        message_limit,
                         CASE 
                             WHEN telegram_username IS NOT NULL THEN 'telegram'
                             ELSE 'email'
@@ -247,7 +249,8 @@ def handler(event: dict, context) -> dict:
 
         elif method == 'PUT':
             try:
-                user_id = event.get('queryStringParameters', {}).get('id')
+                params = event.get('queryStringParameters') or {}
+                user_id = params.get('id')
                 if not user_id:
                     return {
                         'statusCode': 400,
@@ -257,6 +260,42 @@ def handler(event: dict, context) -> dict:
                     }
 
                 data = json.loads(event.get('body', '{}'))
+
+                if params.get('action') == 'message_limit':
+                    limit_raw = data.get('message_limit')
+                    try:
+                        new_limit = int(limit_raw)
+                    except (TypeError, ValueError):
+                        return {
+                            'statusCode': 400,
+                            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                            'body': json.dumps({'error': 'Некорректное значение лимита', 'code': 400}),
+                            'isBase64Encoded': False
+                        }
+                    if new_limit < 0:
+                        new_limit = 0
+                    cur.execute("""
+                        UPDATE t_p76837068_nikolife_health_app.users
+                        SET message_limit = %s
+                        WHERE id = %s
+                        RETURNING id, message_limit
+                    """, (new_limit, user_id))
+                    row = cur.fetchone()
+                    conn.commit()
+                    if not row:
+                        return {
+                            'statusCode': 404,
+                            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                            'body': json.dumps({'error': 'User not found', 'code': 404}),
+                            'isBase64Encoded': False
+                        }
+                    return {
+                        'statusCode': 200,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'success': True, 'message_limit': row['message_limit']}),
+                        'isBase64Encoded': False
+                    }
+
                 name = data.get('name', '').strip()
                 email = data.get('email', '').strip()
                 selected_plan = data.get('selected_plan')

@@ -12,6 +12,7 @@ export interface User {
   is_admin: boolean;
   auth_type: 'email' | 'telegram';
   receive_notifications: boolean;
+  message_limit: number;
 }
 
 export interface HealthParameters {
