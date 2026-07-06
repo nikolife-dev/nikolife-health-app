@@ -82,6 +82,49 @@ def _verify_webhook(body_raw: str, signature: str) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
+def _apply_promo_code(code: str, user_id, plan_id):
+    """Проверяет и применяет промокод (free_access). Возвращает (row, error)."""
+    conn = _get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, is_active, max_uses, used_count, once_per_user, expires_at
+            FROM promo_codes
+            WHERE LOWER(code) = LOWER(%s)
+        """, (code.strip(),))
+        row = cur.fetchone()
+        if not row:
+            return None, 'Промокод не найден'
+        promo_id, is_active, max_uses, used_count, once_per_user, expires_at = row
+        if not is_active:
+            return None, 'Промокод отключён'
+        if expires_at and expires_at < datetime.now():
+            return None, 'Срок действия промокода истёк'
+        if max_uses is not None and used_count >= max_uses:
+            return None, 'Лимит применений исчерпан'
+        if once_per_user:
+            cur.execute("""
+                SELECT 1 FROM promo_code_uses
+                WHERE promo_code_id = %s AND user_id = %s LIMIT 1
+            """, (promo_id, user_id))
+            if cur.fetchone():
+                return None, 'Вы уже использовали этот промокод'
+
+        cur.execute("""
+            INSERT INTO promo_code_uses (promo_code_id, user_id, plan_id)
+            VALUES (%s, %s, %s)
+        """, (promo_id, user_id, plan_id))
+        cur.execute("""
+            UPDATE promo_codes SET used_count = used_count + 1, updated_at = NOW()
+            WHERE id = %s
+        """, (promo_id,))
+        conn.commit()
+        return {'id': promo_id}, None
+    finally:
+        cur.close()
+        conn.close()
+
+
 def _activate_subscription(user_id, plan_id, amount, is_yearly, order_id):
     expires_at = datetime.now() + timedelta(days=365 if is_yearly else 30)
     conn = _get_conn()
@@ -150,11 +193,26 @@ def handler(event: dict, context) -> dict:
         amount = body.get('amount')
         is_yearly = body.get('isYearly', False)
 
+        promo_code = (body.get('promoCode') or '').strip()
+
         user_id = headers.get('X-User-Id') or headers.get('x-user-id')
         if not user_id:
             return _json(401, {'success': False, 'error': 'Требуется авторизация'})
         if not plan_id or amount is None:
             return _json(400, {'success': False, 'error': 'Неверные данные'})
+
+        # Промокод: даёт бесплатный доступ (100% скидка)
+        if promo_code:
+            promo, err = _apply_promo_code(promo_code, user_id, plan_id)
+            if err:
+                return _json(200, {'success': False, 'error': err})
+            _activate_subscription(user_id, plan_id, 0, is_yearly, None)
+            return _json(200, {
+                'success': True,
+                'planId': plan_id,
+                'promoApplied': True,
+                'message': 'Промокод применён, подписка активирована',
+            })
 
         # Бесплатный план активируется сразу
         if plan_id == 'free' or int(amount) == 0:

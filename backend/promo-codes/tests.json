@@ -1,0 +1,55 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET promo codes list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Validate empty code",
+      "method": "POST",
+      "path": "/?action=validate",
+      "body": {
+        "code": ""
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "valid": false
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Validate non-existent code",
+      "method": "POST",
+      "path": "/?action=validate",
+      "body": {
+        "code": "NONEXISTENT_XYZ"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "valid": false
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create promo without code",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "max_uses": 10
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "success": false
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

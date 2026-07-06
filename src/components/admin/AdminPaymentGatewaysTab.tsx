@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { TabsContent } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import PromoCodesManager from './PromoCodesManager';
 
 const API = funcUrls['payment-settings'];
 
@@ -216,6 +217,8 @@ export default function AdminPaymentGatewaysTab() {
           );
         })
       )}
+
+      <PromoCodesManager />
     </TabsContent>
   );
 }

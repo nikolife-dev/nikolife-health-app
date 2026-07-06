@@ -4,6 +4,7 @@ import funcUrls from '../../backend/func2url.json';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import Icon from '@/components/ui/icon';
 
@@ -14,11 +15,48 @@ export default function Checkout() {
   const { planId, planName, price, isYearly } = location.state || {};
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [promoError, setPromoError] = useState('');
+  const [isCheckingPromo, setIsCheckingPromo] = useState(false);
 
   if (!planId || !planName || !price) {
     navigate('/pricing');
     return null;
   }
+
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) return;
+    setIsCheckingPromo(true);
+    setPromoError('');
+    try {
+      const res = await fetch(`${funcUrls['promo-codes']}?action=validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user?.id ? String(user.id) : '',
+        },
+        body: JSON.stringify({ code: promoCode.trim() }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setPromoApplied(true);
+      } else {
+        setPromoApplied(false);
+        setPromoError(data.error || 'Промокод недействителен');
+      }
+    } catch {
+      setPromoError('Не удалось проверить промокод');
+    } finally {
+      setIsCheckingPromo(false);
+    }
+  };
+
+  const resetPromo = () => {
+    setPromoApplied(false);
+    setPromoError('');
+    setPromoCode('');
+  };
 
   const handlePay = async () => {
     setIsProcessing(true);
@@ -34,6 +72,7 @@ export default function Checkout() {
           planId,
           amount: price,
           isYearly,
+          promoCode: promoApplied ? promoCode.trim() : undefined,
         }),
       });
 
@@ -107,6 +146,51 @@ export default function Checkout() {
 
                 <Separator />
 
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-900">Промокод</label>
+                  {promoApplied ? (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Icon name="CheckCircle2" size={20} className="text-emerald-600" />
+                        <span className="text-sm font-medium text-emerald-700">
+                          Промокод «{promoCode.trim().toUpperCase()}» применён — доступ бесплатно
+                        </span>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={resetPromo} className="text-gray-600">
+                        Убрать
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        value={promoCode}
+                        onChange={(e) => {
+                          setPromoCode(e.target.value.toUpperCase());
+                          setPromoError('');
+                        }}
+                        placeholder="Введите промокод"
+                        className="h-12"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleApplyPromo}
+                        disabled={isCheckingPromo || !promoCode.trim()}
+                        className="h-12 px-6"
+                      >
+                        {isCheckingPromo ? (
+                          <Icon name="Loader2" size={18} className="animate-spin" />
+                        ) : (
+                          'Применить'
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                  {promoError && (
+                    <p className="text-sm text-red-600">{promoError}</p>
+                  )}
+                </div>
+
                 <Button
                   onClick={handlePay}
                   disabled={isProcessing}
@@ -115,7 +199,12 @@ export default function Checkout() {
                   {isProcessing ? (
                     <>
                       <Icon name="Loader2" size={24} className="mr-2 animate-spin" />
-                      Переход к оплате...
+                      {promoApplied ? 'Активация...' : 'Переход к оплате...'}
+                    </>
+                  ) : promoApplied ? (
+                    <>
+                      <Icon name="Gift" size={20} className="mr-2" />
+                      Активировать бесплатно
                     </>
                   ) : (
                     <>
@@ -170,7 +259,9 @@ export default function Checkout() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Скидка</span>
-                  <span className="font-medium text-emerald-600">0 ₽</span>
+                  <span className="font-medium text-emerald-600">
+                    {promoApplied ? `−${price.toLocaleString('ru-RU')} ₽` : '0 ₽'}
+                  </span>
                 </div>
               </div>
 
@@ -179,7 +270,7 @@ export default function Checkout() {
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold text-gray-900">Итого</span>
                 <span className="text-2xl font-bold text-gray-900">
-                  {price.toLocaleString('ru-RU')} ₽
+                  {promoApplied ? 'Бесплатно' : `${price.toLocaleString('ru-RU')} ₽`}
                 </span>
               </div>
 
