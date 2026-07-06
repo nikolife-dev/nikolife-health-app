@@ -110,7 +110,7 @@ export default function SupportSection() {
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Чат с менеджером</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Помощник по Здоровью</h2>
           <p className="text-sm sm:text-base text-gray-600">Задайте вопрос — мы поможем</p>
         </div>
         {isFree && limit !== null && (

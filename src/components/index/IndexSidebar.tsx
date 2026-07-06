@@ -78,7 +78,7 @@ export default function IndexSidebar({ activeSection, setActiveSection }: IndexS
           onClick={() => setActiveSection('support')}
         >
           <Icon name="MessageCircle" className="mr-3" size={20} />
-          <span>Чат с менеджером</span>
+          <span>Помощник по Здоровью</span>
         </Button>
       </nav>
 
