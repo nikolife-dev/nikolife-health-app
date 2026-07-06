@@ -198,9 +198,17 @@ export default function Admin() {
             <TabNavigation />
           </ScrollArea>
           <Button
+            variant="outline"
+            onClick={() => navigate('/messenger')}
+            className="gap-2 mt-4 w-full justify-start min-h-[44px] border-[#748c6d]/30 text-[#748c6d]"
+          >
+            <Icon name="MessageSquare" size={20} />
+            Мессенджер
+          </Button>
+          <Button
             variant="ghost"
             onClick={() => navigate('/')}
-            className="gap-2 mt-4 w-full justify-start min-h-[44px]"
+            className="gap-2 mt-2 w-full justify-start min-h-[44px]"
           >
             <Icon name="ArrowLeft" size={20} />
             На главную

@@ -18,6 +18,7 @@ import Profile from "./pages/Profile";
 import Recipes from "./pages/Recipes";
 import Habits from "./pages/Habits";
 import Admin from "./pages/Admin";
+import Messenger from "./pages/Messenger";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,11 @@ const App = () => (
             <Route path="/admin" element={
               <ProtectedRoute requiresPlan={true}>
                 <Admin />
+              </ProtectedRoute>
+            } />
+            <Route path="/messenger" element={
+              <ProtectedRoute requiresPlan={true}>
+                <Messenger />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
