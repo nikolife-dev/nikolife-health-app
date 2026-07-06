@@ -29,9 +29,24 @@ def _get_conn():
     return psycopg2.connect(os.environ['DATABASE_URL'])
 
 
+def _get_tribute_settings() -> dict:
+    """Читает настройки Tribute из админ-панели (таблица payment_gateways)."""
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT settings FROM payment_gateways WHERE provider = 'tribute'")
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        return (row[0] if row and row[0] else {}) or {}
+    except Exception:
+        return {}
+
+
 def _create_tribute_order(amount_rub: int, plan_id: str, is_yearly: bool, user_id: str) -> dict:
     """Создаёт заказ в Tribute и возвращает данные с ссылкой на оплату."""
-    api_key = os.environ.get('TRIBUTE_API_KEY')
+    settings = _get_tribute_settings()
+    api_key = settings.get('api_key') or os.environ.get('TRIBUTE_API_KEY')
     if not api_key:
         raise RuntimeError('TRIBUTE_API_KEY not configured')
 
@@ -57,7 +72,8 @@ def _create_tribute_order(amount_rub: int, plan_id: str, is_yearly: bool, user_i
 
 
 def _verify_webhook(body_raw: str, signature: str) -> bool:
-    secret = os.environ.get('TRIBUTE_WEBHOOK_SECRET')
+    settings = _get_tribute_settings()
+    secret = settings.get('webhook_secret') or os.environ.get('TRIBUTE_WEBHOOK_SECRET')
     if not secret:
         return True
     if not signature:

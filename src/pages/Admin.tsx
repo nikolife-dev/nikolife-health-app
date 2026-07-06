@@ -31,6 +31,7 @@ import AdminUsersTab from '@/components/admin/AdminUsersTab';
 import AdminRecipesTab from '@/components/admin/AdminRecipesTab';
 import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 import AdminChatsTab from '@/components/admin/AdminChatsTab';
+import AdminPaymentGatewaysTab from '@/components/admin/AdminPaymentGatewaysTab';
 import funcUrls from '../../backend/func2url.json';
 
 interface AdminStats {
@@ -154,6 +155,7 @@ export default function Admin() {
   const tabs = [
     { value: 'users', label: 'Пользователи', icon: 'Users' },
     { value: 'subscriptions', label: 'Подписки', icon: 'CreditCard' },
+    { value: 'payments', label: 'Платёжный шлюз', icon: 'Wallet' },
     { value: 'analytics', label: 'Аналитика', icon: 'BarChart3' },
     { value: 'library', label: 'Библиотека', icon: 'BookOpen' },
     { value: 'trainings', label: 'Тренировки', icon: 'Dumbbell' },
@@ -365,6 +367,7 @@ export default function Admin() {
           <AdminMentalHealthTab />
           <AdminNotificationsTab />
           <AdminChatsTab />
+          <AdminPaymentGatewaysTab />
             </Tabs>
           </div>
         </main>

@@ -1,0 +1,44 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET gateways list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "POST unknown provider",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "provider": "unknown"
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "success": false
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST save tribute (no secret change)",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "provider": "tribute",
+        "is_enabled": false,
+        "settings": {}
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
