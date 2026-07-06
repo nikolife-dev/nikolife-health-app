@@ -284,6 +284,9 @@ def handler(event: dict, context) -> dict:
             inserted = 0
             errors = []
             
+            # Единый batch_id для всей пачки импорта — нужен для отката
+            batch_id = uuid.uuid4().hex
+            
             # decisions: dict title -> 'replace' | 'skip' | 'add'
             decisions = body.get('decisions', {})
 
@@ -333,8 +336,8 @@ def handler(event: dict, context) -> dict:
 
                     cur.execute(f"""
                         INSERT INTO {schema}.recipes
-                        (title, description, ingredients, instructions, cooking_time, servings, calories, protein, carbs, fats, image_url, category, tags, created_by, weight_per_serving, calories_100, protein_100, fats_100, carbs_100, user_groups)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        (title, description, ingredients, instructions, cooking_time, servings, calories, protein, carbs, fats, image_url, category, tags, created_by, weight_per_serving, calories_100, protein_100, fats_100, carbs_100, user_groups, import_batch_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         r.get('title'), r.get('description', ''), json.dumps(ingredients),
                         r.get('instructions', ''), r.get('cooking_time'), r.get('servings', 1),
@@ -342,7 +345,7 @@ def handler(event: dict, context) -> dict:
                         r.get('image_url'), category_str, json.dumps([]), user_id,
                         r.get('weight_per_serving'), r.get('calories_100'),
                         r.get('protein_100'), r.get('fats_100'), r.get('carbs_100'),
-                        r.get('user_groups')
+                        r.get('user_groups'), batch_id
                     ))
                     inserted += 1
                 except Exception as e:
@@ -352,11 +355,80 @@ def handler(event: dict, context) -> dict:
                     psycopg2.extras.register_default_jsonb(conn)
                     cur = conn.cursor()
             
+            # Если ничего не вставили (только replace/skip) — batch пустой, не сохраняем его
+            if inserted == 0:
+                batch_id = None
             conn.commit()
             cur.close()
             conn.close()
-            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True, 'inserted': inserted, 'errors': errors}), 'isBase64Encoded': False}
-        
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True, 'inserted': inserted, 'errors': errors, 'batch_id': batch_id}), 'isBase64Encoded': False}
+
+        # GET last_import — информация о последнем импорте (для кнопки отката)
+        if method == 'GET' and action == 'last_import':
+            if not is_admin:
+                return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Только администратор'}), 'isBase64Encoded': False}
+            cur.execute(f"""
+                SELECT import_batch_id, COUNT(*), MAX(created_at)
+                FROM {schema}.recipes
+                WHERE import_batch_id IS NOT NULL AND is_active = true
+                GROUP BY import_batch_id
+                ORDER BY MAX(created_at) DESC
+                LIMIT 1
+            """)
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            if not row:
+                return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'last_import': None}), 'isBase64Encoded': False}
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'last_import': {'batch_id': row[0], 'count': row[1], 'created_at': row[2].isoformat() if row[2] else None}}), 'isBase64Encoded': False}
+
+        # POST undo_import — откат последнего успешного импорта
+        if method == 'POST' and action == 'undo_import':
+            if not is_admin:
+                return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Только администратор'}), 'isBase64Encoded': False}
+            body = json.loads(event.get('body', '{}'))
+            batch = body.get('batch_id')
+            if not batch:
+                cur.execute(f"""
+                    SELECT import_batch_id FROM {schema}.recipes
+                    WHERE import_batch_id IS NOT NULL AND is_active = true
+                    GROUP BY import_batch_id
+                    ORDER BY MAX(created_at) DESC
+                    LIMIT 1
+                """)
+                r = cur.fetchone()
+                batch = r[0] if r else None
+            if not batch:
+                cur.close()
+                conn.close()
+                return {'statusCode': 400, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Нет импортов для отмены'}), 'isBase64Encoded': False}
+            cur.execute(f"DELETE FROM {schema}.user_favorites WHERE recipe_id IN (SELECT id FROM {schema}.recipes WHERE import_batch_id = %s)", (batch,))
+            cur.execute(f"DELETE FROM {schema}.recipes WHERE import_batch_id = %s", (batch,))
+            deleted = cur.rowcount
+            conn.commit()
+            cur.close()
+            conn.close()
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True, 'deleted': deleted}), 'isBase64Encoded': False}
+
+        # POST bulk_delete — выборочное удаление рецептов по списку id
+        if method == 'POST' and action == 'bulk_delete':
+            if not is_admin:
+                return {'statusCode': 403, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Только администратор'}), 'isBase64Encoded': False}
+            body = json.loads(event.get('body', '{}'))
+            ids = body.get('ids', [])
+            ids = [int(x) for x in ids if str(x).isdigit()]
+            if not ids:
+                cur.close()
+                conn.close()
+                return {'statusCode': 400, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': 'Не выбраны рецепты'}), 'isBase64Encoded': False}
+            placeholders = ','.join(['%s'] * len(ids))
+            cur.execute(f"UPDATE {schema}.recipes SET is_active = false WHERE id IN ({placeholders})", tuple(ids))
+            deleted = cur.rowcount
+            conn.commit()
+            cur.close()
+            conn.close()
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True, 'deleted': deleted}), 'isBase64Encoded': False}
+
         # POST /
         if method == 'POST' and not recipe_id:
             if not user_id:

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -61,6 +62,10 @@ export default function AdminRecipesTab() {
   const [isSavingLimit, setIsSavingLimit] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [lastImport, setLastImport] = useState<{ batch_id: string; count: number } | null>(null);
+  const [isUndoing, setIsUndoing] = useState(false);
 
   const categories = [
     'all',
@@ -82,7 +87,21 @@ export default function AdminRecipesTab() {
   useEffect(() => {
     loadRecipes();
     loadSettings();
+    loadLastImport();
   }, [category]);
+
+  const loadLastImport = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${RECIPES_API}?action=last_import`, {
+        headers: token ? { 'X-Auth-Token': token } : {}
+      });
+      const data = await res.json();
+      setLastImport(data.last_import || null);
+    } catch (e) {
+      console.error('loadLastImport error', e);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -253,6 +272,81 @@ export default function AdminRecipesTab() {
     }
   };
 
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === recipes.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(recipes.map((r) => r.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Удалить выбранные рецепты (${selectedIds.length})?`)) return;
+
+    setIsBulkDeleting(true);
+    logInfo(`[BULK DELETE] Удаление ${selectedIds.length} рецептов`);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${RECIPES_API}?action=bulk_delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token! },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        logSuccess(`[BULK DELETE] Удалено ${data.deleted}`);
+        toast({ title: 'Успешно', description: `Удалено рецептов: ${data.deleted}` });
+        setSelectedIds([]);
+        loadRecipes();
+      } else {
+        throw new Error(data.error || 'Ошибка удаления');
+      }
+    } catch (error) {
+      logError(`[BULK DELETE] ${error instanceof Error ? error.message : 'unknown'}`);
+      toast({ title: 'Ошибка', description: error instanceof Error ? error.message : 'Не удалось удалить', variant: 'destructive' });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleUndoImport = async () => {
+    if (!lastImport) return;
+    if (!confirm(`Отменить последний импорт? Будет удалено рецептов: ${lastImport.count}`)) return;
+
+    setIsUndoing(true);
+    logInfo(`[UNDO IMPORT] Откат импорта ${lastImport.batch_id}`);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${RECIPES_API}?action=undo_import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token! },
+        body: JSON.stringify({ batch_id: lastImport.batch_id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        logSuccess(`[UNDO IMPORT] Удалено ${data.deleted}`);
+        toast({ title: 'Импорт отменён', description: `Удалено рецептов: ${data.deleted}` });
+        setSelectedIds([]);
+        loadRecipes();
+        loadLastImport();
+      } else {
+        throw new Error(data.error || 'Ошибка отмены импорта');
+      }
+    } catch (error) {
+      logError(`[UNDO IMPORT] ${error instanceof Error ? error.message : 'unknown'}`);
+      toast({ title: 'Ошибка', description: error instanceof Error ? error.message : 'Не удалось отменить импорт', variant: 'destructive' });
+    } finally {
+      setIsUndoing(false);
+    }
+  };
+
   const getCategoryBadge = (cat: string) => {
     const colors: Record<string, string> = {
       'Гарниры': 'bg-amber-500/10 text-amber-700',
@@ -309,6 +403,21 @@ export default function AdminRecipesTab() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-[#748c6d]">Рецепты</CardTitle>
             <div className="flex gap-2">
+              {lastImport && (
+                <Button
+                  variant="outline"
+                  onClick={handleUndoImport}
+                  disabled={isUndoing}
+                  className="border-orange-300 text-orange-700 hover:bg-orange-50"
+                >
+                  {isUndoing ? (
+                    <Icon name="Loader2" size={18} className="mr-2 animate-spin" />
+                  ) : (
+                    <Icon name="Undo2" size={18} className="mr-2" />
+                  )}
+                  Отменить импорт ({lastImport.count})
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => setIsImportDialogOpen(true)}
@@ -359,6 +468,37 @@ export default function AdminRecipesTab() {
             ))}
           </div>
 
+          {selectedIds.length > 0 && (
+            <div className="flex items-center justify-between gap-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+              <span className="text-sm font-medium text-red-700">
+                Выбрано рецептов: {selectedIds.length}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds([])}
+                  className="text-gray-600"
+                >
+                  Снять выделение
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  disabled={isBulkDeleting}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isBulkDeleting ? (
+                    <Icon name="Loader2" size={16} className="mr-2 animate-spin" />
+                  ) : (
+                    <Icon name="Trash2" size={16} className="mr-2" />
+                  )}
+                  Удалить выбранные
+                </Button>
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="flex justify-center py-12">
               <Icon name="Loader2" size={48} className="animate-spin text-[#748c6d]" />
@@ -368,6 +508,13 @@ export default function AdminRecipesTab() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={recipes.length > 0 && selectedIds.length === recipes.length}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Выбрать все"
+                    />
+                  </TableHead>
                   <TableHead className="text-xs">Фото</TableHead>
                   <TableHead className="text-xs">Название</TableHead>
                   <TableHead className="text-xs">Категории</TableHead>
@@ -385,13 +532,20 @@ export default function AdminRecipesTab() {
               <TableBody>
                 {recipes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={13} className="text-center py-8 text-gray-500">
                       Рецепты не найдены
                     </TableCell>
                   </TableRow>
                 ) : (
                   recipes.map((recipe) => (
-                    <TableRow key={recipe.id}>
+                    <TableRow key={recipe.id} data-state={selectedIds.includes(recipe.id) ? 'selected' : undefined}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.includes(recipe.id)}
+                          onCheckedChange={() => toggleSelect(recipe.id)}
+                          aria-label={`Выбрать ${recipe.title}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <QuickImageCell
                           recipeId={recipe.id}
@@ -483,6 +637,7 @@ export default function AdminRecipesTab() {
         onOpenChange={setIsImportDialogOpen}
         onSuccess={() => {
           loadRecipes();
+          loadLastImport();
         }}
       />
 

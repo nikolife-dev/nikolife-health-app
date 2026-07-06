@@ -19,6 +19,18 @@
       "expectedStatus": 200,
       "expectedBody": {"settings": {}},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "undo_import без прав",
+      "method": "POST",
+      "path": "/?action=undo_import",
+      "expectedStatus": 403
+    },
+    {
+      "name": "bulk_delete без прав",
+      "method": "POST",
+      "path": "/?action=bulk_delete",
+      "expectedStatus": 403
     }
   ]
 }
