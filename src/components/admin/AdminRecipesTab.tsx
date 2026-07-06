@@ -403,21 +403,6 @@ export default function AdminRecipesTab() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-[#748c6d]">Рецепты</CardTitle>
             <div className="flex gap-2">
-              {lastImport && (
-                <Button
-                  variant="outline"
-                  onClick={handleUndoImport}
-                  disabled={isUndoing}
-                  className="border-orange-300 text-orange-700 hover:bg-orange-50"
-                >
-                  {isUndoing ? (
-                    <Icon name="Loader2" size={18} className="mr-2 animate-spin" />
-                  ) : (
-                    <Icon name="Undo2" size={18} className="mr-2" />
-                  )}
-                  Отменить импорт ({lastImport.count})
-                </Button>
-              )}
               <Button
                 variant="outline"
                 onClick={() => setIsImportDialogOpen(true)}
@@ -437,6 +422,32 @@ export default function AdminRecipesTab() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {lastImport && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3">
+              <div className="flex items-start gap-3">
+                <Icon name="History" size={20} className="text-orange-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-orange-800">Последний импорт</p>
+                  <p className="text-xs text-orange-700">
+                    Добавлено рецептов: {lastImport.count}. Можно удалить одним действием.
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleUndoImport}
+                disabled={isUndoing}
+                className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
+              >
+                {isUndoing ? (
+                  <Icon name="Loader2" size={18} className="mr-2 animate-spin" />
+                ) : (
+                  <Icon name="Undo2" size={18} className="mr-2" />
+                )}
+                Отменить последний импорт
+              </Button>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-4">
             <Input
               placeholder="Поиск по названию..."
