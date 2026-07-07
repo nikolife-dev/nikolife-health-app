@@ -4,7 +4,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime
 
-SCHEMA = 't_p76837068_nikolife_health_app'
+SCHEMA = os.environ.get('MAIN_DB_SCHEMA', 'public')
 
 CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',

@@ -39,7 +39,7 @@ def handler(event: dict, context) -> dict:
             action = params.get('action')
 
             if action == 'stats':
-                schema = 't_p76837068_nikolife_health_app'
+                schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
                 cur.execute(f"SELECT COUNT(*) as total FROM {schema}.users")
                 total_users = cur.fetchone()['total']
 
@@ -85,7 +85,7 @@ def handler(event: dict, context) -> dict:
                 }
 
             if action == 'subscriptions':
-                schema = 't_p76837068_nikolife_health_app'
+                schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
                 cur.execute(f"""
                     SELECT
                         s.id,
@@ -137,8 +137,8 @@ def handler(event: dict, context) -> dict:
                         hp.weight,
                         hp.height,
                         hp.diet_preference
-                    FROM t_p76837068_nikolife_health_app.users u
-                    LEFT JOIN t_p76837068_nikolife_health_app.health_parameters hp ON u.id = hp.user_id
+                    FROM public.users u
+                    LEFT JOIN public.health_parameters hp ON u.id = hp.user_id
                     WHERE u.id = %s
                 """, (user_id,))
                 user = cur.fetchone()
@@ -174,7 +174,7 @@ def handler(event: dict, context) -> dict:
                             WHEN telegram_username IS NOT NULL THEN 'telegram'
                             ELSE 'email'
                         END as auth_type
-                    FROM t_p76837068_nikolife_health_app.users 
+                    FROM public.users 
                     ORDER BY created_at DESC
                 """)
                 users = cur.fetchall()
@@ -217,7 +217,7 @@ def handler(event: dict, context) -> dict:
                 height = float(height_str) if height_str else None
 
                 cur.execute("""
-                    SELECT id FROM t_p76837068_nikolife_health_app.users WHERE email = %s
+                    SELECT id FROM public.users WHERE email = %s
                 """, (email,))
                 existing = cur.fetchone()
                 
@@ -233,7 +233,7 @@ def handler(event: dict, context) -> dict:
                 auth_token = secrets.token_urlsafe(32)
 
                 cur.execute("""
-                    INSERT INTO t_p76837068_nikolife_health_app.users 
+                    INSERT INTO public.users 
                     (name, email, password_hash, auth_token, selected_plan, is_admin, telegram_username, onboarding_completed)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id, name, email, selected_plan, is_admin, telegram_username
@@ -244,7 +244,7 @@ def handler(event: dict, context) -> dict:
                 
                 if any([goal, activity_level, age, weight, height, diet_preference]):
                     cur.execute("""
-                        INSERT INTO t_p76837068_nikolife_health_app.health_parameters
+                        INSERT INTO public.health_parameters
                         (user_id, goal, activity_level, age, weight, height, diet_preference)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """, (user_id, goal, activity_level, age, weight, height, diet_preference))
@@ -302,7 +302,7 @@ def handler(event: dict, context) -> dict:
                     if new_limit < 0:
                         new_limit = 0
                     cur.execute("""
-                        UPDATE t_p76837068_nikolife_health_app.users
+                        UPDATE public.users
                         SET message_limit = %s
                         WHERE id = %s
                         RETURNING id, message_limit
@@ -351,7 +351,7 @@ def handler(event: dict, context) -> dict:
                 height = float(height_str) if height_str else None
 
                 cur.execute("""
-                    UPDATE t_p76837068_nikolife_health_app.users 
+                    UPDATE public.users 
                     SET name = %s, email = %s, selected_plan = %s, is_admin = %s, telegram_username = %s, receive_notifications = %s
                     WHERE id = %s
                     RETURNING id, name, email, selected_plan, is_admin, telegram_username, receive_notifications
@@ -361,7 +361,7 @@ def handler(event: dict, context) -> dict:
                 
                 if any([goal, activity_level, age, weight, height, diet_preference]):
                     cur.execute("""
-                        INSERT INTO t_p76837068_nikolife_health_app.health_parameters
+                        INSERT INTO public.health_parameters
                         (user_id, goal, activity_level, age, weight, height, diet_preference)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (user_id) 
@@ -414,68 +414,68 @@ def handler(event: dict, context) -> dict:
                 print(f'[DELETE] Attempting to delete user_id={user_id}')
                 
                 cur.execute("""
-                    DELETE FROM t_p76837068_nikolife_health_app.user_favorites 
+                    DELETE FROM public.user_favorites 
                     WHERE user_id = %s
                 """, (user_id,))
                 print(f'[DELETE] Deleted {cur.rowcount} user_favorites records')
                 
                 cur.execute("""
-                    DELETE FROM t_p76837068_nikolife_health_app.subscriptions 
+                    DELETE FROM public.subscriptions 
                     WHERE user_id = %s
                 """, (user_id,))
                 print(f'[DELETE] Deleted {cur.rowcount} subscriptions records')
                 
                 cur.execute("""
-                    DELETE FROM t_p76837068_nikolife_health_app.weekly_menus 
+                    DELETE FROM public.weekly_menus 
                     WHERE user_id = %s
                 """, (user_id,))
                 print(f'[DELETE] Deleted {cur.rowcount} weekly_menus records')
                 
                 cur.execute("""
-                    DELETE FROM t_p76837068_nikolife_health_app.health_parameters 
+                    DELETE FROM public.health_parameters 
                     WHERE user_id = %s
                 """, (user_id,))
                 print(f'[DELETE] Deleted {cur.rowcount} health_parameters records')
                 
                 cur.execute("""
-                    DELETE FROM t_p76837068_nikolife_health_app.chat_messages 
+                    DELETE FROM public.chat_messages 
                     WHERE user_id = %s
                 """, (user_id,))
                 print(f'[DELETE] Deleted {cur.rowcount} chat_messages records')
                 
                 cur.execute("""
-                    DELETE FROM t_p76837068_nikolife_health_app.chats 
+                    DELETE FROM public.chats 
                     WHERE user_id = %s
                 """, (user_id,))
                 print(f'[DELETE] Deleted {cur.rowcount} chats records')
                 
                 cur.execute("""
-                    DELETE FROM t_p76837068_nikolife_health_app.notifications 
+                    DELETE FROM public.notifications 
                     WHERE user_id = %s
                 """, (user_id,))
                 print(f'[DELETE] Deleted {cur.rowcount} notifications records')
                 
                 cur.execute("""
-                    DELETE FROM t_p76837068_nikolife_health_app.habit_completions 
+                    DELETE FROM public.habit_completions 
                     WHERE user_id = %s
                 """, (user_id,))
                 print(f'[DELETE] Deleted {cur.rowcount} habit_completions records')
                 
                 cur.execute("""
-                    DELETE FROM t_p76837068_nikolife_health_app.habits 
+                    DELETE FROM public.habits 
                     WHERE user_id = %s
                 """, (user_id,))
                 print(f'[DELETE] Deleted {cur.rowcount} habits records')
                 
                 cur.execute("""
-                    UPDATE t_p76837068_nikolife_health_app.recipes 
+                    UPDATE public.recipes 
                     SET created_by = NULL 
                     WHERE created_by = %s
                 """, (user_id,))
                 print(f'[DELETE] Unlinked {cur.rowcount} recipes from user')
                 
                 cur.execute("""
-                    DELETE FROM t_p76837068_nikolife_health_app.users 
+                    DELETE FROM public.users 
                     WHERE id = %s
                 """, (user_id,))
                 deleted_user = cur.rowcount

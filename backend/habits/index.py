@@ -35,7 +35,7 @@ def handler(event: dict, context) -> dict:
     
     try:
         cur.execute(
-            "SELECT id FROM t_p76837068_nikolife_health_app.users WHERE auth_token = %s",
+            "SELECT id FROM public.users WHERE auth_token = %s",
             (token,)
         )
         user_row = cur.fetchone()
@@ -56,11 +56,11 @@ def handler(event: dict, context) -> dict:
             cur.execute("""
                 SELECT h.id, h.title, h.category, h.goal, h.goal_days, h.days_of_week, 
                        h.times_per_day, h.created_at,
-                       (SELECT COUNT(*) FROM t_p76837068_nikolife_health_app.habit_completions 
+                       (SELECT COUNT(*) FROM public.habit_completions 
                         WHERE habit_id = h.id AND completed_date = CURRENT_DATE) as completed_today,
-                       (SELECT COUNT(*) FROM t_p76837068_nikolife_health_app.habit_completions 
+                       (SELECT COUNT(*) FROM public.habit_completions 
                         WHERE habit_id = h.id) as total_completions
-                FROM t_p76837068_nikolife_health_app.habits h
+                FROM public.habits h
                 WHERE h.user_id = %s
                 ORDER BY h.created_at DESC
             """, (user_id,))
@@ -72,7 +72,7 @@ def handler(event: dict, context) -> dict:
                 
                 cur.execute("""
                     SELECT completed_date 
-                    FROM t_p76837068_nikolife_health_app.habit_completions 
+                    FROM public.habit_completions 
                     WHERE habit_id = %s 
                     ORDER BY completed_date DESC
                 """, (row[0],))
@@ -82,14 +82,14 @@ def handler(event: dict, context) -> dict:
                 
                 cur.execute("""
                     SELECT COUNT(*) 
-                    FROM t_p76837068_nikolife_health_app.habit_completions 
+                    FROM public.habit_completions 
                     WHERE habit_id = %s AND completed_date = CURRENT_DATE
                 """, (row[0],))
                 completions_today = cur.fetchone()[0]
                 
                 cur.execute("""
                     SELECT completed_date, COUNT(*) 
-                    FROM t_p76837068_nikolife_health_app.habit_completions 
+                    FROM public.habit_completions 
                     WHERE habit_id = %s AND completed_date >= CURRENT_DATE - INTERVAL '7 days'
                     GROUP BY completed_date
                 """, (row[0],))
@@ -97,7 +97,7 @@ def handler(event: dict, context) -> dict:
                 
                 cur.execute("""
                     SELECT completed_date, COUNT(*) 
-                    FROM t_p76837068_nikolife_health_app.habit_completions 
+                    FROM public.habit_completions 
                     WHERE habit_id = %s AND completed_date >= CURRENT_DATE - INTERVAL '30 days'
                     GROUP BY completed_date
                 """, (row[0],))
@@ -143,7 +143,7 @@ def handler(event: dict, context) -> dict:
             habit_id = habit_id_param
             
             cur.execute("""
-                SELECT id FROM t_p76837068_nikolife_health_app.habits 
+                SELECT id FROM public.habits 
                 WHERE id = %s AND user_id = %s
             """, (habit_id, user_id))
             
@@ -156,12 +156,12 @@ def handler(event: dict, context) -> dict:
                 }
             
             cur.execute("""
-                INSERT INTO t_p76837068_nikolife_health_app.habit_completions (habit_id, user_id) 
+                INSERT INTO public.habit_completions (habit_id, user_id) 
                 VALUES (%s, %s)
             """, (habit_id, user_id))
             
             cur.execute("""
-                SELECT COUNT(*) FROM t_p76837068_nikolife_health_app.habit_completions 
+                SELECT COUNT(*) FROM public.habit_completions 
                 WHERE habit_id = %s AND completed_date = CURRENT_DATE
             """, (habit_id,))
             
@@ -199,7 +199,7 @@ def handler(event: dict, context) -> dict:
             days_of_week_json = json.dumps(days_of_week)
             
             cur.execute("""
-                INSERT INTO t_p76837068_nikolife_health_app.habits 
+                INSERT INTO public.habits 
                 (user_id, title, category, goal, goal_days, days_of_week, times_per_day)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
@@ -226,7 +226,7 @@ def handler(event: dict, context) -> dict:
                 }
             
             cur.execute("""
-                SELECT id FROM t_p76837068_nikolife_health_app.habits 
+                SELECT id FROM public.habits 
                 WHERE id = %s AND user_id = %s
             """, (habit_id, user_id))
             
@@ -257,7 +257,7 @@ def handler(event: dict, context) -> dict:
             days_of_week_json = json.dumps(days_of_week)
             
             cur.execute("""
-                UPDATE t_p76837068_nikolife_health_app.habits 
+                UPDATE public.habits 
                 SET title = %s, category = %s, goal = %s, goal_days = %s, 
                     days_of_week = %s, times_per_day = %s
                 WHERE id = %s AND user_id = %s
@@ -283,7 +283,7 @@ def handler(event: dict, context) -> dict:
                 }
             
             cur.execute("""
-                DELETE FROM t_p76837068_nikolife_health_app.habits 
+                DELETE FROM public.habits 
                 WHERE id = %s AND user_id = %s
             """, (habit_id, user_id))
             

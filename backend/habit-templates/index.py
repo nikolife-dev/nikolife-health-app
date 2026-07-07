@@ -37,14 +37,14 @@ def handler(event: dict, context) -> dict:
         if category:
             cur.execute("""
                 SELECT id, title, category, description 
-                FROM t_p76837068_nikolife_health_app.habit_templates
+                FROM public.habit_templates
                 WHERE category = %s
                 ORDER BY title
             """, (category,))
         else:
             cur.execute("""
                 SELECT id, title, category, description 
-                FROM t_p76837068_nikolife_health_app.habit_templates
+                FROM public.habit_templates
                 ORDER BY category, title
             """)
         

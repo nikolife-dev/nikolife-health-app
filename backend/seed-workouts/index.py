@@ -137,7 +137,7 @@ def handler(event: dict, context) -> dict:
             for workout_data in cardio_workouts:
                 title, desc, duration, diff, cal, exercises = workout_data
                 cur.execute(
-                    '''INSERT INTO t_p76837068_nikolife_health_app.workouts 
+                    '''INSERT INTO public.workouts 
                        (title, description, category, duration_minutes, difficulty, calories, published_date)
                        VALUES (%s, %s, %s, %s, %s, %s, CURRENT_DATE) RETURNING id''',
                     (title, desc, 'cardio', duration, diff, cal)
@@ -146,7 +146,7 @@ def handler(event: dict, context) -> dict:
                 
                 for i, (ex_name, ex_sets, ex_rest) in enumerate(exercises):
                     cur.execute(
-                        '''INSERT INTO t_p76837068_nikolife_health_app.workout_exercises
+                        '''INSERT INTO public.workout_exercises
                            (workout_id, exercise_name, sets, rest_seconds, exercise_order)
                            VALUES (%s, %s, %s, %s, %s)''',
                         (workout_id, ex_name, ex_sets, ex_rest, i)
@@ -156,7 +156,7 @@ def handler(event: dict, context) -> dict:
             for workout_data in strength_workouts:
                 title, desc, duration, diff, cal, exercises = workout_data
                 cur.execute(
-                    '''INSERT INTO t_p76837068_nikolife_health_app.workouts 
+                    '''INSERT INTO public.workouts 
                        (title, description, category, duration_minutes, difficulty, calories, published_date)
                        VALUES (%s, %s, %s, %s, %s, %s, CURRENT_DATE) RETURNING id''',
                     (title, desc, 'strength', duration, diff, cal)
@@ -165,7 +165,7 @@ def handler(event: dict, context) -> dict:
                 
                 for i, (ex_name, ex_sets, ex_rest) in enumerate(exercises):
                     cur.execute(
-                        '''INSERT INTO t_p76837068_nikolife_health_app.workout_exercises
+                        '''INSERT INTO public.workout_exercises
                            (workout_id, exercise_name, sets, rest_seconds, exercise_order)
                            VALUES (%s, %s, %s, %s, %s)''',
                         (workout_id, ex_name, ex_sets, ex_rest, i)
@@ -175,7 +175,7 @@ def handler(event: dict, context) -> dict:
             for workout_data in flexibility_workouts:
                 title, desc, duration, diff, cal, exercises = workout_data
                 cur.execute(
-                    '''INSERT INTO t_p76837068_nikolife_health_app.workouts 
+                    '''INSERT INTO public.workouts 
                        (title, description, category, duration_minutes, difficulty, calories, published_date)
                        VALUES (%s, %s, %s, %s, %s, %s, CURRENT_DATE) RETURNING id''',
                     (title, desc, 'flexibility', duration, diff, cal)
@@ -184,7 +184,7 @@ def handler(event: dict, context) -> dict:
                 
                 for i, (ex_name, ex_sets, ex_rest) in enumerate(exercises):
                     cur.execute(
-                        '''INSERT INTO t_p76837068_nikolife_health_app.workout_exercises
+                        '''INSERT INTO public.workout_exercises
                            (workout_id, exercise_name, sets, rest_seconds, exercise_order)
                            VALUES (%s, %s, %s, %s, %s)''',
                         (workout_id, ex_name, ex_sets, ex_rest, i)

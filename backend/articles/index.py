@@ -59,11 +59,11 @@ def get_articles(conn, event: dict) -> dict:
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         if article_id:
             cur.execute(
-                'UPDATE t_p76837068_nikolife_health_app.articles SET view_count = view_count + 1 WHERE id = %s',
+                'UPDATE public.articles SET view_count = view_count + 1 WHERE id = %s',
                 (article_id,)
             )
             cur.execute(
-                'SELECT id, title, category, content, published_date, view_count, created_at FROM t_p76837068_nikolife_health_app.articles WHERE id = %s',
+                'SELECT id, title, category, content, published_date, view_count, created_at FROM public.articles WHERE id = %s',
                 (article_id,)
             )
             article = cur.fetchone()
@@ -86,12 +86,12 @@ def get_articles(conn, event: dict) -> dict:
         else:
             if category:
                 cur.execute(
-                    'SELECT id, title, category, content, published_date, view_count, created_at FROM t_p76837068_nikolife_health_app.articles WHERE category = %s ORDER BY published_date DESC',
+                    'SELECT id, title, category, content, published_date, view_count, created_at FROM public.articles WHERE category = %s ORDER BY published_date DESC',
                     (category,)
                 )
             else:
                 cur.execute(
-                    'SELECT id, title, category, content, published_date, view_count, created_at FROM t_p76837068_nikolife_health_app.articles ORDER BY published_date DESC'
+                    'SELECT id, title, category, content, published_date, view_count, created_at FROM public.articles ORDER BY published_date DESC'
                 )
             
             articles = cur.fetchall()
@@ -131,7 +131,7 @@ def create_article(conn, event: dict) -> dict:
     
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
-            '''INSERT INTO t_p76837068_nikolife_health_app.articles 
+            '''INSERT INTO public.articles 
                (title, category, content, published_date) 
                VALUES (%s, %s, %s, %s) 
                RETURNING id, title, category, content, published_date, view_count, created_at''',
@@ -202,7 +202,7 @@ def update_article(conn, event: dict) -> dict:
     
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
-            f'''UPDATE t_p76837068_nikolife_health_app.articles 
+            f'''UPDATE public.articles 
                 SET {', '.join(updates)} 
                 WHERE id = %s 
                 RETURNING id, title, category, content, published_date, view_count, created_at''',
@@ -241,7 +241,7 @@ def delete_article(conn, event: dict) -> dict:
     
     with conn.cursor() as cur:
         cur.execute(
-            'DELETE FROM t_p76837068_nikolife_health_app.articles WHERE id = %s',
+            'DELETE FROM public.articles WHERE id = %s',
             (article_id,)
         )
         

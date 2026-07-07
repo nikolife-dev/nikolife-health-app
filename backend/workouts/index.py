@@ -61,13 +61,13 @@ def get_workouts(conn, event: dict) -> dict:
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         if workout_id:
             cur.execute(
-                'UPDATE t_p76837068_nikolife_health_app.workouts SET view_count = view_count + 1 WHERE id = %s',
+                'UPDATE public.workouts SET view_count = view_count + 1 WHERE id = %s',
                 (workout_id,)
             )
             cur.execute(
                 '''SELECT id, title, description, category, published_date, duration_minutes, 
                    difficulty, calories, video_url, view_count, created_at 
-                   FROM t_p76837068_nikolife_health_app.workouts WHERE id = %s''',
+                   FROM public.workouts WHERE id = %s''',
                 (workout_id,)
             )
             workout = cur.fetchone()
@@ -75,7 +75,7 @@ def get_workouts(conn, event: dict) -> dict:
             if workout:
                 cur.execute(
                     '''SELECT exercise_name, sets, rest_seconds 
-                       FROM t_p76837068_nikolife_health_app.workout_exercises 
+                       FROM public.workout_exercises 
                        WHERE workout_id = %s ORDER BY exercise_order''',
                     (workout_id,)
                 )
@@ -103,7 +103,7 @@ def get_workouts(conn, event: dict) -> dict:
                 cur.execute(
                     '''SELECT id, title, description, category, published_date, duration_minutes, 
                        difficulty, calories, video_url, view_count, created_at 
-                       FROM t_p76837068_nikolife_health_app.workouts 
+                       FROM public.workouts 
                        WHERE category = %s ORDER BY published_date DESC''',
                     (category,)
                 )
@@ -111,7 +111,7 @@ def get_workouts(conn, event: dict) -> dict:
                 cur.execute(
                     '''SELECT id, title, description, category, published_date, duration_minutes, 
                        difficulty, calories, video_url, view_count, created_at 
-                       FROM t_p76837068_nikolife_health_app.workouts 
+                       FROM public.workouts 
                        ORDER BY published_date DESC'''
                 )
             
@@ -177,7 +177,7 @@ def create_workout(conn, event: dict) -> dict:
     
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
-            '''INSERT INTO t_p76837068_nikolife_health_app.workouts 
+            '''INSERT INTO public.workouts 
                (title, description, category, published_date, duration_minutes, difficulty, calories, video_url) 
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s) 
                RETURNING id, title, description, category, published_date, duration_minutes, difficulty, calories, video_url, view_count, created_at''',
@@ -188,7 +188,7 @@ def create_workout(conn, event: dict) -> dict:
         
         for i, exercise in enumerate(exercises):
             cur.execute(
-                '''INSERT INTO t_p76837068_nikolife_health_app.workout_exercises 
+                '''INSERT INTO public.workout_exercises 
                    (workout_id, exercise_name, sets, rest_seconds, exercise_order) 
                    VALUES (%s, %s, %s, %s, %s)''',
                 (workout_id, exercise['name'], exercise['sets'], exercise['rest_seconds'], i)
@@ -261,7 +261,7 @@ def update_workout(conn, event: dict) -> dict:
     
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
-            f'''UPDATE t_p76837068_nikolife_health_app.workouts 
+            f'''UPDATE public.workouts 
                 SET {', '.join(updates)} 
                 WHERE id = %s 
                 RETURNING id, title, description, category, published_date, duration_minutes, difficulty, calories, video_url, view_count, created_at''',
@@ -300,7 +300,7 @@ def delete_workout(conn, event: dict) -> dict:
     
     with conn.cursor() as cur:
         cur.execute(
-            'SELECT id FROM t_p76837068_nikolife_health_app.workouts WHERE id = %s',
+            'SELECT id FROM public.workouts WHERE id = %s',
             (workout_id,)
         )
         
