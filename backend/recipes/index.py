@@ -595,12 +595,12 @@ def handler(event: dict, context) -> dict:
             cur.execute(f"""
                 UPDATE {schema}.recipes SET
                     title = COALESCE(%s, title), description = COALESCE(%s, description),
-                    ingredients = COALESCE(%s, ingredients), instructions = COALESCE(%s, instructions),
+                    ingredients = COALESCE(%s::jsonb, ingredients), instructions = COALESCE(%s, instructions),
                     cooking_time = COALESCE(%s, cooking_time), servings = COALESCE(%s, servings),
                     calories = COALESCE(%s, calories), protein = COALESCE(%s, protein),
                     carbs = COALESCE(%s, carbs), fats = COALESCE(%s, fats),
-                    image_url = COALESCE(%s, image_url), category = COALESCE(%s::jsonb, category),
-                    tags = COALESCE(%s, tags), is_active = COALESCE(%s, is_active), updated_at = NOW()
+                    image_url = COALESCE(%s, image_url), category = COALESCE(%s, category),
+                    tags = COALESCE(%s::jsonb, tags), is_active = COALESCE(%s, is_active), updated_at = NOW()
                 WHERE id = %s
             """, (
                 body.get('title'), body.get('description'),
