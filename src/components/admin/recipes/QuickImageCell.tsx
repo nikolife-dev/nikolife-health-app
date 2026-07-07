@@ -144,49 +144,74 @@ export default function QuickImageCell({ recipeId, imageUrl, recipeTitle, onUpda
   ) : null;
 
   const uploadFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Это не изображение');
+      return;
+    }
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      alert('Сессия истекла, войдите заново');
+      return;
+    }
     setIsUploading(true);
-    file = await compressImage(file);
     try {
+      console.log('[QuickImage] Сжатие файла', file.name, file.size);
+      const compressed = await compressImage(file);
       const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve) => {
+      const base64 = await new Promise<string>((resolve, reject) => {
         reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
+        reader.onerror = reject;
+        reader.readAsDataURL(compressed);
       });
-      const token = localStorage.getItem('auth_token');
+      console.log('[QuickImage] Отправка PUT, base64 длина:', base64.length);
       const res = await fetch(`${RECIPES_API}?id=${recipeId}`, {
         method: 'PUT',
-        headers: { 'X-Auth-Token': token!, 'Content-Type': 'application/json' },
+        headers: { 'X-Auth-Token': token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ image_base64: base64 }),
       });
       const data = await res.json();
+      console.log('[QuickImage] Ответ:', res.status, data);
       if (res.ok && data.success) {
         setPreview(data.recipe?.image_url || base64);
         onUpdated();
+      } else {
+        alert(data.error || 'Не удалось загрузить фото');
       }
+    } catch (err) {
+      console.error('[QuickImage] Ошибка загрузки:', err);
+      alert('Ошибка при загрузке фото: ' + (err as Error).message);
     } finally {
       setIsUploading(false);
     }
   };
 
   const applyUrl = async (url: string) => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      alert('Сессия истекла, войдите заново');
+      return;
+    }
     setIsUploading(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      console.log('[QuickImage] Импорт по ссылке:', url);
       const res = await fetch(`${RECIPES_API}?id=${recipeId}`, {
         method: 'PUT',
-        headers: { 'X-Auth-Token': token!, 'Content-Type': 'application/json' },
+        headers: { 'X-Auth-Token': token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ image_url_import: url }),
       });
       const data = await res.json();
-      if (res.ok && data.success) {
-        setPreview(data.recipe?.image_url || url);
+      console.log('[QuickImage] Ответ импорта:', res.status, data);
+      if (res.ok && data.success && data.recipe?.image_url) {
+        setPreview(data.recipe.image_url);
         setShowUrlInput(false);
         setUrlValue('');
         onUpdated();
       } else {
         alert(data.error || 'Не удалось загрузить фото по ссылке');
       }
+    } catch (err) {
+      console.error('[QuickImage] Ошибка импорта:', err);
+      alert('Ошибка при загрузке по ссылке: ' + (err as Error).message);
     } finally {
       setIsUploading(false);
     }

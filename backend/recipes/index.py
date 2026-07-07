@@ -552,7 +552,10 @@ def handler(event: dict, context) -> dict:
                     image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
                     print(f"[RECIPES] Изображение скопировано из URL в S3: {image_url}")
                 except Exception as e:
+                    import traceback
                     print(f"[RECIPES] ⚠️ Ошибка копирования изображения из URL: {e}")
+                    print(traceback.format_exc())
+                    return {'statusCode': 400, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': f'Не удалось загрузить изображение по ссылке: {str(e)}'}), 'isBase64Encoded': False}
             
             # Загрузка изображения в S3, если передан base64
             if body.get('image_base64'):
@@ -585,7 +588,10 @@ def handler(event: dict, context) -> dict:
                     image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
                     print(f"[RECIPES] Изображение загружено: {image_url}")
                 except Exception as e:
+                    import traceback
                     print(f"[RECIPES] ⚠️ Ошибка загрузки изображения: {e}")
+                    print(traceback.format_exc())
+                    return {'statusCode': 400, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'error': f'Не удалось сохранить изображение: {str(e)}'}), 'isBase64Encoded': False}
             
             # Если изменен статус is_active на false - удаляем из всех меню
             if 'is_active' in body and not body['is_active']:
