@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { compressImage } from '@/lib/compressImage';
@@ -23,6 +23,9 @@ export default function ImageDropzone({
   const [copyToStorage, setCopyToStorage] = useState(false);
   const [urlError, setUrlError] = useState('');
 
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [pasteError, setPasteError] = useState('');
+
   const processFile = useCallback(
     async (file: File) => {
       if (!file.type.startsWith('image/')) return;
@@ -31,6 +34,122 @@ export default function ImageDropzone({
     },
     [onFileSelected],
   );
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    window.addEventListener('click', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [menu]);
+
+  useEffect(() => {
+    if (!pasteError) return;
+    const t = setTimeout(() => setPasteError(''), 4000);
+    return () => clearTimeout(t);
+  }, [pasteError]);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setPasteError('');
+    setMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const handlePasteFromClipboard = async () => {
+    setMenu(null);
+    setPasteError('');
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.read) {
+        setPasteError('Браузер не поддерживает вставку из буфера');
+        return;
+      }
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find((t) => t.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          const ext = imageType.split('/')[1] || 'png';
+          const file = new File([blob], `clipboard.${ext}`, { type: imageType });
+          await processFile(file);
+          return;
+        }
+      }
+      const text = (await navigator.clipboard.readText()).trim();
+      if (text) {
+        try {
+          new URL(text);
+          onUrlSelected(text, true);
+          return;
+        } catch {
+          setPasteError('В буфере нет изображения или ссылки');
+          return;
+        }
+      }
+      setPasteError('В буфере обмена нет изображения');
+    } catch {
+      setPasteError('Не удалось получить доступ к буферу обмена');
+    }
+  };
+
+  const handlePasteByLink = () => {
+    setMenu(null);
+    const link = window.prompt('Вставьте ссылку на изображение');
+    if (!link) return;
+    const url = link.trim();
+    try {
+      new URL(url);
+    } catch {
+      setPasteError('Некорректная ссылка');
+      return;
+    }
+    onUrlSelected(url, true);
+  };
+
+  const contextMenu = menu ? (
+    <div
+      className="fixed z-[100] min-w-[220px] rounded-md border border-border bg-white shadow-lg py-1"
+      style={{ top: menu.y, left: menu.x }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        onClick={handlePasteFromClipboard}
+        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-muted transition-colors"
+      >
+        <Icon name="ClipboardPaste" size={15} />
+        Вставить фото из буфера
+      </button>
+      <button
+        type="button"
+        onClick={handlePasteByLink}
+        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-muted transition-colors"
+      >
+        <Icon name="Link" size={15} />
+        Вставить фото по ссылке
+      </button>
+      <button
+        type="button"
+        onClick={() => { setMenu(null); inputRef.current?.click(); }}
+        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-muted transition-colors"
+      >
+        <Icon name="Upload" size={15} />
+        Выбрать файл
+      </button>
+      {imagePreview && (
+        <button
+          type="button"
+          onClick={() => { setMenu(null); onClear(); }}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+        >
+          <Icon name="Trash2" size={15} />
+          Удалить фото
+        </button>
+      )}
+    </div>
+  ) : null;
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -72,28 +191,39 @@ export default function ImageDropzone({
 
   if (imagePreview) {
     return (
-      <div className="relative group w-full h-48 rounded-lg overflow-hidden border border-border">
-        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="flex items-center gap-1.5 bg-white text-black text-sm font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
-          >
-            <Icon name="RefreshCw" size={14} />
-            Заменить файл
-          </button>
-          <button
-            type="button"
-            onClick={onClear}
-            className="flex items-center gap-1.5 bg-red-500 text-white text-sm font-medium px-3 py-1.5 rounded-md hover:bg-red-600 transition-colors"
-          >
-            <Icon name="Trash2" size={14} />
-            Удалить
-          </button>
+      <>
+        <div
+          className="relative group w-full h-48 rounded-lg overflow-hidden border border-border"
+          onContextMenu={handleContextMenu}
+        >
+          <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="flex items-center gap-1.5 bg-white text-black text-sm font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
+            >
+              <Icon name="RefreshCw" size={14} />
+              Заменить файл
+            </button>
+            <button
+              type="button"
+              onClick={onClear}
+              className="flex items-center gap-1.5 bg-red-500 text-white text-sm font-medium px-3 py-1.5 rounded-md hover:bg-red-600 transition-colors"
+            >
+              <Icon name="Trash2" size={14} />
+              Удалить
+            </button>
+          </div>
+          <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded bg-black/45 px-1.5 py-0.5 text-[10px] text-white/90 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <Icon name="MousePointerClick" size={11} />
+            ПКМ — вставить фото
+          </div>
+          <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleInputChange} />
         </div>
-        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleInputChange} />
-      </div>
+        {pasteError && <p className="text-xs text-red-500 mt-1">{pasteError}</p>}
+        {contextMenu}
+      </>
     );
   }
 
@@ -122,6 +252,7 @@ export default function ImageDropzone({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
+          onContextMenu={handleContextMenu}
           className={`w-full h-36 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors select-none ${
             isDragging
               ? 'border-[#748c6d] bg-[#748c6d]/10'
@@ -132,6 +263,7 @@ export default function ImageDropzone({
           <p className="text-sm text-muted-foreground text-center">
             {isDragging ? 'Отпустите, чтобы загрузить' : 'Перетащите фото сюда или нажмите для выбора'}
           </p>
+          <p className="text-xs text-muted-foreground">ПКМ — вставить из буфера или по ссылке</p>
           <p className="text-xs text-muted-foreground">JPG, PNG, WEBP · до 5 МБ</p>
           <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleInputChange} />
         </div>
@@ -167,6 +299,9 @@ export default function ImageDropzone({
           </label>
         </div>
       )}
+
+      {pasteError && <p className="text-xs text-red-500">{pasteError}</p>}
+      {contextMenu}
     </div>
   );
 }
