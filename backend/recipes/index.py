@@ -133,6 +133,25 @@ def handler(event: dict, context) -> dict:
         
         print(f"[RECIPES] Параметры: recipe_id={recipe_id}, action={action}")
         
+        if method == 'GET' and action == 'supabase_diag':
+            diag = {}
+            diag['has_url'] = bool(os.environ.get('SUPABASE_URL'))
+            diag['has_key'] = bool(os.environ.get('SUPABASE_SERVICE_ROLE_KEY'))
+            diag['url'] = os.environ.get('SUPABASE_URL', '')
+            try:
+                png = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==')
+                url = upload_to_supabase(png, 'png')
+                diag['upload'] = 'ok'
+                diag['public_url'] = url
+            except urllib.error.HTTPError as he:
+                diag['upload'] = 'http_error'
+                diag['status'] = he.code
+                diag['body'] = he.read().decode('utf-8', 'ignore')[:500]
+            except Exception as ex:
+                diag['upload'] = 'error'
+                diag['error'] = str(ex)[:500]
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps(diag), 'isBase64Encoded': False}
+        
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
         psycopg2.extras.register_default_jsonb(conn)
         cur = conn.cursor()
