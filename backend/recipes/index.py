@@ -5,6 +5,35 @@ import psycopg2.extras
 import boto3
 import base64
 import uuid
+import urllib.request
+import urllib.error
+
+def upload_to_supabase(image_data: bytes, file_ext: str) -> str:
+    supabase_url = os.environ['SUPABASE_URL'].rstrip('/')
+    service_key = os.environ['SUPABASE_SERVICE_ROLE_KEY']
+    bucket = 'recipes'
+    filename = f"{uuid.uuid4()}.{file_ext}"
+    upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{filename}"
+    content_type = f"image/{'jpeg' if file_ext == 'jpg' else file_ext}"
+    req = urllib.request.Request(
+        upload_url,
+        data=image_data,
+        method='POST',
+        headers={
+            'Authorization': f'Bearer {service_key}',
+            'apikey': service_key,
+            'Content-Type': content_type,
+            'x-upsert': 'true',
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            resp.read()
+    except urllib.error.HTTPError as he:
+        err_body = he.read().decode('utf-8', 'ignore')
+        print(f"[RECIPES] SUPABASE HTTP {he.code}: {err_body}")
+        raise
+    return f"{supabase_url}/storage/v1/object/public/{bucket}/{filename}"
 
 def row_to_recipe(row, is_favorite=False) -> dict:
     return {
@@ -451,7 +480,6 @@ def handler(event: dict, context) -> dict:
             
             if body.get('image_url_import'):
                 try:
-                    import urllib.request
                     ext_url = body['image_url_import']
                     req = urllib.request.Request(ext_url, headers={'User-Agent': 'Mozilla/5.0'})
                     with urllib.request.urlopen(req, timeout=15) as resp:
@@ -460,30 +488,27 @@ def handler(event: dict, context) -> dict:
                     file_ext = 'jpg'
                     if 'png' in content_type: file_ext = 'png'
                     elif 'webp' in content_type: file_ext = 'webp'
-                    s3 = boto3.client('s3', endpoint_url='https://bucket.poehali.dev',
-                        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'], aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'])
-                    filename = f"recipes/{uuid.uuid4()}.{file_ext}"
-                    s3.put_object(Bucket='files', Key=filename, Body=img_data, ContentType=f'image/{file_ext}')
-                    post_image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
+                    post_image_url = upload_to_supabase(img_data, file_ext)
                 except Exception as e:
-                    print(f"[RECIPES] ⚠️ Ошибка копирования изображения из URL: {e}")
+                    print(f"[RECIPES] ⚠️ Ошибка копирования изображения из URL, сохраняю прямую ссылку: {e}")
+                    post_image_url = body['image_url_import']
             
             if body.get('image_base64'):
                 try:
-                    s3 = boto3.client('s3', endpoint_url='https://bucket.poehali.dev',
-                        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'], aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'])
                     b64 = body['image_base64']
                     if ',' in b64: b64 = b64.split(',')[1]
                     img_data = base64.b64decode(b64)
                     file_ext = 'jpg'
                     if body['image_base64'].startswith('data:image/png'): file_ext = 'png'
                     elif body['image_base64'].startswith('data:image/webp'): file_ext = 'webp'
-                    filename = f"recipes/{uuid.uuid4()}.{file_ext}"
-                    s3.put_object(Bucket='files', Key=filename, Body=img_data, ContentType=f'image/{file_ext}')
-                    post_image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
-                    print(f"[RECIPES] Изображение загружено при создании: {post_image_url}")
+                    post_image_url = upload_to_supabase(img_data, file_ext)
+                    print(f"[RECIPES] Изображение загружено при создании в Supabase: {post_image_url}")
                 except Exception as e:
-                    print(f"[RECIPES] ⚠️ Ошибка загрузки изображения при создании: {e}")
+                    print(f"[RECIPES] ⚠️ Ошибка загрузки изображения при создании, сохраняю как data-URL: {e}")
+                    fb = body['image_base64']
+                    if not fb.startswith('data:'):
+                        fb = f"data:image/jpeg;base64,{fb}"
+                    post_image_url = fb
             
             cur.execute(f"""
                 INSERT INTO {schema}.recipes 
@@ -526,10 +551,9 @@ def handler(event: dict, context) -> dict:
             
             image_url = body.get('image_url')
             
-            # Скачивание изображения из внешнего URL в S3
+            # Скачивание изображения из внешнего URL в Supabase Storage
             if body.get('image_url_import'):
                 try:
-                    import urllib.request
                     ext_url = body['image_url_import']
                     req = urllib.request.Request(ext_url, headers={'User-Agent': 'Mozilla/5.0'})
                     with urllib.request.urlopen(req, timeout=15) as resp:
@@ -542,30 +566,17 @@ def handler(event: dict, context) -> dict:
                         file_ext = 'webp'
                     elif 'gif' in content_type:
                         file_ext = 'gif'
-                    s3 = boto3.client('s3',
-                        endpoint_url='https://bucket.poehali.dev',
-                        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
-                        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
-                    )
-                    filename = f"recipes/{uuid.uuid4()}.{file_ext}"
-                    s3.put_object(Bucket='files', Key=filename, Body=img_data, ContentType=f'image/{file_ext}')
-                    image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
-                    print(f"[RECIPES] Изображение скопировано из URL в S3: {image_url}")
+                    image_url = upload_to_supabase(img_data, file_ext)
+                    print(f"[RECIPES] Изображение скопировано из URL в Supabase: {image_url}")
                 except Exception as e:
                     import traceback
                     print(f"[RECIPES] ⚠️ Ошибка копирования изображения из URL, сохраняю прямую ссылку: {e}")
                     print(traceback.format_exc())
                     image_url = body['image_url_import']
             
-            # Загрузка изображения в S3, если передан base64
+            # Загрузка изображения в Supabase Storage, если передан base64
             if body.get('image_base64'):
                 try:
-                    s3 = boto3.client('s3',
-                        endpoint_url='https://bucket.poehali.dev',
-                        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
-                        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
-                    )
-                    
                     base64_data = body['image_base64']
                     if ',' in base64_data:
                         base64_data = base64_data.split(',')[1]
@@ -577,16 +588,8 @@ def handler(event: dict, context) -> dict:
                     elif body['image_base64'].startswith('data:image/webp'):
                         file_ext = 'webp'
                     
-                    filename = f"recipes/{uuid.uuid4()}.{file_ext}"
-                    s3.put_object(
-                        Bucket='files',
-                        Key=filename,
-                        Body=image_data,
-                        ContentType=f'image/{file_ext}'
-                    )
-                    
-                    image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
-                    print(f"[RECIPES] Изображение загружено: {image_url}")
+                    image_url = upload_to_supabase(image_data, file_ext)
+                    print(f"[RECIPES] Изображение загружено в Supabase: {image_url}")
                 except Exception as e:
                     import traceback
                     print(f"[RECIPES] ⚠️ Ошибка загрузки изображения, сохраняю как data-URL: {e}")
