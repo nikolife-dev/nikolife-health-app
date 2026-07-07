@@ -614,9 +614,14 @@ def handler(event: dict, context) -> dict:
             ))
             
             conn.commit()
+
+            cur.execute(f"SELECT image_url FROM {schema}.recipes WHERE id = %s", (recipe_id,))
+            updated_row = cur.fetchone()
+            updated_image_url = updated_row[0] if updated_row else None
+
             cur.close()
             conn.close()
-            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True}), 'isBase64Encoded': False}
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}, 'body': json.dumps({'success': True, 'recipe': {'image_url': updated_image_url}}), 'isBase64Encoded': False}
         
         # DELETE /{id}
         if method == 'DELETE' and recipe_id:

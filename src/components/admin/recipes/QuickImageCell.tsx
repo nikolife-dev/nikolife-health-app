@@ -176,14 +176,16 @@ export default function QuickImageCell({ recipeId, imageUrl, recipeTitle, onUpda
       const res = await fetch(`${RECIPES_API}?id=${recipeId}`, {
         method: 'PUT',
         headers: { 'X-Auth-Token': token!, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_url: url }),
+        body: JSON.stringify({ image_url_import: url }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setPreview(url);
+        setPreview(data.recipe?.image_url || url);
         setShowUrlInput(false);
         setUrlValue('');
         onUpdated();
+      } else {
+        alert(data.error || 'Не удалось загрузить фото по ссылке');
       }
     } finally {
       setIsUploading(false);
