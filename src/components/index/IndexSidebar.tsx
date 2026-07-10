@@ -34,8 +34,8 @@ export default function IndexSidebar({ activeSection, setActiveSection }: IndexS
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col p-6 h-full">
-      <div className="mb-8">
-        <img src="/logo-emerald.png" alt="Nikolife" className="h-12 w-auto" />
+      <div className="mb-8 flex justify-center">
+        <img src="/logo-menu.png" alt="Nikolife" className="h-12 w-auto" />
       </div>
 
       <nav className="flex-1 space-y-2">
