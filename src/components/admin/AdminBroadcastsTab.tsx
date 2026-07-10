@@ -161,10 +161,23 @@ export default function AdminBroadcastsTab() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        toast({
-          title: 'Рассылка отправлена',
-          description: `Доставлено: ${data.sent_count} (TG: ${data.sent_telegram}, Email: ${data.sent_email})`,
-        });
+        const errs: string[] = data.errors || [];
+        if (data.sent_count === 0 && data.failed_count > 0) {
+          toast({
+            title: 'Никому не доставлено',
+            description: errs.length
+              ? `Причина: ${errs[0]}. Часто это значит, что получатель не начал диалог с ботом.`
+              : `Не доставлено: ${data.failed_count}. Проверьте, что получатели написали боту.`,
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Рассылка отправлена',
+            description:
+              `Доставлено: ${data.sent_count} (TG: ${data.sent_telegram}, Email: ${data.sent_email})` +
+              (data.failed_count ? ` · не доставлено: ${data.failed_count}` : ''),
+          });
+        }
         load();
       } else {
         toast({ title: data.error || 'Ошибка отправки', variant: 'destructive' });

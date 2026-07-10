@@ -3,6 +3,7 @@ import os
 import smtplib
 import ssl
 import urllib.request
+import urllib.error
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formataddr
@@ -65,15 +66,24 @@ def get_admin(cur, schema, token):
 def send_telegram(chat_id, text):
     token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
     if not token:
-        return False
+        return False, 'no_token'
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     data = json.dumps({'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML', 'disable_web_page_preview': True}).encode('utf-8')
     req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
     try:
         urllib.request.urlopen(req, timeout=10)
-        return True
-    except Exception:
-        return False
+        return True, None
+    except urllib.error.HTTPError as he:
+        try:
+            body = json.loads(he.read().decode('utf-8', 'ignore'))
+            desc = body.get('description', str(he.code))
+        except Exception:
+            desc = str(he.code)
+        print(f"[BROADCASTS] TG fail chat_id={chat_id}: {desc}")
+        return False, desc
+    except Exception as e:
+        print(f"[BROADCASTS] TG error chat_id={chat_id}: {e}")
+        return False, str(e)[:120]
 
 
 def send_email_batch(recipients, subject, html_body):
@@ -272,6 +282,7 @@ def handler(event, context):
         sent_tg = 0
         sent_email = 0
         failed = 0
+        error_samples = []
 
         if 'telegram' in ch:
             cur.execute(f"""
@@ -280,10 +291,13 @@ def handler(event, context):
             """)
             for name, tg_id in cur.fetchall():
                 text = f"<b>{title}</b>\n\n{message}"
-                if send_telegram(tg_id, text):
+                ok, err = send_telegram(tg_id, text)
+                if ok:
                     sent_tg += 1
                 else:
                     failed += 1
+                    if err and len(error_samples) < 5:
+                        error_samples.append(f"TG: {err}")
 
         if 'email' in ch:
             cur.execute(f"""
@@ -295,6 +309,9 @@ def handler(event, context):
             html_body = f"<h2 style='color:#748c6d'>{title}</h2><p>{message}</p>"
             sent_email, errs = send_email_batch(recipients, title, html_body)
             failed += max(0, len(recipients) - sent_email)
+            for e in (errs or [])[:5]:
+                if len(error_samples) < 5:
+                    error_samples.append(f"Email: {e}")
 
         total_sent = sent_tg + sent_email
         cur.execute(f"""
@@ -305,7 +322,7 @@ def handler(event, context):
         """, (total_sent, sent_tg, sent_email, failed, bid))
         conn.commit()
         cur.close(); conn.close()
-        return resp(200, {'success': True, 'sent_count': total_sent, 'sent_telegram': sent_tg, 'sent_email': sent_email, 'failed_count': failed})
+        return resp(200, {'success': True, 'sent_count': total_sent, 'sent_telegram': sent_tg, 'sent_email': sent_email, 'failed_count': failed, 'errors': error_samples})
 
     cur.close()
     conn.close()
