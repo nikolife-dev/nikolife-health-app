@@ -108,6 +108,53 @@ def handler(event, context):
         result['fixed_count'] = len(fixed)
         result['fixed'] = fixed[:50]
 
+    elif action == 'audit_categories':
+        dcur.execute('SELECT id, title, category FROM public."recipes" WHERE is_active = true ORDER BY id')
+        rows = dcur.fetchall()
+        json_like = []
+        empty_cat = []
+        bracket_or_quote = []
+        cat_usage = {}
+        for rid, title, cat in rows:
+            if cat is None or str(cat).strip() == '':
+                empty_cat.append([rid, title])
+                continue
+            c = str(cat)
+            if c.startswith('[') or '"' in c or c.startswith('{'):
+                bracket_or_quote.append([rid, title, c])
+                try:
+                    arr = json.loads(c)
+                    if isinstance(arr, list):
+                        json_like.append([rid, title, c])
+                except Exception:
+                    pass
+            for part in c.split(','):
+                p = part.strip().strip('[]"{}')
+                if p:
+                    cat_usage[p] = cat_usage.get(p, 0) + 1
+        result['total'] = len(rows)
+        result['json_like_count'] = len(json_like)
+        result['bracket_or_quote'] = bracket_or_quote[:50]
+        result['empty_count'] = len(empty_cat)
+        result['empty'] = empty_cat[:50]
+        result['categories'] = dict(sorted(cat_usage.items(), key=lambda x: -x[1]))
+
+    elif action == 'fix_typos':
+        mapping = {
+            'салаты': 'Салаты', 'салат': 'Салаты',
+            'десерт': 'Десерты', 'дессерт': 'Десерты', 'Дессерты': 'Десерты', 'дессерты': 'Десерты',
+            'ланч-боксы': 'Ланч-боксы',
+        }
+        fixed = []
+        for wrong, right in mapping.items():
+            dcur.execute('UPDATE public."recipes" SET category = %s WHERE category = %s', (right, wrong))
+            if dcur.rowcount:
+                fixed.append([wrong, right, dcur.rowcount])
+        dcur.execute("UPDATE public.\"recipes\" SET category = '' WHERE category = 'NULL'")
+        result['null_text_fixed'] = dcur.rowcount
+        dst.commit()
+        result['fixed'] = fixed
+
     elif action == 'cat':
         dcur.execute('SELECT id, title, category, pg_typeof(category)::text FROM public."recipes" WHERE title ILIKE %s', ('%ирис%',))
         result['rows'] = [list(r) for r in dcur.fetchall()]
