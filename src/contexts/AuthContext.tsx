@@ -19,6 +19,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string, telegramData?: { telegram_id?: number; telegram_username?: string }) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  setSession: (token: string, user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -129,6 +130,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await checkAuth();
   };
 
+  const setSession = (token: string, userData: User) => {
+    localStorage.setItem('auth_token', token);
+    setUser(userData);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -138,7 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         register,
         logout,
-        refreshUser
+        refreshUser,
+        setSession
       }}
     >
       {children}

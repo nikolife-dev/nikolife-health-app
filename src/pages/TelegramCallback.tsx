@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 export default function TelegramCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { setSession } = useAuth();
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(true);
 
@@ -61,7 +61,7 @@ export default function TelegramCallback() {
         console.log('[TG CALLBACK] Ответ от backend:', data);
 
         if (data.success && data.token) {
-          localStorage.setItem('auth_token', data.token);
+          setSession(data.token, data.user);
           
           // Небольшая задержка для красоты
           await new Promise(resolve => setTimeout(resolve, 500));
