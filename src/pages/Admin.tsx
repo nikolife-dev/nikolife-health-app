@@ -30,6 +30,7 @@ import AdminMentalHealthTab from '@/components/admin/AdminMentalHealthTab';
 import AdminUsersTab from '@/components/admin/AdminUsersTab';
 import AdminRecipesTab from '@/components/admin/AdminRecipesTab';
 import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
+import AdminBroadcastsTab from '@/components/admin/AdminBroadcastsTab';
 import AdminChatsTab from '@/components/admin/AdminChatsTab';
 import AdminPaymentGatewaysTab from '@/components/admin/AdminPaymentGatewaysTab';
 import funcUrls from '../../backend/func2url.json';
@@ -157,6 +158,7 @@ export default function Admin() {
     { value: 'nutrition', label: 'Питание', icon: 'Apple' },
     { value: 'mental', label: 'Ментальное здоровье', icon: 'Brain' },
     { value: 'notifications', label: 'Уведомления', icon: 'Bell' },
+    { value: 'broadcasts', label: 'Рассылки', icon: 'Mails' },
     { value: 'chats', label: 'Чаты', icon: 'MessageSquare' },
   ];
 
@@ -383,6 +385,7 @@ export default function Admin() {
 
           <AdminMentalHealthTab />
           <AdminNotificationsTab />
+          <AdminBroadcastsTab />
           <AdminChatsTab />
           <AdminPaymentGatewaysTab />
             </Tabs>
