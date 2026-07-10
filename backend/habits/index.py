@@ -59,7 +59,8 @@ def handler(event: dict, context) -> dict:
                        (SELECT COUNT(*) FROM public.habit_completions 
                         WHERE habit_id = h.id AND completed_date = CURRENT_DATE) as completed_today,
                        (SELECT COUNT(*) FROM public.habit_completions 
-                        WHERE habit_id = h.id) as total_completions
+                        WHERE habit_id = h.id) as total_completions,
+                       h.reminder_enabled, h.reminder_time, h.reminder_channel
                 FROM public.habits h
                 WHERE h.user_id = %s
                 ORDER BY h.created_at DESC
@@ -129,7 +130,10 @@ def handler(event: dict, context) -> dict:
                     'completions_today': completions_today,
                     'day_progress': min(100, (completions_today / times_per_day) * 100) if times_per_day > 0 else 0,
                     'week_progress': week_progress,
-                    'month_progress': month_progress
+                    'month_progress': month_progress,
+                    'reminder_enabled': bool(row[10]),
+                    'reminder_time': (str(row[11])[:5] if row[11] else ''),
+                    'reminder_channel': row[12] or 'telegram'
                 })
             
             return {
@@ -187,6 +191,7 @@ def handler(event: dict, context) -> dict:
             goal_days = max(body.get('goal_days', 30), 30)
             days_of_week = body.get('days_of_week', [])
             times_per_day = body.get('times_per_day', 1)
+            reminder_enabled, reminder_time, reminder_channel = parse_reminder(body)
             
             if not title or not category or not goal or not days_of_week:
                 return {
@@ -200,10 +205,12 @@ def handler(event: dict, context) -> dict:
             
             cur.execute("""
                 INSERT INTO public.habits 
-                (user_id, title, category, goal, goal_days, days_of_week, times_per_day)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                (user_id, title, category, goal, goal_days, days_of_week, times_per_day,
+                 reminder_enabled, reminder_time, reminder_channel)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
-            """, (user_id, title, category, goal, goal_days, days_of_week_json, times_per_day))
+            """, (user_id, title, category, goal, goal_days, days_of_week_json, times_per_day,
+                  reminder_enabled, reminder_time, reminder_channel))
             
             habit_id = cur.fetchone()[0]
             conn.commit()
@@ -245,6 +252,7 @@ def handler(event: dict, context) -> dict:
             goal_days = max(body.get('goal_days', 30), 30)
             days_of_week = body.get('days_of_week', [])
             times_per_day = body.get('times_per_day', 1)
+            reminder_enabled, reminder_time, reminder_channel = parse_reminder(body)
             
             if not title or not category or not goal or not days_of_week:
                 return {
@@ -259,9 +267,11 @@ def handler(event: dict, context) -> dict:
             cur.execute("""
                 UPDATE public.habits 
                 SET title = %s, category = %s, goal = %s, goal_days = %s, 
-                    days_of_week = %s, times_per_day = %s
+                    days_of_week = %s, times_per_day = %s,
+                    reminder_enabled = %s, reminder_time = %s, reminder_channel = %s
                 WHERE id = %s AND user_id = %s
-            """, (title, category, goal, goal_days, days_of_week_json, times_per_day, habit_id, user_id))
+            """, (title, category, goal, goal_days, days_of_week_json, times_per_day,
+                  reminder_enabled, reminder_time, reminder_channel, habit_id, user_id))
             
             conn.commit()
             
@@ -319,6 +329,27 @@ def handler(event: dict, context) -> dict:
     finally:
         cur.close()
         conn.close()
+
+
+def parse_reminder(body):
+    '''Нормализует поля напоминания из тела запроса'''
+    enabled = bool(body.get('reminder_enabled', False))
+    time_raw = (body.get('reminder_time') or '').strip()
+    channel = body.get('reminder_channel') or 'telegram'
+    if channel not in ('telegram', 'email'):
+        channel = 'telegram'
+    # Валидация формата HH:MM
+    valid_time = None
+    if time_raw and len(time_raw) == 5 and time_raw[2] == ':':
+        try:
+            hh, mm = int(time_raw[:2]), int(time_raw[3:])
+            if 0 <= hh <= 23 and 0 <= mm <= 59:
+                valid_time = f"{hh:02d}:{mm:02d}"
+        except ValueError:
+            valid_time = None
+    if not valid_time:
+        enabled = False
+    return enabled, valid_time, channel
 
 
 def calculate_week_progress(week_completions, days_of_week, times_per_day):

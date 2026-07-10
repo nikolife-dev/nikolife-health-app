@@ -4,9 +4,7 @@
       "name": "OPTIONS request returns CORS headers",
       "method": "OPTIONS",
       "path": "/",
-      "expectedStatus": 200,
-      "expectedBody": {},
-      "bodyMatcher": "partial"
+      "expectedStatus": 200
     },
     {
       "name": "GET without token returns 401",

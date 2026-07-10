@@ -14,6 +14,9 @@ export interface Habit {
   day_progress: number;
   week_progress: number;
   month_progress: number;
+  reminder_enabled: boolean;
+  reminder_time: string;
+  reminder_channel: 'telegram' | 'email';
 }
 
 export interface HabitTemplate {
@@ -30,6 +33,9 @@ export interface NewHabitData {
   goal_days: number;
   days_of_week: number[];
   times_per_day: number;
+  reminder_enabled: boolean;
+  reminder_time: string;
+  reminder_channel: 'telegram' | 'email';
 }
 
 export const CATEGORIES = [

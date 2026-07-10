@@ -17,7 +17,66 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Habit, HabitTemplate, NewHabitData, CATEGORIES, WEEKDAYS } from './types';
+
+interface ReminderValue {
+  reminder_enabled: boolean;
+  reminder_time: string;
+  reminder_channel: 'telegram' | 'email';
+}
+
+function ReminderFields({
+  value,
+  onChange,
+}: {
+  value: ReminderValue;
+  onChange: (patch: Partial<ReminderValue>) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-gray-200 p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icon name="Bell" size={18} className="text-[#748c6d]" />
+          <Label className="cursor-pointer">Напоминание</Label>
+        </div>
+        <Switch
+          checked={value.reminder_enabled}
+          onCheckedChange={(checked) => onChange({ reminder_enabled: checked })}
+        />
+      </div>
+      {value.reminder_enabled && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs text-gray-500">Время</Label>
+            <Input
+              type="time"
+              value={value.reminder_time || '09:00'}
+              onChange={(e) => onChange({ reminder_time: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-gray-500">Канал</Label>
+            <Select
+              value={value.reminder_channel}
+              onValueChange={(val) =>
+                onChange({ reminder_channel: val as 'telegram' | 'email' })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="telegram">Telegram</SelectItem>
+                <SelectItem value="email">E-mail</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface TemplateDialogProps {
   open: boolean;
@@ -105,6 +164,9 @@ export function MyHabitsDialog({ open, onOpenChange, habits, onEdit, onDelete }:
                       <span>✅ {habit.total_completions} выполнений</span>
                       <span>📅 {habit.goal_days} дней цель</span>
                       <span>🔁 {habit.times_per_day}x/день</span>
+                      {habit.reminder_enabled && (
+                        <span>🔔 {habit.reminder_time} · {habit.reminder_channel === 'email' ? 'E-mail' : 'Telegram'}</span>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {WEEKDAYS.map((day) => (
@@ -270,6 +332,10 @@ export function CreateHabitDialog({
               }
             />
           </div>
+          <ReminderFields
+            value={newHabit}
+            onChange={(patch) => setNewHabit({ ...newHabit, ...patch })}
+          />
           <Button onClick={onCreateHabit} className="w-full min-h-[44px]">
             Создать привычку
           </Button>
@@ -394,6 +460,10 @@ export function EditHabitDialog({
                 }
               />
             </div>
+            <ReminderFields
+              value={editingHabit}
+              onChange={(patch) => setEditingHabit({ ...editingHabit, ...patch })}
+            />
             <Button onClick={onUpdateHabit} className="w-full min-h-[44px]">
               Сохранить изменения
             </Button>

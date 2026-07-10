@@ -1,0 +1,4 @@
+ALTER TABLE habits
+  ADD COLUMN IF NOT EXISTS reminder_enabled BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS reminder_time VARCHAR(5),
+  ADD COLUMN IF NOT EXISTS reminder_channel VARCHAR(20) DEFAULT 'telegram';

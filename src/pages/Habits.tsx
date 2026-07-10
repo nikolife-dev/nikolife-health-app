@@ -45,6 +45,9 @@ export default function Habits() {
     goal_days: 30,
     days_of_week: [],
     times_per_day: 1,
+    reminder_enabled: false,
+    reminder_time: '09:00',
+    reminder_channel: 'telegram',
   });
 
   useEffect(() => {
@@ -164,6 +167,9 @@ export default function Habits() {
           goal_days: 30,
           days_of_week: [],
           times_per_day: 1,
+          reminder_enabled: false,
+          reminder_time: '09:00',
+          reminder_channel: 'telegram',
         });
         loadHabits();
       } else {
@@ -222,6 +228,9 @@ export default function Habits() {
             goal_days: editingHabit.goal_days,
             days_of_week: editingHabit.days_of_week,
             times_per_day: editingHabit.times_per_day,
+            reminder_enabled: editingHabit.reminder_enabled,
+            reminder_time: editingHabit.reminder_time,
+            reminder_channel: editingHabit.reminder_channel,
           }),
         }
       );
