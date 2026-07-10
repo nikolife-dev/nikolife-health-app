@@ -105,6 +105,17 @@ export default function AdminBroadcastsTab() {
     setDialogOpen(true);
   };
 
+  const openDuplicate = (b: Broadcast) => {
+    setEditing(null);
+    setForm({
+      title: `${b.title} (копия)`,
+      message: b.message,
+      telegram: b.channels.includes('telegram'),
+      email: b.channels.includes('email'),
+    });
+    setDialogOpen(true);
+  };
+
   const save = async () => {
     if (!form.title.trim() || !form.message.trim()) {
       toast({ title: 'Заполните заголовок и текст', variant: 'destructive' });
@@ -294,6 +305,14 @@ export default function AdminBroadcastsTab() {
                           </Button>
                         </>
                       )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        title="Дублировать"
+                        onClick={() => openDuplicate(b)}
+                      >
+                        <Icon name="Copy" size={14} />
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
