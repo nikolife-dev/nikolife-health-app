@@ -18,6 +18,7 @@ import CommunitySection from '@/components/index/CommunitySection';
 import MentalHealthSection from '@/components/index/MentalHealthSection';
 import ProgressSection from '@/components/index/ProgressSection';
 import SupportSection from '@/components/index/SupportSection';
+import SiteFooter from '@/components/index/SiteFooter';
 import { LiveLogs, useLiveLogs } from '@/components/LiveLogs';
 
 interface Habit {
@@ -401,6 +402,7 @@ export default function Index() {
                 <SupportSection />
               )}
             </div>
+            <SiteFooter />
           </ScrollArea>
         </main>
       </div>
