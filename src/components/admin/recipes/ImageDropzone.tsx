@@ -20,11 +20,16 @@ export default function ImageDropzone({
   const [isDragging, setIsDragging] = useState(false);
   const [tab, setTab] = useState<'file' | 'url'>('file');
   const [urlValue, setUrlValue] = useState('');
-  const [copyToStorage, setCopyToStorage] = useState(false);
+  const [copyToStorage, setCopyToStorage] = useState(true);
   const [urlError, setUrlError] = useState('');
 
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [pasteError, setPasteError] = useState('');
+  const [imgLoadError, setImgLoadError] = useState(false);
+
+  useEffect(() => {
+    setImgLoadError(false);
+  }, [imagePreview]);
 
   const processFile = useCallback(
     async (file: File) => {
@@ -196,7 +201,24 @@ export default function ImageDropzone({
           className="relative group w-full h-48 rounded-lg overflow-hidden border border-border"
           onContextMenu={handleContextMenu}
         >
-          <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+          {imgLoadError ? (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted text-center px-3">
+              <Icon name="ImageOff" size={22} className="text-muted-foreground" />
+              <p className="text-xs text-muted-foreground leading-tight">
+                Сайт не даёт показать фото по прямой ссылке.
+                <br />
+                Оно будет скопировано в хранилище при сохранении.
+              </p>
+            </div>
+          ) : (
+            <img
+              src={imagePreview}
+              alt="Preview"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+              onError={() => setImgLoadError(true)}
+            />
+          )}
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
             <button
               type="button"
