@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Icon from '@/components/ui/icon';
 import funcUrls from '../../../../backend/func2url.json';
 import { compressImage } from '@/lib/compressImage';
@@ -35,7 +36,11 @@ export default function QuickImageCell({ recipeId, imageUrl, recipeTitle, onUpda
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setMenu({ x: e.clientX, y: e.clientY });
+    const menuW = 210;
+    const menuH = preview ? 176 : 132;
+    const x = Math.min(e.clientX, window.innerWidth - menuW - 8);
+    const y = Math.min(e.clientY, window.innerHeight - menuH - 8);
+    setMenu({ x: Math.max(8, x), y: Math.max(8, y) });
   };
 
   const pasteFromClipboard = async () => {
@@ -100,11 +105,12 @@ export default function QuickImageCell({ recipeId, imageUrl, recipeTitle, onUpda
     }
   };
 
-  const contextMenu = menu ? (
+  const contextMenu = menu ? createPortal(
     <div
       className="fixed z-[100] min-w-[210px] rounded-md border border-border bg-white shadow-lg py-1"
       style={{ top: menu.y, left: menu.x }}
       onClick={(e) => e.stopPropagation()}
+      onContextMenu={(e) => e.preventDefault()}
     >
       <button
         type="button"
@@ -140,7 +146,8 @@ export default function QuickImageCell({ recipeId, imageUrl, recipeTitle, onUpda
           Удалить фото
         </button>
       )}
-    </div>
+    </div>,
+    document.body
   ) : null;
 
   const uploadFile = async (file: File) => {
