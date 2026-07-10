@@ -1,6 +1,28 @@
 import json
 import os
+import hmac
+import hashlib
 import psycopg2
+
+
+def verify_telegram_auth(auth_data: dict, bot_token: str) -> bool:
+    '''Проверяет подлинность данных Telegram Login Widget по HMAC-SHA256'''
+    if not bot_token:
+        return False
+    check_hash = auth_data.pop('hash', None)
+    if not check_hash:
+        return False
+    # Оставляем только поля, пришедшие от Telegram
+    allowed = ('id', 'first_name', 'last_name', 'username', 'photo_url', 'auth_date')
+    pairs = []
+    for k in sorted(auth_data.keys()):
+        if k in allowed and auth_data[k] is not None and auth_data[k] != '':
+            pairs.append(f"{k}={auth_data[k]}")
+    data_check_string = '\n'.join(pairs)
+    secret_key = hashlib.sha256(bot_token.encode()).digest()
+    calc_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(calc_hash, str(check_hash))
+
 
 def handler(event: dict, context) -> dict:
     '''API для управления профилем пользователя'''
@@ -11,7 +33,7 @@ def handler(event: dict, context) -> dict:
             'statusCode': 200,
             'headers': {
                 'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+                'Access-Control-Allow-Methods': 'GET, PUT, POST, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type, X-Authorization',
                 'Access-Control-Max-Age': '86400'
             },
@@ -61,6 +83,73 @@ def handler(event: dict, context) -> dict:
             }
         
         user_id, current_name, current_email, telegram_id, telegram_username, selected_plan, onboarding_completed, receive_notifications = user
+        
+        query_params = event.get('queryStringParameters') or {}
+        action = query_params.get('action', '')
+        
+        # Привязка Telegram к текущему аккаунту
+        if method == 'POST' and action == 'link_telegram':
+            body = json.loads(event.get('body', '{}'))
+            tg_id = body.get('id')
+            tg_username = body.get('username')
+            bot_token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+            
+            if not verify_telegram_auth(dict(body), bot_token):
+                cur.close(); conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Не удалось проверить данные Telegram'}),
+                    'isBase64Encoded': False
+                }
+            
+            if not tg_id:
+                cur.close(); conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Нет данных Telegram'}),
+                    'isBase64Encoded': False
+                }
+            
+            # Проверяем, не привязан ли этот Telegram к другому аккаунту
+            cur.execute(f"SELECT id FROM {schema}.users WHERE telegram_id = %s AND id <> %s", (tg_id, user_id))
+            if cur.fetchone():
+                cur.close(); conn.close()
+                return {
+                    'statusCode': 409,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Этот Telegram уже привязан к другому аккаунту'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur.execute(
+                f"UPDATE {schema}.users SET telegram_id = %s, telegram_username = %s WHERE id = %s",
+                (tg_id, tg_username, user_id)
+            )
+            conn.commit()
+            cur.close(); conn.close()
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'success': True, 'telegram_id': tg_id, 'telegram_username': tg_username}),
+                'isBase64Encoded': False
+            }
+        
+        # Отвязка Telegram
+        if method == 'POST' and action == 'unlink_telegram':
+            cur.execute(
+                f"UPDATE {schema}.users SET telegram_id = NULL, telegram_username = NULL WHERE id = %s",
+                (user_id,)
+            )
+            conn.commit()
+            cur.close(); conn.close()
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'success': True}),
+                'isBase64Encoded': False
+            }
         
         if method == 'GET':
             initials = ''.join([word[0] for word in current_name.split()[:2]]).upper()

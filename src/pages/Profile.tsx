@@ -3,6 +3,7 @@ import Icon from '@/components/ui/icon';
 import { LiveLogs } from '@/components/LiveLogs';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfileStats from '@/components/profile/ProfileStats';
+import TelegramLinkCard from '@/components/profile/TelegramLinkCard';
 import SubscriptionCard from '@/components/profile/SubscriptionCard';
 import PricingComparison from '@/components/profile/PricingComparison';
 import { useProfileData } from './profile/useProfileData';
@@ -34,6 +35,7 @@ export default function Profile() {
     handleSaveProfile,
     handleSettingsClick,
     handleSaveSettings,
+    handleUnlinkTelegram,
   } = useProfileData();
 
   if (isLoadingProfile) {
@@ -85,6 +87,11 @@ export default function Profile() {
               onSettingsClick={handleSettingsClick}
             />
             <ProfileStats userStats={userStats} />
+            <TelegramLinkCard
+              telegramUsername={userProfile.telegram_username}
+              telegramId={userProfile.telegram_id}
+              onUnlink={handleUnlinkTelegram}
+            />
           </div>
 
           <div className="lg:col-span-2 space-y-6">

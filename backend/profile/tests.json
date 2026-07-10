@@ -23,6 +23,19 @@
         "error": "string"
       },
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "Link telegram without token",
+      "method": "POST",
+      "path": "/?action=link_telegram",
+      "body": {
+        "id": 123
+      },
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
     }
   ]
 }

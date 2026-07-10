@@ -15,6 +15,7 @@ import Onboarding from "./pages/Onboarding";
 import Pricing from "./pages/Pricing";
 import Checkout from "./pages/Checkout";
 import Profile from "./pages/Profile";
+import ProfileTelegramLink from "./pages/ProfileTelegramLink";
 import Recipes from "./pages/Recipes";
 import Habits from "./pages/Habits";
 import Admin from "./pages/Admin";
@@ -58,6 +59,11 @@ const App = () => (
             <Route path="/profile" element={
               <ProtectedRoute requiresPlan={true}>
                 <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile/telegram/link" element={
+              <ProtectedRoute>
+                <ProfileTelegramLink />
               </ProtectedRoute>
             } />
             <Route path="/recipes" element={

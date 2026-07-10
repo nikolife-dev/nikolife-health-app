@@ -21,6 +21,7 @@ export function useProfileData() {
     email: '',
     avatar: '',
     telegram_username: '',
+    telegram_id: null as number | null,
     selected_plan: '',
     receive_notifications: true
   });
@@ -360,6 +361,31 @@ export function useProfileData() {
     }
   };
 
+  const handleUnlinkTelegram = async () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    try {
+      const response = await fetch(`${funcUrls.profile}?action=unlink_telegram`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Authorization': `Bearer ${token}`,
+        },
+        body: '{}',
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setUserProfile((prev) => ({ ...prev, telegram_id: null, telegram_username: '' }));
+        await refreshUser();
+        toast({ title: 'Готово', description: 'Telegram отвязан' });
+      } else {
+        toast({ title: 'Ошибка', description: data.error || 'Не удалось отвязать', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Ошибка', description: 'Не удалось отвязать Telegram', variant: 'destructive' });
+    }
+  };
+
   return {
     navigate,
     logs,
@@ -384,5 +410,6 @@ export function useProfileData() {
     handleSaveProfile,
     handleSettingsClick,
     handleSaveSettings,
+    handleUnlinkTelegram,
   };
 }
