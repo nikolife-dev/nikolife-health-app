@@ -264,8 +264,8 @@ def handler(event: dict, context) -> dict:
             query_params = []
             
             if category:
-                query += " AND (category = %s OR category ILIKE %s OR category ILIKE %s OR category ILIKE %s)"
-                query_params.extend([category, f"{category},%", f"%, {category}", f"%, {category},%"])
+                query += " AND (category = %s OR category ILIKE %s OR category ILIKE %s OR category ILIKE %s OR category ILIKE %s)"
+                query_params.extend([category, f"{category},%", f"%, {category}", f"%, {category},%", f"%\"{category}\"%"])
             
             if search:
                 query += " AND (title ILIKE %s OR description ILIKE %s)"

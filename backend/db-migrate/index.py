@@ -89,6 +89,31 @@ def handler(event, context):
         result['source'] = 'ok'
         result['dest_version'] = dcur.fetchone()[0][:40]
 
+    elif action == 'fix_categories':
+        dcur.execute("SELECT id, category FROM public.\"recipes\" WHERE category LIKE '[%'")
+        rows = dcur.fetchall()
+        fixed = []
+        for rid, cat in rows:
+            try:
+                arr = json.loads(cat)
+                if isinstance(arr, list):
+                    new_cat = ', '.join(str(x).strip() for x in arr if str(x).strip())
+                else:
+                    new_cat = str(arr)
+            except Exception:
+                new_cat = cat
+            dcur.execute('UPDATE public."recipes" SET category = %s WHERE id = %s', (new_cat, rid))
+            fixed.append([rid, cat, new_cat])
+        dst.commit()
+        result['fixed_count'] = len(fixed)
+        result['fixed'] = fixed[:50]
+
+    elif action == 'cat':
+        dcur.execute('SELECT id, title, category, pg_typeof(category)::text FROM public."recipes" WHERE title ILIKE %s', ('%ирис%',))
+        result['rows'] = [list(r) for r in dcur.fetchall()]
+        dcur.execute("SELECT DISTINCT category FROM public.\"recipes\" WHERE category ILIKE %s LIMIT 20", ('%есерт%',))
+        result['desert_variants'] = [r[0] for r in dcur.fetchall()]
+
     elif action == 'whereami':
         dburl = os.environ.get('DATABASE_URL', '')
         supurl = os.environ.get('SUPABASE_DB_URL', '')
