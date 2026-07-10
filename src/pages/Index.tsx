@@ -328,7 +328,7 @@ export default function Index() {
                 <IndexSidebar activeSection={activeSection} setActiveSection={handleSectionChange} />
               </SheetContent>
             </Sheet>
-            <img src="/logo-emerald.png" alt="Nikolife" className="h-8 w-auto" />
+            <img src="/logo-menu.png" alt="Nikolife" className="h-8 w-auto" />
             <div className="w-[44px]" />
           </div>
         </div>
