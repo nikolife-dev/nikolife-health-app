@@ -48,6 +48,7 @@ export default function Habits() {
     reminder_enabled: false,
     reminder_time: '09:00',
     reminder_channel: 'telegram',
+    reminder_timezone: '+03:00',
   });
 
   useEffect(() => {
@@ -170,6 +171,7 @@ export default function Habits() {
           reminder_enabled: false,
           reminder_time: '09:00',
           reminder_channel: 'telegram',
+          reminder_timezone: '+03:00',
         });
         loadHabits();
       } else {
@@ -231,6 +233,7 @@ export default function Habits() {
             reminder_enabled: editingHabit.reminder_enabled,
             reminder_time: editingHabit.reminder_time,
             reminder_channel: editingHabit.reminder_channel,
+            reminder_timezone: editingHabit.reminder_timezone,
           }),
         }
       );

@@ -1,0 +1,3 @@
+ALTER TABLE habits
+  ADD COLUMN IF NOT EXISTS reminder_timezone VARCHAR(8) DEFAULT '+03:00',
+  ADD COLUMN IF NOT EXISTS reminder_last_sent DATE;

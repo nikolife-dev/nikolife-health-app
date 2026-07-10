@@ -18,12 +18,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Habit, HabitTemplate, NewHabitData, CATEGORIES, WEEKDAYS } from './types';
+import { Habit, HabitTemplate, NewHabitData, CATEGORIES, WEEKDAYS, TIMEZONES } from './types';
 
 interface ReminderValue {
   reminder_enabled: boolean;
   reminder_time: string;
   reminder_channel: 'telegram' | 'email';
+  reminder_timezone: string;
 }
 
 function ReminderFields({
@@ -46,29 +47,49 @@ function ReminderFields({
         />
       </div>
       {value.reminder_enabled && (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs text-gray-500">Время</Label>
-            <Input
-              type="time"
-              value={value.reminder_time || '09:00'}
-              onChange={(e) => onChange({ reminder_time: e.target.value })}
-            />
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-gray-500">Время</Label>
+              <Input
+                type="time"
+                value={value.reminder_time || '09:00'}
+                onChange={(e) => onChange({ reminder_time: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">Канал</Label>
+              <Select
+                value={value.reminder_channel}
+                onValueChange={(val) =>
+                  onChange({ reminder_channel: val as 'telegram' | 'email' })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="telegram">Telegram</SelectItem>
+                  <SelectItem value="email">E-mail</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div>
-            <Label className="text-xs text-gray-500">Канал</Label>
+            <Label className="text-xs text-gray-500">Часовой пояс</Label>
             <Select
-              value={value.reminder_channel}
-              onValueChange={(val) =>
-                onChange({ reminder_channel: val as 'telegram' | 'email' })
-              }
+              value={value.reminder_timezone || '+03:00'}
+              onValueChange={(val) => onChange({ reminder_timezone: val })}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="telegram">Telegram</SelectItem>
-                <SelectItem value="email">E-mail</SelectItem>
+                {TIMEZONES.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

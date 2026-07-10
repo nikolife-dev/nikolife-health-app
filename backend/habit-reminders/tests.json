@@ -1,0 +1,1 @@
+{"tests": [{"name": "OPTIONS", "method": "OPTIONS", "path": "/", "expectedStatus": 200}, {"name": "run scheduler", "method": "GET", "path": "/", "expectedStatus": 200}]}
