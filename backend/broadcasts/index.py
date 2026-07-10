@@ -208,13 +208,20 @@ def handler(event, context):
             cur.close(); conn.close()
             return resp(400, {'error': 'Заполните заголовок и текст'})
         ch = ','.join([c for c in channels if c in ('telegram', 'email')]) or 'telegram'
-        total = count_recipients(cur, schema, ch.split(','))
-        cur.execute(f"""
-            INSERT INTO {schema}.broadcasts (title, message, channels, status, total_recipients, created_by)
-            VALUES (%s, %s, %s, 'draft', %s, %s) RETURNING id
-        """, (title, message, ch, total, admin['id']))
-        new_id = cur.fetchone()[0]
-        conn.commit()
+        try:
+            total = count_recipients(cur, schema, ch.split(','))
+            cur.execute(f"""
+                INSERT INTO {schema}.broadcasts (title, message, channels, status, total_recipients, created_by)
+                VALUES (%s, %s, %s, 'draft', %s, %s) RETURNING id
+            """, (title, message, ch, total, admin['id']))
+            new_id = cur.fetchone()[0]
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            import traceback
+            print('[BROADCASTS] POST error:', traceback.format_exc())
+            cur.close(); conn.close()
+            return resp(500, {'error': f'Ошибка БД: {str(e)[:200]}'})
         cur.close(); conn.close()
         return resp(200, {'success': True, 'id': new_id})
 
