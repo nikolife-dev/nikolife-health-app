@@ -351,7 +351,7 @@ export default function Auth() {
         {/* Header */}
         <div className="text-center space-y-3">
           <div className="w-16 h-16 mx-auto bg-gradient-to-br from-[#748c6d] to-[#5a7052] rounded-2xl flex items-center justify-center shadow-lg">
-            <Icon name="Heart" size={32} className="text-white" />
+            <img src="/logo-white.png" alt="Nikolife" className="h-9 w-auto" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900">
             {mode === 'login' ? 'Добро пожаловать' : mode === 'register' ? 'Регистрация' : 'Восстановление пароля'}
