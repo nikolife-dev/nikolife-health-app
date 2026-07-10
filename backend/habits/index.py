@@ -3,7 +3,7 @@ import os
 import psycopg2
 from datetime import datetime, timedelta
 
-DSN = os.environ.get('DATABASE_URL')
+DSN = (os.environ.get('SUPABASE_DB_URL') or os.environ.get('DATABASE_URL'))
 
 def handler(event: dict, context) -> dict:
     '''API для управления привычками пользователя'''

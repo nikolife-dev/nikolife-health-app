@@ -90,9 +90,9 @@ def handler(event: dict, context) -> dict:
                     }
                 
                 # Ищем или создаем пользователя по telegram_id
-                conn = psycopg2.connect(os.environ['DATABASE_URL'])
+                conn = psycopg2.connect((os.environ.get('SUPABASE_DB_URL') or os.environ['DATABASE_URL']))
                 cur = conn.cursor()
-                schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+                schema = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
                 
                 telegram_id = body.get('id')
                 telegram_username = body.get('username')
@@ -181,10 +181,10 @@ def handler(event: dict, context) -> dict:
                 password_hash = hash_password(password)
                 token = generate_token()
                 
-                conn = psycopg2.connect(os.environ['DATABASE_URL'])
+                conn = psycopg2.connect((os.environ.get('SUPABASE_DB_URL') or os.environ['DATABASE_URL']))
                 cur = conn.cursor()
                 
-                schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+                schema = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
                 cur.execute(f"SELECT id FROM {schema}.users WHERE email = %s", (email,))
                 if cur.fetchone():
                     cur.close()
@@ -238,10 +238,10 @@ def handler(event: dict, context) -> dict:
                 
                 password_hash = hash_password(password)
                 
-                conn = psycopg2.connect(os.environ['DATABASE_URL'])
+                conn = psycopg2.connect((os.environ.get('SUPABASE_DB_URL') or os.environ['DATABASE_URL']))
                 cur = conn.cursor()
                 
-                schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+                schema = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
                 cur.execute(f"""
                     SELECT id, name, email, password_hash, selected_plan, onboarding_completed FROM {schema}.users WHERE email = %s
                 """, (email,))
@@ -330,10 +330,10 @@ def handler(event: dict, context) -> dict:
                     'isBase64Encoded': False
                 }
             
-            conn = psycopg2.connect(os.environ['DATABASE_URL'])
+            conn = psycopg2.connect((os.environ.get('SUPABASE_DB_URL') or os.environ['DATABASE_URL']))
             cur = conn.cursor()
             
-            schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+            schema = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
             cur.execute(f"""
                 SELECT id, name, email, created_at, telegram_id, telegram_username, selected_plan, onboarding_completed, is_admin 
                 FROM {schema}.users WHERE auth_token = %s

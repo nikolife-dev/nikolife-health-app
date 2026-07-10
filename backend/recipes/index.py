@@ -101,10 +101,10 @@ def handler(event: dict, context) -> dict:
         
         user_plan = None
         if auth_token:
-            conn = psycopg2.connect(os.environ['DATABASE_URL'])
+            conn = psycopg2.connect((os.environ.get('SUPABASE_DB_URL') or os.environ['DATABASE_URL']))
             psycopg2.extras.register_default_jsonb(conn)
             cur = conn.cursor()
-            schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+            schema = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
             
             cur.execute(f"SELECT id, is_admin, selected_plan FROM {schema}.users WHERE auth_token = %s", (auth_token,))
             user_data = cur.fetchone()
@@ -133,10 +133,10 @@ def handler(event: dict, context) -> dict:
         
         print(f"[RECIPES] Параметры: recipe_id={recipe_id}, action={action}")
         
-        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        conn = psycopg2.connect((os.environ.get('SUPABASE_DB_URL') or os.environ['DATABASE_URL']))
         psycopg2.extras.register_default_jsonb(conn)
         cur = conn.cursor()
-        schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+        schema = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
         
         # GET settings (для админки)
         if method == 'GET' and action == 'get_settings':
@@ -407,7 +407,7 @@ def handler(event: dict, context) -> dict:
                 except Exception as e:
                     errors.append(f"Строка {i+1}: {str(e)}")
                     conn.rollback()
-                    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+                    conn = psycopg2.connect((os.environ.get('SUPABASE_DB_URL') or os.environ['DATABASE_URL']))
                     psycopg2.extras.register_default_jsonb(conn)
                     cur = conn.cursor()
             

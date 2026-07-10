@@ -32,8 +32,8 @@ def handler(event: dict, context) -> dict:
     if auth_token.startswith('Bearer '):
         auth_token = auth_token[7:]
     
-    database_url = os.environ.get('DATABASE_URL')
-    schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+    database_url = (os.environ.get('SUPABASE_DB_URL') or os.environ.get('DATABASE_URL'))
+    schema = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
     
     if not database_url:
         return {

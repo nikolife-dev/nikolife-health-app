@@ -24,12 +24,12 @@ import jwt
 # =============================================================================
 
 def get_db_connection():
-    return psycopg2.connect(os.environ["DATABASE_URL"])
+    return psycopg2.connect((os.environ.get("SUPABASE_DB_URL") or os.environ["DATABASE_URL"]))
 
 
 def get_schema() -> str:
     """Get database schema prefix."""
-    schema = os.environ.get("MAIN_DB_SCHEMA", "public")
+    schema = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
     return f"{schema}." if schema else ""
 
 

@@ -2,7 +2,7 @@ import json
 import os
 import psycopg2
 
-DSN = os.environ.get('DATABASE_URL')
+DSN = (os.environ.get('SUPABASE_DB_URL') or os.environ.get('DATABASE_URL'))
 
 def handler(event: dict, context) -> dict:
     '''API для получения шаблонов привычек'''

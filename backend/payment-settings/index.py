@@ -56,7 +56,7 @@ def _json(status: int, payload: dict) -> dict:
 
 
 def _get_conn():
-    return psycopg2.connect(os.environ['DATABASE_URL'])
+    return psycopg2.connect((os.environ.get('SUPABASE_DB_URL') or os.environ['DATABASE_URL']))
 
 
 def _mask(value: str) -> str:

@@ -21,7 +21,7 @@ def handler(event: dict, context) -> dict:
             'isBase64Encoded': False
         }
 
-    dsn = os.environ.get('DATABASE_URL')
+    dsn = (os.environ.get('SUPABASE_DB_URL') or os.environ.get('DATABASE_URL'))
     if not dsn:
         return {
             'statusCode': 500,
@@ -39,7 +39,7 @@ def handler(event: dict, context) -> dict:
             action = params.get('action')
 
             if action == 'stats':
-                schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+                schema = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
                 cur.execute(f"SELECT COUNT(*) as total FROM {schema}.users")
                 total_users = cur.fetchone()['total']
 
@@ -85,7 +85,7 @@ def handler(event: dict, context) -> dict:
                 }
 
             if action == 'subscriptions':
-                schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+                schema = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
                 cur.execute(f"""
                     SELECT
                         s.id,

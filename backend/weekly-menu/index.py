@@ -52,9 +52,9 @@ def handler(event: dict, context) -> dict:
                 'isBase64Encoded': False
             }
         
-        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        conn = psycopg2.connect((os.environ.get('SUPABASE_DB_URL') or os.environ['DATABASE_URL']))
         cur = conn.cursor()
-        schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+        schema = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
         
         cur.execute(f"SELECT id, is_admin FROM {schema}.users WHERE auth_token = %s", (auth_token,))
         user_data = cur.fetchone()

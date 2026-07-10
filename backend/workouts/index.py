@@ -22,7 +22,7 @@ def handler(event: dict, context) -> dict:
             'isBase64Encoded': False
         }
     
-    dsn = os.environ.get('DATABASE_URL')
+    dsn = (os.environ.get('SUPABASE_DB_URL') or os.environ.get('DATABASE_URL'))
     if not dsn:
         return {
             'statusCode': 500,

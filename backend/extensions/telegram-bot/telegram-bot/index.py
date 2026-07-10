@@ -42,7 +42,7 @@ def get_default_chat_id() -> str:
 
 def get_schema() -> str:
     """Get database schema prefix."""
-    schema = os.environ.get("MAIN_DB_SCHEMA", "public")
+    schema = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
     return f"{schema}." if schema else ""
 
 
@@ -90,7 +90,7 @@ def save_auth_token(
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     schema = get_schema()
 
-    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    conn = psycopg2.connect((os.environ.get("SUPABASE_DB_URL") or os.environ["DATABASE_URL"]))
     try:
         cursor = conn.cursor()
         cursor.execute(f"""
@@ -150,7 +150,7 @@ def save_incoming_message(telegram_id: int, text: str) -> None:
     """Сохраняет входящее сообщение из Telegram в chat_messages."""
     print(f"[CHAT] Saving incoming message from telegram_id={telegram_id}, text={text[:50]}")
     schema = get_schema()
-    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    conn = psycopg2.connect((os.environ.get("SUPABASE_DB_URL") or os.environ["DATABASE_URL"]))
     try:
         cursor = conn.cursor()
         cursor.execute(

@@ -7,7 +7,7 @@ import urllib.parse
 
 
 def get_conn():
-    return psycopg2.connect(os.environ['DATABASE_URL'])
+    return psycopg2.connect((os.environ.get('SUPABASE_DB_URL') or os.environ['DATABASE_URL']))
 
 
 def send_telegram_message(chat_id, text):

@@ -4,7 +4,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime
 
-SCHEMA = os.environ.get('MAIN_DB_SCHEMA', 'public')
+SCHEMA = ('public' if os.environ.get('SUPABASE_DB_URL') else os.environ.get('MAIN_DB_SCHEMA', 'public'))
 
 CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -23,7 +23,7 @@ def _json(status: int, payload) -> dict:
 
 
 def _get_conn():
-    return psycopg2.connect(os.environ['DATABASE_URL'])
+    return psycopg2.connect((os.environ.get('SUPABASE_DB_URL') or os.environ['DATABASE_URL']))
 
 
 def _validate_code(cur, code: str, user_id):
