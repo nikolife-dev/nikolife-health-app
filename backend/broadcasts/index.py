@@ -1,9 +1,9 @@
 import json
 import os
+import time
 import smtplib
 import ssl
-import urllib.request
-import urllib.error
+import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formataddr
@@ -63,27 +63,30 @@ def get_admin(cur, schema, token):
     return {'id': row[0], 'is_admin': bool(row[1])}
 
 
-def send_telegram(chat_id, text):
+def send_telegram(session, chat_id, text, retries=3):
     token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
     if not token:
         return False, 'no_token'
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    data = json.dumps({'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML', 'disable_web_page_preview': True}).encode('utf-8')
-    req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
-    try:
-        urllib.request.urlopen(req, timeout=10)
-        return True, None
-    except urllib.error.HTTPError as he:
+    payload = {'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML', 'disable_web_page_preview': True}
+    last_err = 'unknown'
+    for attempt in range(retries):
         try:
-            body = json.loads(he.read().decode('utf-8', 'ignore'))
-            desc = body.get('description', str(he.code))
-        except Exception:
-            desc = str(he.code)
-        print(f"[BROADCASTS] TG fail chat_id={chat_id}: {desc}")
-        return False, desc
-    except Exception as e:
-        print(f"[BROADCASTS] TG error chat_id={chat_id}: {e}")
-        return False, str(e)[:120]
+            r = session.post(url, json=payload, timeout=(5, 7))
+            if r.status_code == 200:
+                return True, None
+            # Ошибка уровня Telegram (бот заблокирован, чат не найден) — повтор бесполезен
+            try:
+                desc = r.json().get('description', str(r.status_code))
+            except Exception:
+                desc = str(r.status_code)
+            print(f"[BROADCASTS] TG fail chat_id={chat_id}: {desc}")
+            return False, desc
+        except Exception as e:
+            last_err = str(e)[:120]
+            print(f"[BROADCASTS] TG timeout chat_id={chat_id} attempt {attempt + 1}/{retries}: {last_err}")
+            time.sleep(0.5)
+    return False, last_err
 
 
 def send_email_batch(recipients, subject, html_body):
@@ -289,15 +292,17 @@ def handler(event, context):
                 SELECT name, telegram_id FROM {schema}.users
                 WHERE receive_notifications = TRUE AND telegram_id IS NOT NULL
             """)
+            tg_session = requests.Session()
             for name, tg_id in cur.fetchall():
                 text = f"<b>{title}</b>\n\n{message}"
-                ok, err = send_telegram(tg_id, text)
+                ok, err = send_telegram(tg_session, tg_id, text)
                 if ok:
                     sent_tg += 1
                 else:
                     failed += 1
                     if err and len(error_samples) < 5:
                         error_samples.append(f"TG: {err}")
+            tg_session.close()
 
         if 'email' in ch:
             cur.execute(f"""
