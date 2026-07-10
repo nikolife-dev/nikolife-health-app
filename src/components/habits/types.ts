@@ -46,7 +46,7 @@ export const TIMEZONES = [
   { value: '+04:00', label: 'Самара (UTC+4)' },
   { value: '+05:00', label: 'Екатеринбург (UTC+5)' },
   { value: '+06:00', label: 'Омск (UTC+6)' },
-  { value: '+07:00', label: 'Красноярск (UTC+7)' },
+  { value: '+07:00', label: 'Красноярск, Барнаул, Белокуриха (UTC+7)' },
   { value: '+08:00', label: 'Иркутск (UTC+8)' },
   { value: '+09:00', label: 'Якутск (UTC+9)' },
   { value: '+10:00', label: 'Владивосток (UTC+10)' },
