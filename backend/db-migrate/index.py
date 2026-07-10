@@ -89,6 +89,25 @@ def handler(event, context):
         result['source'] = 'ok'
         result['dest_version'] = dcur.fetchone()[0][:40]
 
+    elif action == 'whereami':
+        dburl = os.environ.get('DATABASE_URL', '')
+        supurl = os.environ.get('SUPABASE_DB_URL', '')
+        def host(u):
+            try:
+                return u.split('@')[1].split('/')[0]
+            except Exception:
+                return 'unknown'
+        result['database_url_host'] = host(dburl)
+        result['supabase_url_host'] = host(supurl)
+        result['main_db_schema'] = os.environ.get('MAIN_DB_SCHEMA', 'NOT_SET')
+        result['is_supabase'] = 'supabase.com' in dburl
+
+    elif action == 'check_users':
+        dcur.execute('SELECT id, email, LEFT(password_hash,12), LENGTH(password_hash), telegram_id FROM public."users" ORDER BY id')
+        result['dst_users'] = [list(r) for r in dcur.fetchall()]
+        scur.execute(f'SELECT id, email, LEFT(password_hash,12), LENGTH(password_hash), telegram_id FROM "{SCHEMA}"."users" ORDER BY id')
+        result['src_users'] = [list(r) for r in scur.fetchall()]
+
     elif action == 'schema':
         dcur.execute('CREATE SCHEMA IF NOT EXISTS public')
         created = []
